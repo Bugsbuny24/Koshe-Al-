@@ -34,12 +34,13 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("KOSCHEI AI: Supabase Bağlantısı Kuruldu")
-
-# Model ve Ajan Tanımları
+# Gemini 2.5 ve 3.x serisi için güncel isimlendirme
 MODELS = {
-    "flash": "gemini-3.0-flash",
-    "pro":   "gemini-2.5-flash",
-    "ultra": "gemini-3.1-pro",
+    "flash": "gemini-2.0-flash",          # En hızlı ve güncel flash model
+    "pro":   "gemini-2.0-flash-thinking", # Düşünme yeteneği olan çok zeki model
+    "ultra": "gemini-1.5-pro",            # Stabil ve devasa bağlam penceresi
+
+
 }
 
 AGENT_PROMPTS = {
