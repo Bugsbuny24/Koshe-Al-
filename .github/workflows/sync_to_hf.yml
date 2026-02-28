@@ -1,20 +1,19 @@
-name: Sync to Hugging Face Space
-
+name: Sync to Hugging Face
 on:
   push:
-    branches: [main]
+    branches: [main] # Hangi branch'i kullanıyorsan onu yaz (genelde main olur)
 
 jobs:
-  sync:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
           lfs: true
-
-      - name: Push to Hugging Face Space
+          
+      - name: Push to HF
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          git push --force https://Koshei0:$HF_TOKEN@huggingface.co/spaces/Koshei0/Snapscrip main
+          git push --force https://onur-sel:$HF_TOKEN@huggingface.co/spaces/onur-sel/Koschei main
