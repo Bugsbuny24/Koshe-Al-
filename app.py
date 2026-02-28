@@ -34,17 +34,15 @@ supabase: Client = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     print("KOSCHEI AI: Supabase Bağlantısı Kuruldu")
-# Gemini 3.1 ve 3.0 Serisi Güncel İsimler
+
+# Model Tanımları (En güncel 3.1 Preview serisi)
 MODELS = {
-    "flash": "gemini-3.1-flash-image-preview", # En yeni Flash (Hızlı ve görsel yetenekli)
-    "pro":   "gemini-3.1-pro-preview",        # En yeni Pro (Zeki ve analizci)
-    "ultra": "gemini-3.1-pro-preview",        # Şimdilik en güçlüsü bu
-}
-": "gemini-1.5-pro",            # Stabil ve devasa bağlam penceresi
-
-
+    "flash": "gemini-3.1-flash-image-preview",
+    "pro":   "gemini-3.1-pro-preview",
+    "ultra": "gemini-3.1-pro-preview",
 }
 
+# Ajan Talimatları
 AGENT_PROMPTS = {
     "web_developer": "Sen Uzman Web Geliştirici Koschei'sin. Modern ve SEO uyumlu kod yazarsın.",
     "game_developer": "Sen Kıdemli Oyun Geliştirici Koschei'sin. Unity ve Unreal Engine uzmanısın.",
@@ -70,7 +68,9 @@ class RepoRequest(BaseModel):
 
 # Yardımcı Fonksiyonlar
 def get_model(tier: str, role: str = "general"):
-    model_name = MODELS.get(tier, MODELS["flash"])
+    # Model isminin başına models/ eklemek hatayı önler
+    model_key = MODELS.get(tier, MODELS["flash"])
+    model_name = f"models/{model_key}"
     instruction = AGENT_PROMPTS.get(role, AGENT_PROMPTS["general"])
     return genai.GenerativeModel(model_name=model_name, system_instruction=instruction)
 
@@ -93,7 +93,6 @@ async def create_order(req: ServiceOrder):
         response = model.generate_content(req.prompt)
         content = response.text
         
-        # Supabase'e Siparişi Kaydet
         if supabase:
             order_data = {
                 "user_id": req.user_id,
@@ -112,13 +111,12 @@ async def create_order(req: ServiceOrder):
 async def chat(req: ChatRequest):
     try:
         model = get_model(req.model_tier, req.agent_role)
-        chat = model.start_chat(history=[])
-        response = chat.send_message(req.messages[-1]["content"])
+        chat_session = model.start_chat(history=[])
+        response = chat_session.send_message(req.messages[-1]["content"])
         return {"reply": response.text}
     except Exception as e:
         return {"error": str(e)}
 
 @app.post("/analyze")
 async def analyze_repo(req: RepoRequest):
-    # Eski analiz fonksiyonunu buraya entegre edebilirsin (GitHub token kullanarak)
     return {"message": "Analiz fonksiyonu hazır, GITHUB_TOKEN ile çalışıyor."}
