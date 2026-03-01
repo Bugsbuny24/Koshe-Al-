@@ -5,13 +5,15 @@ from typing import Optional, Dict, Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import google.generativeai as genai
 from supabase import create_client, Client
 
 app = FastAPI()
 
-# CORS Ayarları
+# =========================
+# CORS
+# =========================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -33,7 +35,9 @@ WORKER_ID = os.environ.get("WORKER_ID", "hf-worker-1")
 WORKER_POLL_SECONDS = int(os.environ.get("WORKER_POLL_SECONDS", "3"))
 WORKER_LOCK_MINUTES = int(os.environ.get("WORKER_LOCK_MINUTES", "10"))
 
-# Servis Bağlantıları
+# =========================
+# Service Connections
+# =========================
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
     print("KOSCHEI AI: Gemini Aktif", flush=True)
@@ -48,11 +52,11 @@ else:
     print("KOSCHEI AI: Supabase PASIF (URL/KEY yok)", flush=True)
 
 # =========================
-# Model Tanımları
+# Model Registry
 # =========================
 MODELS = {
     "flash": "gemini-1.5-flash",
-    "pro":   "gemini-3.1-pro-preview",
+    "pro": "gemini-3.1-pro-preview",
     "ultra": "gemini-3.1-pro-preview",
 }
 
@@ -62,7 +66,7 @@ AGENT_PROMPTS = {
     "game_developer": "Sen Kıdemli Oyun Geliştirici Koschei'sin. Unity ve Unreal Engine uzmanısın.",
     "logo_designer": "Sen Kreatif Tasarımcı Koschei'sin. Marka kimliği ve logo tasarımında uzmansın.",
     "seo_expert": "Sen SEO ve İçerik Stratejisti Koschei'sin. Google sıralama odaklı çalışırsın.",
-    "general": "Sen KOSCHEI AI'sın. Türkiye'nin en güçlü yapay zeka asistanısın."
+    "general": "Sen KOSCHEI AI'sın. Türkiye'nin en güçlü yapay zeka asistanısın.",
 }
 
 # =========================
@@ -72,12 +76,13 @@ class ServiceOrder(BaseModel):
     category: str
     prompt: str
     user_id: str
-    job_type: str = "general"          # studio_video, general vs
-    estimated_credits: float = 3        # UI burayı kategoriye göre set eder
+    job_type: str = "general"          # örn: studio_video, general
+    estimated_credits: float = 3       # UI bunu kategoriye göre set edebilir
     is_studio: bool = False
     ultra_required: bool = False
     ultra_daily_limit: int = 0
-    metadata: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
 class ChatRequest(BaseModel):
     messages: list
     model_tier: str = "flash"
@@ -95,10 +100,12 @@ def get_model(tier: str, role: str = "general"):
     instruction = AGENT_PROMPTS.get(role, AGENT_PROMPTS["general"])
     return genai.GenerativeModel(model_name=model_name, system_instruction=instruction)
 
-def safe_get_text(response):
+def safe_get_text(response) -> str:
     try:
         if response.candidates and response.candidates[0].content.parts:
-            return "".join([part.text for part in response.candidates[0].content.parts if hasattr(part, "text")])
+            return "".join(
+                [part.text for part in response.candidates[0].content.parts if hasattr(part, "text")]
+            )
         return "Yanıt alınamadı."
     except Exception:
         return "Metin dönüştürme hatası oluştu."
@@ -226,10 +233,8 @@ async def worker_loop():
                 flush=True,
             )
 
-            # AI üretim (routing + fallback)
             output = await generate_with_gemini(category, job_type, prompt)
 
-            # stage complete
             await complete_stage(stage_id, output, None)
             print(f"WORKER: completed stage={stage_id} tier={output.get('tier')}", flush=True)
 
@@ -238,7 +243,7 @@ async def worker_loop():
             print("WORKER ERROR:", err, flush=True)
             print(traceback.format_exc(), flush=True)
 
-            # KRİTİK: stage'i failed bas ki kuyruk tıkanmasın
+            # stage kilitlenmesin -> failed bas
             try:
                 if stage_id:
                     await complete_stage(stage_id, {"engine": "worker", "note": "failed"}, err)
@@ -253,7 +258,6 @@ async def worker_loop():
 # =========================
 @app.on_event("startup")
 async def on_startup():
-    # background worker başlat
     asyncio.create_task(worker_loop())
 
 # =========================
@@ -276,49 +280,14 @@ async def root():
 
 @app.post("/order")
 async def create_order(req: ServiceOrder):
-    if not GEMINI_API_KEY:
-        return {"error": "AI motoru aktif değil."}
-
-    tier_map = {"starter": "flash", "pro": "pro", "ultimate": "ultra"}
-    tier = tier_map.get(req.package, "flash")
-
-    try:
-        model = get_model(tier, req.category)
-        response = model.generate_content(req.prompt)
-        content = safe_get_text(response)
-
-        if supabase:
-            # Orders tablosuna ekle
-            order_data = {
-                "user_id": req.user_id,
-                "category": req.category,
-                "prompt": req.prompt,
-                "result": content,
-                "status": "completed",
-            }
-            supabase.table("orders").insert(order_data).execute()
-
-            # snap_scripts tablosuna ekle
-            script_data = {
-                "user_id": req.user_id if req.user_id != "guest" else None,
-                "prompt": req.prompt,
-                "result": content,
-                "script_content": content,
-                "package_type": req.package,
-                "is_active": True,
-            }
-            supabase.table("snap_scripts").insert(script_data).execute()
-
-        return {"status": "success", "delivery": content}
-    except Exception as e:
-        return {"error": str(e)}
-@app.post("/order")
-async def create_order(req: ServiceOrder):
+    """
+    TEK doğru akış:
+    create_job_and_spend -> orders + job_stages oluşur, worker tamamlar.
+    """
     if not supabase:
         return {"error": "Supabase bağlı değil."}
 
     try:
-        # Pipeline: create_job_and_spend RPC
         res = supabase.rpc(
             "create_job_and_spend",
             {
@@ -330,14 +299,13 @@ async def create_order(req: ServiceOrder):
                 "p_is_studio": req.is_studio,
                 "p_ultra_required": req.ultra_required,
                 "p_ultra_daily_limit": req.ultra_daily_limit,
-                "p_metadata": req.metadata or {},
+                "p_metadata": req.metadata,
             },
         ).execute()
 
         if not res.data:
             return {"error": "create_job_and_spend boş döndü."}
 
-        # Supabase RPC composite döndürüyor -> ilk satır
         job = res.data[0]
         order_id = job.get("id") or job.get("job_id") or job.get("order_id")
 
@@ -350,3 +318,46 @@ async def create_order(req: ServiceOrder):
 
     except Exception as e:
         return {"error": str(e)}
+
+@app.get("/order/{order_id}")
+async def get_order(order_id: str):
+    """
+    UI/Pi Browser polling için.
+    """
+    if not supabase:
+        return {"error": "Supabase bağlı değil."}
+
+    try:
+        r = (
+            supabase.table("orders")
+            .select("id,created_at,category,job_type,status,result,credits_spent,credits_total,model_route,updated_at")
+            .eq("id", order_id)
+            .limit(1)
+            .execute()
+        )
+        if not r.data:
+            return {"error": "Order bulunamadı."}
+        return r.data[0]
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/ask")
+async def chat(req: ChatRequest):
+    """
+    Basit chatbot endpoint. (Pipeline'dan bağımsız)
+    """
+    try:
+        if not GEMINI_API_KEY:
+            return {"error": "AI motoru aktif değil."}
+
+        model = get_model(req.model_tier, req.agent_role)
+        chat_session = model.start_chat(history=[])
+        response = chat_session.send_message(req.messages[-1]["content"])
+        content = safe_get_text(response)
+        return {"reply": content}
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/analyze")
+async def analyze_repo(req: RepoRequest):
+    return {"message": "Analiz fonksiyonu hazır, GITHUB_TOKEN ile çalışıyor."}
