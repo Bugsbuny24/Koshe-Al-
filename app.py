@@ -71,9 +71,13 @@ AGENT_PROMPTS = {
 class ServiceOrder(BaseModel):
     category: str
     prompt: str
-    user_id: str = "guest"
-    package: str = "starter"
-
+    user_id: str
+    job_type: str = "general"          # studio_video, general vs
+    estimated_credits: float = 3        # UI burayı kategoriye göre set eder
+    is_studio: bool = False
+    ultra_required: bool = False
+    ultra_daily_limit: int = 0
+    metadata: Dict[str, Any] = {}
 class ChatRequest(BaseModel):
     messages: list
     model_tier: str = "flash"
