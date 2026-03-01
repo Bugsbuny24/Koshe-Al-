@@ -56,7 +56,133 @@ MODELS = {
 
 # Ajan Talimatları
 AGENT_PROMPTS = {
-    "web_developer": "Sen Uzman Web Geliştirici Koschei'sin. Modern ve SEO uyumlu kod yazarsın.",
+    "web_developer": "Sen Uzman Web Geliştirici Koschei'sin. Modern ve SEO uyumlu kod yazarsı# =========================
+# Helpers (PATCH)
+# =========================
+
+def db_get_routing(category: str) -> Dict[str, str]:
+    """
+    model_routing tablosundan category için primary/fallback tier çeker.
+    Yoksa flash/flash döner.
+    """
+    routing = {"primary_tier": "flash", "fallback_tier": "flash"}
+    if not supabase or not category:
+        return routing
+    try:
+        r = (
+            supabase.table("model_routing")
+            .select("primary_tier,fallback_tier")
+            .eq("category", category)
+            .limit(1)
+            .execute()
+        )
+        if r.data and len(r.data) > 0:
+            routing.update(r.data[0])
+    except Exception:
+        pass
+    return routing
+
+def safe_get_text(response):
+    try:
+        if response.candidates and response.candidates[0].content.parts:
+            return "".join([part.text for part in response.candidates[0].content.parts if hasattr(part, "text")])
+        return "Yanıt alınamadı."
+    except Exception:
+        return "Metin dönüştürme hatası oluştu."
+
+async def generate_with_gemini(category: str, job_type: str, prompt: str) -> Dict[str, Any]:
+    """
+    DB routing -> primary tier ile dener.
+    Fail olursa fallback tier ile 1 kere daha dener.
+    """
+    if not GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY yok. Worker AI üretemez.")
+
+    routing = db_get_routing(category)
+    primary = routing.get("primary_tier", "flash")
+    fallback = routing.get("fallback_tier", "flash")
+
+    # 1) primary dene
+    try:
+        model = get_model(primary, "general")
+        resp = model.generate_content(prompt)
+        return {
+            "text": safe_get_text(resp),
+            "engine": "gemini",
+            "tier": primary,
+            "job_type": job_type,
+            "category": category,
+        }
+    except Exception as e1:
+        # 2) fallback dene
+        print(f"WORKER: primary tier failed ({primary}) -> fallback ({fallback}) err={e1}", flush=True)
+        model = get_model(fallback, "general")
+        resp = model.generate_content(prompt)
+        return {
+            "text": safe_get_text(resp),
+            "engine": "gemini",
+            "tier": fallback,
+            "job_type": job_type,
+            "category": category,
+        }
+
+# =========================
+# Worker Core (PATCH)
+# =========================
+async def worker_loop():
+    if not WORKER_ENABLED:
+        print("WORKER: disabled (WORKER_ENABLED=0)", flush=True)
+        return
+    if not supabase:
+        print("WORKER: Supabase yok, worker çalışmayacak.", flush=True)
+        return
+
+    print(
+        f"WORKER: started (id={WORKER_ID}) poll={WORKER_POLL_SECONDS}s lock={WORKER_LOCK_MINUTES}m",
+        flush=True,
+    )
+
+    while True:
+        stage_id = None
+        try:
+            stage = await claim_next_stage()
+
+            if not stage:
+                await asyncio.sleep(WORKER_POLL_SECONDS)
+                continue
+
+            stage_id = stage.get("stage_id")
+            job_type = stage.get("job_type") or "general"
+            category = stage.get("category") or "general"
+            prompt = stage.get("prompt") or ""
+            stage_number = stage.get("stage_number")
+
+            print(
+                f"WORKER: claimed stage={stage_id} category={category} job_type={job_type} stage_no={stage_number}",
+                flush=True,
+            )
+
+            # AI üretim (routing + fallback)
+            output = await generate_with_gemini(category, job_type, prompt)
+
+            # stage complete
+            await complete_stage(stage_id, output, None)
+            print(f"WORKER: completed stage={stage_id} tier={output.get('tier')}", flush=True)
+
+        except Exception as e:
+            err = str(e)
+            print("WORKER ERROR:", err, flush=True)
+            print(traceback.format_exc(), flush=True)
+
+            # KRİTİK: stage’i failed bas ki kuyruk tıkanmasın
+            try:
+                if stage_id:
+                    await complete_stage(stage_id, {"engine": "worker", "note": "failed"}, err)
+                    print(f"WORKER: failed stage marked stage={stage_id}", flush=True)
+            except Exception as e2:
+                print("WORKER ERROR (mark failed):", str(e2), flush=True)
+
+            await asyncio.sleep(5)n.",
     "game_developer": "Sen Kıdemli Oyun Geliştirici Koschei'sin. Unity ve Unreal Engine uzmanısın.",
     "logo_designer": "Sen Kreatif Tasarımcı Koschei'sin. Marka kimliği ve logo tasarımında uzmansın.",
     "seo_expert": "Sen SEO ve İçerik Stratejisti Koschei'sin. Google sıralama odaklı çalışırsın.",
@@ -80,55 +206,6 @@ class ChatRequest(BaseModel):
 class RepoRequest(BaseModel):
     repo_url: str
 
-# =========================
-# Helpers
-# =========================
-def get_model(tier: str, role: str = "general"):
-    model_key = MODELS.get(tier, MODELS["flash"])
-    model_name = f"models/{model_key}"
-    instruction = AGENT_PROMPTS.get(role, AGENT_PROMPTS["general"])
-    return genai.GenerativeModel(model_name=model_name, system_instruction=instruction)
-
-def safe_get_text(response):
-    try:
-        if response.candidates and response.candidates[0].content.parts:
-            return "".join([part.text for part in response.candidates[0].content.parts if hasattr(part, "text")])
-        return "Yanıt alınamadı."
-    except Exception:
-        return "Metin dönüştürme hatası oluştu."
-
-def pick_tier_for_job(job_type: str) -> str:
-    """
-    Basit kural:
-    - studio_video / studio_game / cinema_action -> ultra
-    - diğer -> pro/flash
-    Bunu istersen model_routing tablosundan okuyacak hale getiririz.
-    """
-    jt = (job_type or "").lower()
-    if jt in ["studio_video", "studio_game", "cinema_action", "ultra"]:
-        return "ultra"
-    if jt in ["web_app", "mobile_app", "app_generator", "blueprint"]:
-        return "pro"
-    return "flash"
-
-async def generate_with_gemini(job_type: str, prompt: str) -> Dict[str, Any]:
-    if not GEMINI_API_KEY:
-        raise RuntimeError("GEMINI_API_KEY yok. Worker AI üretemez.")
-
-    tier = pick_tier_for_job(job_type)
-    model = get_model(tier, "general")
-
-    # İstersen burada job_type'a özel instruction da ekleyebiliriz.
-    # Şimdilik prompt'u direkt gönderiyoruz.
-    resp = model.generate_content(prompt)
-    text = safe_get_text(resp)
-
-    return {
-        "text": text,
-        "engine": "gemini",
-        "tier": tier,
-        "job_type": job_type,
-    }
 
 # =========================
 # Worker Core
