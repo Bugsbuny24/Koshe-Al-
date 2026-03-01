@@ -312,18 +312,41 @@ async def create_order(req: ServiceOrder):
         return {"status": "success", "delivery": content}
     except Exception as e:
         return {"error": str(e)}
+@app.post("/order")
+async def create_order(req: ServiceOrder):
+    if not supabase:
+        return {"error": "Supabase bağlı değil."}
 
-@app.post("/ask")
-async def chat(req: ChatRequest):
     try:
-        model = get_model(req.model_tier, req.agent_role)
-        chat_session = model.start_chat(history=[])
-        response = chat_session.send_message(req.messages[-1]["content"])
-        content = safe_get_text(response)
-        return {"reply": content}
+        # Pipeline: create_job_and_spend RPC
+        res = supabase.rpc(
+            "create_job_and_spend",
+            {
+                "p_user_id": req.user_id,
+                "p_job_type": req.job_type,
+                "p_category": req.category,
+                "p_prompt": req.prompt,
+                "p_estimated_credits": req.estimated_credits,
+                "p_is_studio": req.is_studio,
+                "p_ultra_required": req.ultra_required,
+                "p_ultra_daily_limit": req.ultra_daily_limit,
+                "p_metadata": req.metadata or {},
+            },
+        ).execute()
+
+        if not res.data:
+            return {"error": "create_job_and_spend boş döndü."}
+
+        # Supabase RPC composite döndürüyor -> ilk satır
+        job = res.data[0]
+        order_id = job.get("id") or job.get("job_id") or job.get("order_id")
+
+        return {
+            "status": "queued",
+            "order_id": order_id,
+            "category": req.category,
+            "job_type": req.job_type,
+        }
+
     except Exception as e:
         return {"error": str(e)}
-
-@app.post("/analyze")
-async def analyze_repo(req: RepoRequest):
-    return {"message": "Analiz fonksiyonu hazır, GITHUB_TOKEN ile çalışıyor."}
