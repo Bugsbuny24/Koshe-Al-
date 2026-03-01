@@ -1,10 +1,8 @@
 import os
-import time
 import asyncio
 import traceback
 from typing import Optional, Dict, Any
 
-import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -38,12 +36,16 @@ WORKER_LOCK_MINUTES = int(os.environ.get("WORKER_LOCK_MINUTES", "10"))
 # Servis Bağlantıları
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
-    print("KOSCHEI AI: Gemini Aktif")
+    print("KOSCHEI AI: Gemini Aktif", flush=True)
+else:
+    print("KOSCHEI AI: Gemini PASIF (GEMINI_API_KEY yok)", flush=True)
 
 supabase: Optional[Client] = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("KOSCHEI AI: Supabase Bağlantısı Kuruldu")
+    print("KOSCHEI AI: Supabase Bağlantısı Kuruldu", flush=True)
+else:
+    print("KOSCHEI AI: Supabase PASIF (URL/KEY yok)", flush=True)
 
 # =========================
 # Model Tanımları
@@ -56,9 +58,46 @@ MODELS = {
 
 # Ajan Talimatları
 AGENT_PROMPTS = {
-    "web_developer": "Sen Uzman Web Geliştirici Koschei'sin. Modern ve SEO uyumlu kod yazarsı# =========================
-# Helpers (PATCH)
+    "web_developer": "Sen Uzman Web Geliştirici Koschei'sin. Modern ve SEO uyumlu kod yazarsın.",
+    "game_developer": "Sen Kıdemli Oyun Geliştirici Koschei'sin. Unity ve Unreal Engine uzmanısın.",
+    "logo_designer": "Sen Kreatif Tasarımcı Koschei'sin. Marka kimliği ve logo tasarımında uzmansın.",
+    "seo_expert": "Sen SEO ve İçerik Stratejisti Koschei'sin. Google sıralama odaklı çalışırsın.",
+    "general": "Sen KOSCHEI AI'sın. Türkiye'nin en güçlü yapay zeka asistanısın."
+}
+
 # =========================
+# Request Models
+# =========================
+class ServiceOrder(BaseModel):
+    category: str
+    prompt: str
+    user_id: str = "guest"
+    package: str = "starter"
+
+class ChatRequest(BaseModel):
+    messages: list
+    model_tier: str = "flash"
+    agent_role: str = "general"
+
+class RepoRequest(BaseModel):
+    repo_url: str
+
+# =========================
+# Helpers
+# =========================
+def get_model(tier: str, role: str = "general"):
+    model_key = MODELS.get(tier, MODELS["flash"])
+    model_name = f"models/{model_key}"
+    instruction = AGENT_PROMPTS.get(role, AGENT_PROMPTS["general"])
+    return genai.GenerativeModel(model_name=model_name, system_instruction=instruction)
+
+def safe_get_text(response):
+    try:
+        if response.candidates and response.candidates[0].content.parts:
+            return "".join([part.text for part in response.candidates[0].content.parts if hasattr(part, "text")])
+        return "Yanıt alınamadı."
+    except Exception:
+        return "Metin dönüştürme hatası oluştu."
 
 def db_get_routing(category: str) -> Dict[str, str]:
     """
@@ -78,17 +117,9 @@ def db_get_routing(category: str) -> Dict[str, str]:
         )
         if r.data and len(r.data) > 0:
             routing.update(r.data[0])
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"WORKER: routing read failed category={category} err={e}", flush=True)
     return routing
-
-def safe_get_text(response):
-    try:
-        if response.candidates and response.candidates[0].content.parts:
-            return "".join([part.text for part in response.candidates[0].content.parts if hasattr(part, "text")])
-        return "Yanıt alınamadı."
-    except Exception:
-        return "Metin dönüştürme hatası oluştu."
 
 async def generate_with_gemini(category: str, job_type: str, prompt: str) -> Dict[str, Any]:
     """
@@ -106,8 +137,9 @@ async def generate_with_gemini(category: str, job_type: str, prompt: str) -> Dic
     try:
         model = get_model(primary, "general")
         resp = model.generate_content(prompt)
+        text = safe_get_text(resp)
         return {
-            "text": safe_get_text(resp),
+            "text": text,
             "engine": "gemini",
             "tier": primary,
             "job_type": job_type,
@@ -115,11 +147,12 @@ async def generate_with_gemini(category: str, job_type: str, prompt: str) -> Dic
         }
     except Exception as e1:
         # 2) fallback dene
-        print(f"WORKER: primary tier failed ({primary}) -> fallback ({fallback}) err={e1}", flush=True)
+        print(f"WORKER: primary failed tier={primary} -> fallback={fallback} err={e1}", flush=True)
         model = get_model(fallback, "general")
         resp = model.generate_content(prompt)
+        text = safe_get_text(resp)
         return {
-            "text": safe_get_text(resp),
+            "text": text,
             "engine": "gemini",
             "tier": fallback,
             "job_type": job_type,
@@ -127,8 +160,35 @@ async def generate_with_gemini(category: str, job_type: str, prompt: str) -> Dic
         }
 
 # =========================
-# Worker Core (PATCH)
+# Worker Core
 # =========================
+async def claim_next_stage() -> Optional[Dict[str, Any]]:
+    if not supabase:
+        return None
+
+    res = supabase.rpc(
+        "claim_next_stage",
+        {"p_worker_id": WORKER_ID, "p_lock_minutes": WORKER_LOCK_MINUTES},
+    ).execute()
+
+    if res.data and len(res.data) > 0:
+        return res.data[0]
+    return None
+
+async def complete_stage(stage_id: str, output: Dict[str, Any], error: Optional[str] = None) -> None:
+    if not supabase:
+        return
+
+    supabase.rpc(
+        "complete_stage",
+        {
+            "p_stage_id": stage_id,
+            "p_worker_id": WORKER_ID,
+            "p_output": output,
+            "p_error": error,
+        },
+    ).execute()
+
 async def worker_loop():
     if not WORKER_ENABLED:
         print("WORKER: disabled (WORKER_ENABLED=0)", flush=True)
@@ -174,106 +234,14 @@ async def worker_loop():
             print("WORKER ERROR:", err, flush=True)
             print(traceback.format_exc(), flush=True)
 
-            # KRİTİK: stage’i failed bas ki kuyruk tıkanmasın
+            # KRİTİK: stage'i failed bas ki kuyruk tıkanmasın
             try:
                 if stage_id:
                     await complete_stage(stage_id, {"engine": "worker", "note": "failed"}, err)
-                    print(f"WORKER: failed stage marked stage={stage_id}", flush=True)
+                    print(f"WORKER: marked failed stage={stage_id}", flush=True)
             except Exception as e2:
                 print("WORKER ERROR (mark failed):", str(e2), flush=True)
 
-            await asyncio.sleep(5)n.",
-    "game_developer": "Sen Kıdemli Oyun Geliştirici Koschei'sin. Unity ve Unreal Engine uzmanısın.",
-    "logo_designer": "Sen Kreatif Tasarımcı Koschei'sin. Marka kimliği ve logo tasarımında uzmansın.",
-    "seo_expert": "Sen SEO ve İçerik Stratejisti Koschei'sin. Google sıralama odaklı çalışırsın.",
-    "general": "Sen KOSCHEI AI'sın. Türkiye'nin en güçlü yapay zeka asistanısın."
-}
-
-# =========================
-# Request Models
-# =========================
-class ServiceOrder(BaseModel):
-    category: str
-    prompt: str
-    user_id: str = "guest"
-    package: str = "starter"
-
-class ChatRequest(BaseModel):
-    messages: list
-    model_tier: str = "flash"
-    agent_role: str = "general"
-
-class RepoRequest(BaseModel):
-    repo_url: str
-
-
-# =========================
-# Worker Core
-# =========================
-async def claim_next_stage() -> Optional[Dict[str, Any]]:
-    if not supabase:
-        return None
-
-    res = supabase.rpc(
-        "claim_next_stage",
-        {"p_worker_id": WORKER_ID, "p_lock_minutes": WORKER_LOCK_MINUTES},
-    ).execute()
-
-    if res.data and len(res.data) > 0:
-        return res.data[0]
-    return None
-
-async def complete_stage(stage_id: str, output: Dict[str, Any], error: Optional[str] = None) -> None:
-    if not supabase:
-        return
-
-    supabase.rpc(
-        "complete_stage",
-        {
-            "p_stage_id": stage_id,
-            "p_worker_id": WORKER_ID,
-            "p_output": output,
-            "p_error": error,
-        },
-    ).execute()
-
-async def worker_loop():
-    if not WORKER_ENABLED:
-        print("WORKER: disabled (WORKER_ENABLED=0)")
-        return
-    if not supabase:
-        print("WORKER: Supabase yok, worker çalışmayacak.")
-        return
-
-    print(f"WORKER: started (id={WORKER_ID}) poll={WORKER_POLL_SECONDS}s lock={WORKER_LOCK_MINUTES}m")
-
-    while True:
-        try:
-            stage = await claim_next_stage()
-
-            if not stage:
-                await asyncio.sleep(WORKER_POLL_SECONDS)
-                continue
-
-            stage_id = stage.get("stage_id")
-            job_type = stage.get("job_type") or "general"
-            prompt = stage.get("prompt") or ""
-            stage_number = stage.get("stage_number")
-
-            print(f"WORKER: claimed stage={stage_id} job_type={job_type} stage_no={stage_number}")
-
-            # AI üretim
-            output = await generate_with_gemini(job_type, prompt)
-
-            # stage complete
-            await complete_stage(stage_id, output, None)
-            print(f"WORKER: completed stage={stage_id}")
-
-        except Exception as e:
-            err = str(e)
-            print("WORKER ERROR:", err)
-            print(traceback.format_exc())
-            # Eğer stage_id yakalanabildiyse failed basmak istersen burada ekleriz.
             await asyncio.sleep(5)
 
 # =========================
