@@ -5,16 +5,37 @@ import { Button } from "@/components/ui/Button";
 
 const KosheiAvatar = lazy(() => import("@/components/avatar/KosheiAvatar"));
 
-export default function LiveClient() {
-  const [listening, setListening] = useState(false);
-  const [transcript, setTranscript] = useState("");
-  const [reply, setReply] = useState("");
-  const [err, setErr] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
+const LANGUAGES = [
+  { code: "en-US",  label: "🇬🇧 English",    targetLang: "English"    },
+  { code: "de-DE",  label: "🇩🇪 Deutsch",    targetLang: "German"     },
+  { code: "fr-FR",  label: "🇫🇷 Français",   targetLang: "French"     },
+  { code: "es-ES",  label: "🇪🇸 Español",    targetLang: "Spanish"    },
+  { code: "it-IT",  label: "🇮🇹 Italiano",   targetLang: "Italian"    },
+  { code: "ru-RU",  label: "🇷🇺 Русский",    targetLang: "Russian"    },
+  { code: "ar-SA",  label: "🇸🇦 العربية",    targetLang: "Arabic"     },
+  { code: "ja-JP",  label: "🇯🇵 日本語",     targetLang: "Japanese"   },
+  { code: "zh-CN",  label: "🇨🇳 中文",       targetLang: "Chinese"    },
+  { code: "ko-KR",  label: "🇰🇷 한국어",     targetLang: "Korean"     },
+  { code: "pt-BR",  label: "🇧🇷 Português",  targetLang: "Portuguese" },
+  { code: "nl-NL",  label: "🇳🇱 Nederlands", targetLang: "Dutch"      },
+];
 
-  const recRef = useRef<any>(null);
+const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+
+export default function LiveClient() {
+  const [listening, setListening]   = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [reply, setReply]           = useState("");
+  const [err, setErr]               = useState("");
+  const [loading, setLoading]       = useState(false);
+  const [audioUrl, setAudioUrl]     = useState<string | null>(null);
+  const [playing, setPlaying]       = useState(false);
+
+  const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
+  const [level, setLevel]               = useState("A2");
+  const [showLangPicker, setShowLangPicker] = useState(false);
+
+  const recRef   = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
@@ -23,7 +44,7 @@ export default function LiveClient() {
     if (!SpeechRecognition) return;
 
     const rec = new SpeechRecognition();
-    rec.lang = "tr-TR";
+    rec.lang = selectedLang.code;
     rec.interimResults = true;
     rec.continuous = true;
 
@@ -33,15 +54,11 @@ export default function LiveClient() {
         t += e.results[i][0].transcript;
       setTranscript(t.trim());
     };
+    rec.onerror = (e: any) => { setErr(e?.error || "STT error"); setListening(false); };
+    rec.onend   = () => setListening(false);
 
-    rec.onerror = (e: any) => {
-      setErr(e?.error || "STT error");
-      setListening(false);
-    };
-
-    rec.onend = () => setListening(false);
     recRef.current = rec;
-  }, []);
+  }, [selectedLang]);
 
   async function ask() {
     setErr("");
@@ -55,9 +72,9 @@ export default function LiveClient() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          targetLang: "English",
+          targetLang: selectedLang.targetLang,
           nativeLang: "Turkish",
-          level: "A2",
+          level,
           text: msg,
         }),
       });
@@ -71,13 +88,11 @@ export default function LiveClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: replyText }),
       });
-
       if (ttsRes.ok) {
         const contentType = ttsRes.headers.get("Content-Type") || "audio/wav";
         const arrayBuf = await ttsRes.arrayBuffer();
         const blob = new Blob([arrayBuf], { type: contentType });
-        const url = URL.createObjectURL(blob);
-        setAudioUrl(url);
+        setAudioUrl(URL.createObjectURL(blob));
       }
     } catch (e: any) {
       setErr(e?.message || "error");
@@ -88,10 +103,10 @@ export default function LiveClient() {
 
   function playAudio() {
     if (!audioUrl) return;
-    if (audioRef.current) audioRef.current.pause();
+    audioRef.current?.pause();
     const audio = new Audio(audioUrl);
     audioRef.current = audio;
-    audio.onplay = () => setPlaying(true);
+    audio.onplay  = () => setPlaying(true);
     audio.onended = () => setPlaying(false);
     audio.onerror = () => setPlaying(false);
     audio.play();
@@ -99,26 +114,61 @@ export default function LiveClient() {
 
   function start() {
     setErr("");
-    if (!recRef.current)
-      return setErr("Tarayıcı mikrofonu desteklemiyor (Chrome önerilir).");
-    try {
-      recRef.current.start();
-      setListening(true);
-    } catch {}
+    if (!recRef.current) return setErr("Tarayıcı mikrofonu desteklemiyor (Chrome önerilir).");
+    try { recRef.current.start(); setListening(true); } catch {}
   }
 
-  function stop() {
-    try { recRef.current?.stop?.(); } catch {}
-    setListening(false);
-  }
-
-  function silence() {
-    audioRef.current?.pause?.();
-    setPlaying(false);
-  }
+  function stop()    { try { recRef.current?.stop?.(); } catch {} setListening(false); }
+  function silence() { audioRef.current?.pause?.(); setPlaying(false); }
 
   return (
     <div className="space-y-4">
+
+      {/* Dil & Seviye Seçici */}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative">
+          <button
+            onClick={() => setShowLangPicker(!showLangPicker)}
+            className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm hover:bg-white/20 transition"
+          >
+            <span>{selectedLang.label}</span>
+            <span className="text-white/50">▾</span>
+          </button>
+
+          {showLangPicker && (
+            <div className="absolute left-0 top-10 z-50 w-48 rounded-xl border border-white/20 bg-[#0d0d1f] shadow-2xl overflow-hidden">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang.code}
+                  onClick={() => { setSelectedLang(lang); setShowLangPicker(false); setTranscript(""); }}
+                  className={`w-full text-left px-4 py-2 text-sm hover:bg-white/10 transition ${
+                    selectedLang.code === lang.code ? "bg-white/15 font-semibold" : ""
+                  }`}
+                >
+                  {lang.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-1">
+          {LEVELS.map((l) => (
+            <button
+              key={l}
+              onClick={() => setLevel(l)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                level === l
+                  ? "bg-violet-600 text-white"
+                  : "border border-white/20 bg-white/5 text-white/60 hover:bg-white/10"
+              }`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Avatar */}
       <Suspense fallback={
         <div style={{
@@ -133,7 +183,7 @@ export default function LiveClient() {
         <KosheiAvatar isSpeaking={playing} />
       </Suspense>
 
-      {/* Controls */}
+      {/* Kontroller */}
       <div className="flex flex-wrap gap-2">
         {!listening ? (
           <Button onClick={start}>🎙️ Dinle</Button>
@@ -176,4 +226,4 @@ export default function LiveClient() {
       </div>
     </div>
   );
-}
+           }
