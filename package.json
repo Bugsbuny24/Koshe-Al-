@@ -1,0 +1,45 @@
+{
+  "name": "koshei",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p $PORT",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "16.0.7",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+
+    "@google/generative-ai": "^0.21.0",
+
+    "@supabase/supabase-js": "^2.49.0",
+    "@supabase/auth-helpers-nextjs": "^0.10.0",
+
+    "zod": "^3.24.1",
+
+    "zustand": "^4.5.5",
+
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.4",
+    "lucide-react": "^0.468.0",
+
+    "@codesandbox/sandpack-react": "^2.19.9"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^20.17.10",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+
+    "tailwindcss": "^3.4.15",
+    "postcss": "^8.4.49",
+    "autoprefixer": "^10.4.20",
+
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.35"
+  }
+}
