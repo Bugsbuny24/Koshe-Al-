@@ -8,178 +8,144 @@ interface AvatarProps {
 
 export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef<{
-    renderer: any;
-    scene: any;
-    camera: any;
-    vrm: any;
-    animFrame: number;
-    clock: any;
-    mouthOpen: number;
-  }>({
-    renderer: null,
-    scene: null,
-    camera: null,
-    vrm: null,
-    animFrame: 0,
-    clock: null,
-    mouthOpen: 0,
-  });
+  const isSpeakingRef = useRef(isSpeaking);
+  const cleanupRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    isSpeakingRef.current = isSpeaking;
+  }, [isSpeaking]);
 
   useEffect(() => {
     if (!mountRef.current) return;
-
     const mount = mountRef.current;
-    let THREE: any, GLTFLoader: any, VRMLoaderPlugin: any;
 
-    async function init() {
-      // Load Three.js modules
-      THREE = await import("three" as any).catch(() => null);
-      if (!THREE) {
-        // Fallback: load from CDN via script tags
-        return loadFromCDN();
-      }
-      setupScene(THREE);
-    }
-
-    function loadFromCDN() {
-      // Add scripts dynamically
-      const scripts = [
-        { src: "/three_module.js", global: "THREE" },
-        { src: "/GLTFLoader.js", global: null },
-        { src: "/three-vrm_module.js", global: null },
-      ];
-
-      let loaded = 0;
-      scripts.forEach((s) => {
+    // Load scripts sequentially from CDN
+    function loadScript(src: string): Promise<void> {
+      return new Promise((resolve, reject) => {
+        // Check if already loaded
+        if (document.querySelector(`script[src="${src}"]`)) {
+          resolve();
+          return;
+        }
         const script = document.createElement("script");
-        script.src = s.src;
-        script.type = "module";
-        script.onload = () => {
-          loaded++;
-          if (loaded === scripts.length) {
-            setTimeout(() => setupSceneGlobal(), 500);
-          }
-        };
+        script.src = src;
+        script.onload = () => resolve();
+        script.onerror = () => reject(new Error(`Failed to load ${src}`));
         document.head.appendChild(script);
       });
     }
 
-    function setupSceneGlobal() {
-      const T = (window as any).THREE;
-      if (!T) return;
-      setupScene(T);
+    async function init() {
+      try {
+        // Load Three.js from CDN
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
+        await loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js");
+        await loadScript("https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
+
+        const T = (window as any).THREE;
+        if (!T) throw new Error("THREE not loaded");
+
+        setupScene(T, mount);
+      } catch (err) {
+        console.error("Avatar init error:", err);
+        // Show fallback
+        mount.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;">Avatar yüklenemedi</div>`;
+      }
     }
 
-    function setupScene(T: any) {
-      const state = stateRef.current;
-      const w = mount.clientWidth;
-      const h = mount.clientHeight;
+    function setupScene(T: any, container: HTMLDivElement) {
+      const w = container.clientWidth;
+      const h = container.clientHeight;
 
-      // Renderer
       const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
       renderer.setSize(w, h);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.outputColorSpace = T.SRGBColorSpace || T.sRGBEncoding;
-      mount.appendChild(renderer.domElement);
-      state.renderer = renderer;
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
 
-      // Scene
       const scene = new T.Scene();
-      state.scene = scene;
-
-      // Camera - focused on face
       const camera = new T.PerspectiveCamera(30, w / h, 0.1, 20);
-      camera.position.set(0, 1.4, 1.8);
+      camera.position.set(0, 1.35, 1.6);
       camera.lookAt(0, 1.3, 0);
-      state.camera = camera;
 
       // Lighting
-      const ambient = new T.AmbientLight(0xffffff, 0.6);
-      scene.add(ambient);
-      const dirLight = new T.DirectionalLight(0xffffff, 0.8);
-      dirLight.position.set(1, 2, 2);
-      scene.add(dirLight);
-      const fillLight = new T.DirectionalLight(0x8888ff, 0.3);
-      fillLight.position.set(-1, 0, 1);
-      scene.add(fillLight);
+      scene.add(new T.AmbientLight(0xffffff, 0.7));
+      const dir = new T.DirectionalLight(0xffffff, 0.8);
+      dir.position.set(1, 2, 2);
+      scene.add(dir);
+      const fill = new T.DirectionalLight(0x8899ff, 0.3);
+      fill.position.set(-1, 0, 1);
+      scene.add(fill);
 
-      // Clock
-      state.clock = new T.Clock();
+      let vrm: any = null;
+      let mouthOpen = 0;
+      let animFrame = 0;
+      const clock = new T.Clock();
 
       // Load VRM
-      loadVRM(T, scene, state);
-
-      // Start render loop
-      animate(T, state);
-    }
-
-    function loadVRM(T: any, scene: any, state: any) {
-      const loader = new ((window as any).THREE?.GLTFLoader || T.GLTFLoader || {})();
-      if (!loader.register) return; // fallback if not available
-
-      const VRMPlugin = (window as any).THREE_VRM?.VRMLoaderPlugin;
-      if (VRMPlugin) loader.register((p: any) => new VRMPlugin(p));
+      const loader = new (T as any).GLTFLoader();
+      const VRM = (window as any).THREE_VRM;
+      if (VRM) loader.register((p: any) => new VRM.VRMLoaderPlugin(p));
 
       loader.load(
         "/Youko.vrm",
         (gltf: any) => {
-          const vrm = gltf.userData.vrm;
-          if (!vrm) return;
-          scene.add(vrm.scene);
-          // Rotate to face camera
-          vrm.scene.rotation.y = Math.PI;
-          state.vrm = vrm;
+          vrm = gltf.userData.vrm || gltf.scene;
+          const vrmScene = vrm.scene || vrm;
+          vrmScene.rotation.y = Math.PI;
+          scene.add(vrmScene);
         },
         undefined,
-        (err: any) => console.error("VRM load error:", err)
+        (e: any) => console.warn("VRM load error:", e)
       );
-    }
 
-    function animate(T: any, state: any) {
-      state.animFrame = requestAnimationFrame(() => animate(T, state));
-      const delta = state.clock?.getDelta() || 0.016;
+      // Render loop
+      function animate() {
+        animFrame = requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        const t = Date.now();
 
-      if (state.vrm) {
-        // Mouth animation when speaking
-        const targetMouth = isSpeaking ? 0.6 + Math.sin(Date.now() * 0.01) * 0.3 : 0;
-        state.mouthOpen += (targetMouth - state.mouthOpen) * 0.15;
+        if (vrm) {
+          // Mouth
+          const target = isSpeakingRef.current
+            ? 0.5 + Math.sin(t * 0.012) * 0.35
+            : 0;
+          mouthOpen += (target - mouthOpen) * 0.12;
 
-        try {
-          const exp = state.vrm.expressionManager;
-          if (exp) {
-            exp.setValue("aa", state.mouthOpen);
+          try {
+            const exp = vrm.expressionManager;
+            if (exp) exp.setValue("aa", mouthOpen);
+          } catch {}
+
+          // Subtle head sway
+          const vrmScene = vrm.scene || vrm;
+          if (vrmScene?.rotation) {
+            vrmScene.rotation.y = Math.PI + Math.sin(t * 0.0004) * 0.04;
+            vrmScene.rotation.x = Math.sin(t * 0.0003) * 0.015;
           }
-        } catch {}
 
-        // Subtle idle head movement
-        if (state.vrm.scene) {
-          state.vrm.scene.rotation.y = Math.PI + Math.sin(Date.now() * 0.0005) * 0.05;
+          if (vrm.update) vrm.update(delta);
         }
 
-        state.vrm.update(delta);
+        renderer.render(scene, camera);
       }
 
-      state.renderer?.render(state.scene, state.camera);
+      animate();
+
+      cleanupRef.current = () => {
+        cancelAnimationFrame(animFrame);
+        renderer.dispose();
+        if (container.contains(renderer.domElement)) {
+          container.removeChild(renderer.domElement);
+        }
+      };
     }
 
     init();
 
     return () => {
-      cancelAnimationFrame(stateRef.current.animFrame);
-      if (stateRef.current.renderer) {
-        stateRef.current.renderer.dispose();
-        if (mount.contains(stateRef.current.renderer.domElement)) {
-          mount.removeChild(stateRef.current.renderer.domElement);
-        }
-      }
+      cleanupRef.current?.();
     };
   }, []);
-
-  // Update speaking state without remounting
-  useEffect(() => {
-    // isSpeaking is read directly in animate loop via closure ref
-  }, [isSpeaking]);
 
   return (
     <div
@@ -189,7 +155,7 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
         height: "320px",
         borderRadius: "1rem",
         overflow: "hidden",
-        background: "linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 100%)",
+        background: "linear-gradient(180deg, #050510 0%, #130820 100%)",
       }}
     />
   );
