@@ -4,45 +4,66 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
-    const { text, lang = "en" } = await req.json();
+    const { text } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: "text is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "OPENAI_API_KEY missing" }, { status: 500 });
+      return NextResponse.json({ error: "GEMINI_API_KEY missing" }, { status: 500 });
     }
 
-    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+    const body = {
+      contents: [
+        {
+          parts: [{ text }]
+        }
+      ],
+      generationConfig: {
+        responseModalities: ["AUDIO"],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: {
+              voiceName: "Kore" // Doğal, net kadın sesi
+            }
+          }
+        }
+      }
+    };
+
+    const res = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "tts-1",
-        input: text,
-        voice: "nova", // Doğal kadın sesi - Koshei için ideal
-        response_format: "mp3",
-        speed: 1.0,
-      }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      const msg = (err as any)?.error?.message || "OpenAI TTS error";
-      console.error("OpenAI TTS error:", msg);
+      const msg = (err as any)?.error?.message || "Gemini TTS error";
+      console.error("Gemini TTS error:", msg);
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
-    const audioBuffer = await res.arrayBuffer();
+    const data = await res.json();
+
+    // Gemini TTS returns base64 encoded audio
+    const audioData = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    const mimeType = data?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType || "audio/wav";
+
+    if (!audioData) {
+      return NextResponse.json({ error: "No audio data returned" }, { status: 500 });
+    }
+
+    const audioBuffer = Buffer.from(audioData, "base64");
 
     return new NextResponse(audioBuffer, {
       status: 200,
       headers: {
-        "Content-Type": "audio/mpeg",
+        "Content-Type": mimeType,
         "Content-Length": audioBuffer.byteLength.toString(),
       },
     });
