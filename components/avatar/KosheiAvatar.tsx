@@ -19,10 +19,8 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
     if (!mountRef.current) return;
     const mount = mountRef.current;
 
-    // Load scripts sequentially from CDN
     function loadScript(src: string): Promise<void> {
       return new Promise((resolve, reject) => {
-        // Check if already loaded
         if (document.querySelector(`script[src="${src}"]`)) {
           resolve();
           return;
@@ -37,18 +35,24 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
 
     async function init() {
       try {
-        // Load Three.js from CDN
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
+        await loadScript(
+          "https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"
+        );
+        // UMD build: GLTFLoader'ı THREE global'ine attach eder
+        await loadScript(
+          "https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"
+        );
+        await loadScript(
+          "https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js"
+        );
 
         const T = (window as any).THREE;
         if (!T) throw new Error("THREE not loaded");
+        if (!T.GLTFLoader) throw new Error("GLTFLoader not on THREE");
 
         setupScene(T, mount);
       } catch (err) {
         console.error("Avatar init error:", err);
-        // Show fallback
         mount.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;">Avatar yüklenemedi</div>`;
       }
     }
@@ -67,7 +71,6 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
       camera.position.set(0, 1.35, 1.6);
       camera.lookAt(0, 1.3, 0);
 
-      // Lighting
       scene.add(new T.AmbientLight(0xffffff, 0.7));
       const dir = new T.DirectionalLight(0xffffff, 0.8);
       dir.position.set(1, 2, 2);
@@ -81,8 +84,8 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
       let animFrame = 0;
       const clock = new T.Clock();
 
-      // Load VRM
-      const loader = new (T as any).GLTFLoader();
+      // Düzeltme: T.GLTFLoader (THREE'ye attach edilmiş)
+      const loader = new T.GLTFLoader();
       const VRM = (window as any).THREE_VRM;
       if (VRM) loader.register((p: any) => new VRM.VRMLoaderPlugin(p));
 
@@ -98,31 +101,25 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
         (e: any) => console.warn("VRM load error:", e)
       );
 
-      // Render loop
       function animate() {
         animFrame = requestAnimationFrame(animate);
         const delta = clock.getDelta();
         const t = Date.now();
 
         if (vrm) {
-          // Mouth
           const target = isSpeakingRef.current
             ? 0.5 + Math.sin(t * 0.012) * 0.35
             : 0;
           mouthOpen += (target - mouthOpen) * 0.12;
-
           try {
             const exp = vrm.expressionManager;
             if (exp) exp.setValue("aa", mouthOpen);
           } catch {}
-
-          // Subtle head sway
           const vrmScene = vrm.scene || vrm;
           if (vrmScene?.rotation) {
             vrmScene.rotation.y = Math.PI + Math.sin(t * 0.0004) * 0.04;
             vrmScene.rotation.x = Math.sin(t * 0.0003) * 0.015;
           }
-
           if (vrm.update) vrm.update(delta);
         }
 
@@ -141,10 +138,7 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
     }
 
     init();
-
-    return () => {
-      cleanupRef.current?.();
-    };
+    return () => { cleanupRef.current?.(); };
   }, []);
 
   return (
@@ -159,4 +153,3 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
       }}
     />
   );
-}
