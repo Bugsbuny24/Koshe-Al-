@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 
 export default function LiveClient() {
@@ -9,6 +9,8 @@ export default function LiveClient() {
   const [reply, setReply] = useState("");
   const [err, setErr] = useState("");
   const [loading, setLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
 
   const recRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -39,51 +41,15 @@ export default function LiveClient() {
     recRef.current = rec;
   }, []);
 
-  async function speakWithElevenLabs(text: string) {
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-
-      if (!res.ok) {
-        // ElevenLabs başarısız olursa tarayıcı TTS'e düş
-        fallbackSpeak(text);
-        return;
-      }
-
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      }
-
-      const audio = new Audio(url);
-      audioRef.current = audio;
-      audio.play();
-    } catch {
-      fallbackSpeak(text);
-    }
-  }
-
-  function fallbackSpeak(text: string) {
-    (window as any).speechSynthesis?.cancel?.();
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = "tr-TR";
-    (window as any).speechSynthesis?.speak?.(u);
-  }
-
   async function ask() {
     setErr("");
+    setAudioUrl(null);
     const msg = transcript.trim();
     if (!msg) return;
     setLoading(true);
 
     try {
-      const res = await fetch("/api/chat", {
+      const chatRes = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -93,16 +59,38 @@ export default function LiveClient() {
           text: msg,
         }),
       });
-      const data = await res.json();
-      if (!res.ok || data?.error) throw new Error(data?.error || "chat failed");
+      const chatData = await chatRes.json();
+      if (!chatRes.ok || chatData?.error) throw new Error(chatData?.error || "chat failed");
+      const replyText = chatData.reply || "";
+      setReply(replyText);
 
-      setReply(data.reply || "");
-      await speakWithElevenLabs(data.reply || "");
+      const ttsRes = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: replyText }),
+      });
+
+      if (ttsRes.ok) {
+        const blob = await ttsRes.blob();
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
+      }
     } catch (e: any) {
       setErr(e?.message || "error");
     } finally {
       setLoading(false);
     }
+  }
+
+  function playAudio() {
+    if (!audioUrl) return;
+    if (audioRef.current) audioRef.current.pause();
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+    audio.onplay = () => setPlaying(true);
+    audio.onended = () => setPlaying(false);
+    audio.onerror = () => setPlaying(false);
+    audio.play();
   }
 
   function start() {
@@ -116,14 +104,13 @@ export default function LiveClient() {
   }
 
   function stop() {
-    try {
-      recRef.current?.stop?.();
-    } catch {}
+    try { recRef.current?.stop?.(); } catch {}
     setListening(false);
   }
 
   function silence() {
     audioRef.current?.pause?.();
+    setPlaying(false);
     (window as any).speechSynthesis?.cancel?.();
   }
 
@@ -131,18 +118,14 @@ export default function LiveClient() {
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
         {!listening ? (
-          <Button onClick={start}>Dinle</Button>
+          <Button onClick={start}>🎙️ Dinle</Button>
         ) : (
-          <Button onClick={stop} variant="secondary">
-            Durdur
-          </Button>
+          <Button onClick={stop} variant="secondary">⏹ Durdur</Button>
         )}
         <Button onClick={ask} variant="secondary" disabled={loading}>
-          {loading ? "Düşünüyor..." : "Sor"}
+          {loading ? "⏳ Düşünüyor..." : "✉️ Sor"}
         </Button>
-        <Button onClick={silence} variant="secondary">
-          Sustur
-        </Button>
+        <Button onClick={silence} variant="secondary">🔇 Sustur</Button>
       </div>
 
       {err && (
@@ -163,6 +146,14 @@ export default function LiveClient() {
           <div className="mt-2 whitespace-pre-wrap">
             {loading ? "⏳ Yanıt geliyor..." : reply || "Cevap burada..."}
           </div>
+          {audioUrl && !loading && (
+            <button
+              onClick={playAudio}
+              className="mt-3 flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/20 transition"
+            >
+              {playing ? "🔊 Çalıyor..." : "▶️ Sesi Çal"}
+            </button>
+          )}
         </div>
       </div>
     </div>
