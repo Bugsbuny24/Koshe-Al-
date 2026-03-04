@@ -1,1 +1,41 @@
-{\n  "dependencies": {\n    "next": "16.0.7",\n    "react": "^19.2.0",\n    "react-dom": "^19.2.0",\n    "@supabase/supabase-js": "latest",\n    "@supabase/ssr": "latest",\n    "@google/generative-ai": "latest",\n    "zod": "latest",\n    "react-hook-form": "latest",\n    "@hookform/resolvers": "latest",\n    "zustand": "latest",\n    "tailwindcss": "latest",\n    "postcss": "latest",\n    "autoprefixer": "latest",\n    "eslint": "latest",\n    "eslint-config-next": "latest",\n    "lucide-react": "latest",\n    "framer-motion": "latest",\n    "next-themes": "latest",\n    "sonner": "latest",\n    "clsx": "latest",\n    "tailwind-merge": "latest"\n  }\n}
+{
+  "name": "koshei-ai",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start -p $PORT",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^16.0.11",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+
+    "@supabase/supabase-js": "^2.49.0",
+    "@supabase/ssr": "^0.5.2",
+
+    "zod": "^3.24.0",
+    "react-hook-form": "^7.53.0",
+    "@hookform/resolvers": "^3.9.0",
+
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.5.3",
+    "lucide-react": "^0.454.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.8.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+
+    "tailwindcss": "^3.4.14",
+    "postcss": "^8.4.47",
+    "autoprefixer": "^10.4.20",
+
+    "eslint": "^9.12.0",
+    "eslint-config-next": "^16.0.11"
+  }
+}
