@@ -10,57 +10,44 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "text is required" }, { status: 400 });
     }
 
-    // Google Translate TTS - no API key needed
-    // Split text into chunks max 200 chars (Google limit)
-    const chunks = splitText(text, 200);
-    const audioChunks: Buffer[] = [];
-
-    for (const chunk of chunks) {
-      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${lang}&client=tw-ob`;
-
-      const res = await fetch(url, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)",
-          Referer: "https://translate.google.com/",
-        },
-      });
-
-      if (!res.ok) {
-        throw new Error(`Google TTS error: ${res.status}`);
-      }
-
-      const buf = Buffer.from(await res.arrayBuffer());
-      audioChunks.push(buf);
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "OPENAI_API_KEY missing" }, { status: 500 });
     }
 
-    const combined = Buffer.concat(audioChunks);
+    const res = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "tts-1",
+        input: text,
+        voice: "nova", // Doğal kadın sesi - Koshei için ideal
+        response_format: "mp3",
+        speed: 1.0,
+      }),
+    });
 
-    return new NextResponse(combined, {
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = (err as any)?.error?.message || "OpenAI TTS error";
+      console.error("OpenAI TTS error:", msg);
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+
+    const audioBuffer = await res.arrayBuffer();
+
+    return new NextResponse(audioBuffer, {
       status: 200,
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Length": combined.byteLength.toString(),
+        "Content-Length": audioBuffer.byteLength.toString(),
       },
     });
   } catch (e: any) {
     console.error("TTS error:", e?.message);
     return NextResponse.json({ error: e?.message || "tts error" }, { status: 500 });
   }
-}
-
-function splitText(text: string, maxLen: number): string[] {
-  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
-  const chunks: string[] = [];
-  let current = "";
-
-  for (const s of sentences) {
-    if ((current + s).length > maxLen) {
-      if (current) chunks.push(current.trim());
-      current = s;
-    } else {
-      current += s;
-    }
-  }
-  if (current.trim()) chunks.push(current.trim());
-  return chunks;
 }
