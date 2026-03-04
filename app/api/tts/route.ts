@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// Koshei'nin sesi için ElevenLabs voice ID
-// Render env'ye ELEVENLABS_VOICE_ID ekleyebilirsin, yoksa default "Rachel" kullanır
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Rachel - doğal kadın sesi
+const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Rachel
 
 export async function POST(req: Request) {
   try {
@@ -32,12 +30,10 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           text,
-          model_id: "eleven_multilingual_v2",
+          model_id: "eleven_flash_v2_5", // Free plan compatible, fast
           voice_settings: {
             stability: 0.5,
             similarity_boost: 0.75,
-            style: 0.3,
-            use_speaker_boost: true,
           },
         }),
       }
@@ -45,7 +41,9 @@ export async function POST(req: Request) {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      throw new Error((err as any)?.detail?.message || "ElevenLabs error");
+      const msg = (err as any)?.detail?.message || JSON.stringify(err);
+      console.error("ElevenLabs error:", msg);
+      return NextResponse.json({ error: msg }, { status: 500 });
     }
 
     const audioBuffer = await res.arrayBuffer();
@@ -58,6 +56,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (e: any) {
+    console.error("TTS error:", e?.message);
     return NextResponse.json({ error: e?.message || "tts error" }, { status: 500 });
   }
 }
