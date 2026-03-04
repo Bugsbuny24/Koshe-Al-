@@ -1,7 +1,9 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/Button";
+
+const KosheiAvatar = lazy(() => import("@/components/avatar/KosheiAvatar"));
 
 export default function LiveClient() {
   const [listening, setListening] = useState(false);
@@ -113,11 +115,25 @@ export default function LiveClient() {
   function silence() {
     audioRef.current?.pause?.();
     setPlaying(false);
-    (window as any).speechSynthesis?.cancel?.();
   }
 
   return (
     <div className="space-y-4">
+      {/* Avatar */}
+      <Suspense fallback={
+        <div style={{
+          width: "100%", height: "320px", borderRadius: "1rem",
+          background: "linear-gradient(180deg, #0a0a1a 0%, #1a0a2e 100%)",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "rgba(255,255,255,0.4)", fontSize: "14px"
+        }}>
+          Koshei yükleniyor...
+        </div>
+      }>
+        <KosheiAvatar isSpeaking={playing} />
+      </Suspense>
+
+      {/* Controls */}
       <div className="flex flex-wrap gap-2">
         {!listening ? (
           <Button onClick={start}>🎙️ Dinle</Button>
