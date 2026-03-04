@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { VRMLoaderPlugin, VRMUtils } from "@pixiv/three-vrm";
 
 interface AvatarProps {
   isSpeaking: boolean;
@@ -8,114 +11,147 @@ interface AvatarProps {
 
 export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const isSpeakingRef = useRef(isSpeaking);
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const speakingRef = useRef(isSpeaking);
+  const cleanupRef = useRef<null | (() => void)>(null);
 
   useEffect(() => {
-    isSpeakingRef.current = isSpeaking;
+    speakingRef.current = isSpeaking;
   }, [isSpeaking]);
 
   useEffect(() => {
-    if (!mountRef.current) return;
-    const mount = mountRef.current;
+    const container = mountRef.current;
+    if (!container) return;
 
-    function loadScript(src: string): Promise<void> {
-      return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-          resolve();
+    // temiz başla
+    container.innerHTML = "";
+
+    let raf = 0;
+    let renderer: THREE.WebGLRenderer | null = null;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+    camera.position.set(0, 1.35, 1.6);
+    camera.lookAt(0, 1.3, 0);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+    const key = new THREE.DirectionalLight(0xffffff, 0.9);
+    key.position.set(1.2, 2.2, 2.2);
+    scene.add(key);
+
+    const fill = new THREE.DirectionalLight(0x88a0ff, 0.25);
+    fill.position.set(-1.5, 0.8, 1.2);
+    scene.add(fill);
+
+    const clock = new THREE.Clock();
+
+    // resize helper
+    const resize = () => {
+      if (!renderer) return;
+      const w = container.clientWidth || 1;
+      const h = container.clientHeight || 1;
+      renderer.setSize(w, h, false);
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    };
+
+    // renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    container.appendChild(renderer.domElement);
+    resize();
+
+    // VRM load
+    const loader = new GLTFLoader();
+    loader.register((parser) => new VRMLoaderPlugin(parser));
+
+    // ÖNEMLİ:
+    // VRM dosyan public klasöründeyse: /avatar.vrm
+    // public/static altındaysa: /static/avatar.vrm
+    const VRM_URL = "/avatar.vrm";
+
+    let vrm: any = null;
+    let mouth = 0;
+
+    loader.load(
+      VRM_URL,
+      (gltf) => {
+        vrm = gltf.userData.vrm;
+        if (!vrm) {
+          console.warn("VRM not found on gltf.userData.vrm");
           return;
         }
-        const script = document.createElement("script");
-        script.src = src;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Failed to load ${src}`));
-        document.head.appendChild(script);
-      });
-    }
 
-    async function init() {
-      try {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
-        const T = (window as any).THREE;
-        if (!T) throw new Error("THREE not loaded");
-        if (!T.GLTFLoader) throw new Error("GLTFLoader not on THREE");
-        setupScene(T, mount);
-      } catch (err) {
-        console.error("Avatar init error:", err);
-        mount.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;">Avatar yüklenemedi</div>`;
+        // model normalize (çok kritik: ters eksen/scale vs.)
+        VRMUtils.removeUnnecessaryVertices(gltf.scene);
+        VRMUtils.removeUnnecessaryJoints(gltf.scene);
+
+        // sahneye ekle
+        vrm.scene.rotation.y = Math.PI;
+        scene.add(vrm.scene);
+      },
+      undefined,
+      (err) => {
+        console.error("VRM load error:", err);
+        container.innerHTML =
+          `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.35);font-size:13px;">
+            Avatar yüklenemedi (VRM dosyası bulunamadı/okunamadı)
+          </div>`;
       }
-    }
+    );
 
-    function setupScene(T: any, container: HTMLDivElement) {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(w, h);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      container.appendChild(renderer.domElement);
-      const scene = new T.Scene();
-      const camera = new T.PerspectiveCamera(30, w / h, 0.1, 20);
-      camera.position.set(0, 1.35, 1.6);
-      camera.lookAt(0, 1.3, 0);
-      scene.add(new T.AmbientLight(0xffffff, 0.7));
-      const dir = new T.DirectionalLight(0xffffff, 0.8);
-      dir.position.set(1, 2, 2);
-      scene.add(dir);
-      const fill = new T.DirectionalLight(0x8899ff, 0.3);
-      fill.position.set(-1, 0, 1);
-      scene.add(fill);
-      let vrm: any = null;
-      let mouthOpen = 0;
-      let animFrame = 0;
-      const clock = new T.Clock();
-      const loader = new T.GLTFLoader();
-      const VRM = (window as any).THREE_VRM;
-      if (VRM) loader.register((p: any) => new VRM.VRMLoaderPlugin(p));
-      loader.load(
-        "/Youko.vrm",
-        (gltf: any) => {
-          vrm = gltf.userData.vrm || gltf.scene;
-          const vrmScene = vrm.scene || vrm;
-          vrmScene.rotation.y = Math.PI;
-          scene.add(vrmScene);
-        },
-        undefined,
-        (e: any) => console.warn("VRM load error:", e)
-      );
-      function animate() {
-        animFrame = requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-        const t = Date.now();
-        if (vrm) {
-          const target = isSpeakingRef.current ? 0.5 + Math.sin(t * 0.012) * 0.35 : 0;
-          mouthOpen += (target - mouthOpen) * 0.12;
-          try {
-            const exp = vrm.expressionManager;
-            if (exp) exp.setValue("aa", mouthOpen);
-          } catch {}
-          const vrmScene = vrm.scene || vrm;
-          if (vrmScene?.rotation) {
-            vrmScene.rotation.y = Math.PI + Math.sin(t * 0.0004) * 0.04;
-            vrmScene.rotation.x = Math.sin(t * 0.0003) * 0.015;
-          }
-          if (vrm.update) vrm.update(delta);
+    const animate = () => {
+      raf = requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+      const t = Date.now();
+
+      if (vrm) {
+        // konuşma animasyonu (basit ağız)
+        const target = speakingRef.current ? 0.55 + Math.sin(t * 0.012) * 0.35 : 0;
+        mouth += (target - mouth) * 0.12;
+
+        const exp = vrm.expressionManager;
+        if (exp?.setValue) {
+          exp.setValue("aa", mouth);
         }
-        renderer.render(scene, camera);
+
+        // hafif kafa hareketi
+        vrm.scene.rotation.y = Math.PI + Math.sin(t * 0.0004) * 0.04;
+        vrm.scene.rotation.x = Math.sin(t * 0.0003) * 0.015;
+
+        vrm.update(delta);
       }
-      animate();
-      cleanupRef.current = () => {
-        cancelAnimationFrame(animFrame);
+
+      renderer?.render(scene, camera);
+    };
+
+    animate();
+    window.addEventListener("resize", resize);
+
+    cleanupRef.current = () => {
+      window.removeEventListener("resize", resize);
+      cancelAnimationFrame(raf);
+
+      // dispose
+      if (renderer) {
         renderer.dispose();
-        if (container.contains(renderer.domElement)) {
+        if (renderer.domElement.parentElement === container) {
           container.removeChild(renderer.domElement);
         }
-      };
-    }
+      }
+      renderer = null;
 
-    init();
-    return () => { cleanupRef.current?.(); };
+      // scene cleanup (basit)
+      scene.traverse((obj: any) => {
+        if (obj.geometry) obj.geometry.dispose?.();
+        if (obj.material) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          mats.forEach((m) => m.dispose?.());
+        }
+        if (obj.texture) obj.texture.dispose?.();
+      });
+    };
+
+    return () => cleanupRef.current?.();
   }, []);
 
   return (
@@ -130,4 +166,4 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
       }}
     />
   );
-      }
+}
