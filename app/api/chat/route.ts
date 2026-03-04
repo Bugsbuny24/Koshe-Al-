@@ -1,15 +1,28 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { NextResponse } from "next/server";
+import { teacherSystemPrompt } from "@/lib/ai/prompts";
+import { callGemini } from "@/lib/ai/gemini";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const { prompt } = await req.json();
+  try {
+    const payload = await req.json().catch(() => ({}));
+    const userText = String(payload?.text || "").trim();
 
-  const result = await model.generateContent(prompt);
-  const response = await result.response;
-  const text = response.text();
+    const targetLang = String(payload?.targetLang || "English");
+    const nativeLang = String(payload?.nativeLang || "Turkish");
+    const level = String(payload?.level || "A2");
+    const userName = payload?.userName ? String(payload.userName) : undefined;
 
-  return Response.json({ text });
+    if (!userText) {
+      return NextResponse.json({ error: "text is required" }, { status: 400 });
+    }
+
+    const system = teacherSystemPrompt({ targetLang, nativeLang, level, userName });
+    const reply = await callGemini({ system, user: userText });
+
+    return NextResponse.json({ reply });
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message || "chat error" }, { status: 500 });
+  }
 }
