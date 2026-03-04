@@ -2,61 +2,65 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"; // Rachel
-
 export async function POST(req: Request) {
   try {
-    const { text } = await req.json();
+    const { text, lang = "en" } = await req.json();
 
     if (!text) {
       return NextResponse.json({ error: "text is required" }, { status: 400 });
     }
 
-    const apiKey = process.env.ELEVENLABS_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "ELEVENLABS_API_KEY missing" }, { status: 500 });
-    }
+    // Google Translate TTS - no API key needed
+    // Split text into chunks max 200 chars (Google limit)
+    const chunks = splitText(text, 200);
+    const audioChunks: Buffer[] = [];
 
-    const voiceId = process.env.ELEVENLABS_VOICE_ID || DEFAULT_VOICE_ID;
+    for (const chunk of chunks) {
+      const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${lang}&client=tw-ob`;
 
-    const res = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
-      {
-        method: "POST",
+      const res = await fetch(url, {
         headers: {
-          "xi-api-key": apiKey,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
+          "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)",
+          Referer: "https://translate.google.com/",
         },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_flash_v2_5", // Free plan compatible, fast
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-          },
-        }),
-      }
-    );
+      });
 
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      const msg = (err as any)?.detail?.message || JSON.stringify(err);
-      console.error("ElevenLabs error:", msg);
-      return NextResponse.json({ error: msg }, { status: 500 });
+      if (!res.ok) {
+        throw new Error(`Google TTS error: ${res.status}`);
+      }
+
+      const buf = Buffer.from(await res.arrayBuffer());
+      audioChunks.push(buf);
     }
 
-    const audioBuffer = await res.arrayBuffer();
+    const combined = Buffer.concat(audioChunks);
 
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(combined, {
       status: 200,
       headers: {
         "Content-Type": "audio/mpeg",
-        "Content-Length": audioBuffer.byteLength.toString(),
+        "Content-Length": combined.byteLength.toString(),
       },
     });
   } catch (e: any) {
     console.error("TTS error:", e?.message);
     return NextResponse.json({ error: e?.message || "tts error" }, { status: 500 });
   }
+}
+
+function splitText(text: string, maxLen: number): string[] {
+  const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const s of sentences) {
+    if ((current + s).length > maxLen) {
+      if (current) chunks.push(current.trim());
+      current = s;
+    } else {
+      current += s;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+  return chunks;
 }
