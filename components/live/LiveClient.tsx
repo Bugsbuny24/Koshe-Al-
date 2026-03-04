@@ -71,7 +71,9 @@ export default function LiveClient() {
       });
 
       if (ttsRes.ok) {
-        const blob = await ttsRes.blob();
+        const contentType = ttsRes.headers.get("Content-Type") || "audio/wav";
+        const arrayBuf = await ttsRes.arrayBuffer();
+        const blob = new Blob([arrayBuf], { type: contentType });
         const url = URL.createObjectURL(blob);
         setAudioUrl(url);
       }
