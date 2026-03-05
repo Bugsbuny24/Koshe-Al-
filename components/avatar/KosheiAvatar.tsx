@@ -36,18 +36,20 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
     async function init() {
       try {
         await loadScript("https://unpkg.com/three@0.128.0/build/three.min.js");
-await loadScript("https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js");
-await loadScript("https://unpkg.com/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
+        await loadScript("https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js");
+        await loadScript("https://unpkg.com/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
         const T = (window as any).THREE;
-        if (!T.GLTFLoader) { console.warn("GLTFLoader not on THREE, trying fallback..."); }
-        setupScene(T, mount);
+        if (!T) throw new Error("THREE not loaded");
+        const GLTFLoaderClass = T.GLTFLoader || (window as any).GLTFLoader;
+        if (!GLTFLoaderClass) throw new Error("GLTFLoader not found");
+        setupScene(T, GLTFLoaderClass, mount);
       } catch (err) {
         console.error("Avatar init error:", err);
         mount.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;">Avatar yüklenemedi</div>`;
       }
     }
 
-    function setupScene(T: any, container: HTMLDivElement) {
+    function setupScene(T: any, GLTFLoaderClass: any, container: HTMLDivElement) {
       const w = container.clientWidth;
       const h = container.clientHeight;
       const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
@@ -69,7 +71,7 @@ await loadScript("https://unpkg.com/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
       let mouthOpen = 0;
       let animFrame = 0;
       const clock = new T.Clock();
-      const loader = new T.GLTFLoader();
+      const loader = new GLTFLoaderClass();
       const VRM = (window as any).THREE_VRM;
       if (VRM) loader.register((p: any) => new VRM.VRMLoaderPlugin(p));
       loader.load(
