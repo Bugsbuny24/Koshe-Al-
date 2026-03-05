@@ -20,7 +20,9 @@ const LANGUAGES = [
   { code: "nl-NL",  label: "🇳🇱 Nederlands", targetLang: "Dutch"      },
 ];
 
-const LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2"];
+// A1/A2/B1 = Türkçe konuş, B2+ = hedef dil
+const EARLY_LEVELS = ["A1", "A2", "B1"];
+const ALL_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"];
 
 export default function LiveClient() {
   const [listening, setListening]   = useState(false);
@@ -32,11 +34,20 @@ export default function LiveClient() {
   const [playing, setPlaying]       = useState(false);
 
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
-  const [level, setLevel]               = useState("A2");
+  const [level, setLevel]               = useState("A1");
   const [showLangPicker, setShowLangPicker] = useState(false);
 
-  const recRef   = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const recRef        = useRef<any>(null);
+  const audioRef      = useRef<HTMLAudioElement | null>(null);
+  const transcriptRef = useRef("");
+
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
+
+  // STT dili seviyeye göre otomatik ayarlanır
+  const sttLang = EARLY_LEVELS.includes(level) ? "tr-TR" : selectedLang.code;
+  const isEarlyLevel = EARLY_LEVELS.includes(level);
 
   useEffect(() => {
     const SpeechRecognition =
@@ -44,7 +55,7 @@ export default function LiveClient() {
     if (!SpeechRecognition) return;
 
     const rec = new SpeechRecognition();
-    rec.lang = selectedLang.code;
+    rec.lang = sttLang; // seviyeye göre TR veya hedef dil
     rec.interimResults = true;
     rec.continuous = true;
 
@@ -58,13 +69,13 @@ export default function LiveClient() {
     rec.onend   = () => setListening(false);
 
     recRef.current = rec;
-  }, [selectedLang]);
+  }, [selectedLang, level, sttLang]);
 
-  async function ask() {
+  async function ask(overrideMsg?: string) {
+    const msg = (overrideMsg ?? transcript).trim();
+    if (!msg) return;
     setErr("");
     setAudioUrl(null);
-    const msg = transcript.trim();
-    if (!msg) return;
     setLoading(true);
 
     try {
@@ -76,6 +87,7 @@ export default function LiveClient() {
           nativeLang: "Turkish",
           level,
           text: msg,
+          nativeMode: isEarlyLevel,
         }),
       });
       const chatData = await chatRes.json();
@@ -92,7 +104,15 @@ export default function LiveClient() {
         const contentType = ttsRes.headers.get("Content-Type") || "audio/wav";
         const arrayBuf = await ttsRes.arrayBuffer();
         const blob = new Blob([arrayBuf], { type: contentType });
-        setAudioUrl(URL.createObjectURL(blob));
+        const url = URL.createObjectURL(blob);
+        setAudioUrl(url);
+        // Otomatik oynat
+        const audio = new Audio(url);
+        audioRef.current = audio;
+        audio.onplay  = () => setPlaying(true);
+        audio.onended = () => setPlaying(false);
+        audio.onerror = () => setPlaying(false);
+        audio.play().catch(() => {});
       }
     } catch (e: any) {
       setErr(e?.message || "error");
@@ -114,18 +134,29 @@ export default function LiveClient() {
 
   function start() {
     setErr("");
-    if (!recRef.current) return setErr("Tarayıcı mikrofonu desteklemiyor (Chrome önerilir).");
+    setTranscript("");
+    if (!recRef.current) return setErr("Tarayici mikrofonu desteklemiyor (Chrome onerilir).");
     try { recRef.current.start(); setListening(true); } catch {}
   }
 
-  function stop()    { try { recRef.current?.stop?.(); } catch {} setListening(false); }
+  function stop() {
+    try { recRef.current?.stop?.(); } catch {}
+    setListening(false);
+    setTimeout(() => {
+      const t = transcriptRef.current.trim();
+      if (t) ask(t);
+    }, 400);
+  }
+
   function silence() { audioRef.current?.pause?.(); setPlaying(false); }
 
   return (
     <div className="space-y-4">
 
-      {/* Dil & Seviye Seçici */}
+      {/* Dil & Seviye Secici */}
       <div className="flex flex-wrap items-center gap-2">
+
+        {/* Dil */}
         <div className="relative">
           <button
             onClick={() => setShowLangPicker(!showLangPicker)}
@@ -134,7 +165,6 @@ export default function LiveClient() {
             <span>{selectedLang.label}</span>
             <span className="text-white/50">▾</span>
           </button>
-
           {showLangPicker && (
             <div className="absolute left-0 top-10 z-50 w-48 rounded-xl border border-white/20 bg-[#0d0d1f] shadow-2xl overflow-hidden">
               {LANGUAGES.map((lang) => (
@@ -152,11 +182,12 @@ export default function LiveClient() {
           )}
         </div>
 
-        <div className="flex gap-1">
-          {LEVELS.map((l) => (
+        {/* Seviye */}
+        <div className="flex gap-1 flex-wrap">
+          {ALL_LEVELS.map((l) => (
             <button
               key={l}
-              onClick={() => setLevel(l)}
+              onClick={() => { setLevel(l); setTranscript(""); }}
               className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                 level === l
                   ? "bg-violet-600 text-white"
@@ -166,6 +197,15 @@ export default function LiveClient() {
               {l}
             </button>
           ))}
+        </div>
+
+        {/* Mikrofon dili gostergesi */}
+        <div className={`rounded-xl px-3 py-1.5 text-xs font-semibold border ${
+          isEarlyLevel
+            ? "bg-orange-500/20 border-orange-500/40 text-orange-300"
+            : "bg-green-500/20 border-green-500/40 text-green-300"
+        }`}>
+          {isEarlyLevel ? "Mikrofon: Turkce" : `Mikrofon: ${selectedLang.targetLang}`}
         </div>
       </div>
 
@@ -177,7 +217,7 @@ export default function LiveClient() {
           display: "flex", alignItems: "center", justifyContent: "center",
           color: "rgba(255,255,255,0.4)", fontSize: "14px"
         }}>
-          Koshei yükleniyor...
+          Koshei yukleniyor...
         </div>
       }>
         <KosheiAvatar isSpeaking={playing} />
@@ -186,14 +226,14 @@ export default function LiveClient() {
       {/* Kontroller */}
       <div className="flex flex-wrap gap-2">
         {!listening ? (
-          <Button onClick={start}>🎙️ Dinle</Button>
+          <Button onClick={start}>Dinle</Button>
         ) : (
-          <Button onClick={stop} variant="secondary">⏹ Durdur</Button>
+          <Button onClick={stop} variant="secondary">Durdur</Button>
         )}
-        <Button onClick={ask} variant="secondary" disabled={loading}>
-          {loading ? "⏳ Düşünüyor..." : "✉️ Sor"}
+        <Button onClick={() => ask()} variant="secondary" disabled={loading || !transcript.trim()}>
+          {loading ? "Dusunuyor..." : "Sor"}
         </Button>
-        <Button onClick={silence} variant="secondary">🔇 Sustur</Button>
+        <Button onClick={silence} variant="secondary">Sustur</Button>
       </div>
 
       {err && (
@@ -204,26 +244,28 @@ export default function LiveClient() {
 
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-          <div className="text-sm text-white/60">Sen:</div>
+          <div className="text-sm text-white/60">
+            Sen {isEarlyLevel ? "(Turkce konusuyorsun)" : `(${selectedLang.targetLang} pratik)`}:
+          </div>
           <div className="mt-2 whitespace-pre-wrap">
-            {transcript || "Konuş ya da metin oluşmasını bekle..."}
+            {transcript || "Konus ya da metin olusmasini bekle..."}
           </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="text-sm text-white/60">Koshei:</div>
           <div className="mt-2 whitespace-pre-wrap">
-            {loading ? "⏳ Yanıt geliyor..." : reply || "Cevap burada..."}
+            {loading ? "Yanit geliyor..." : reply || "Cevap burada..."}
           </div>
           {audioUrl && !loading && (
             <button
               onClick={playAudio}
               className="mt-3 flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2 text-sm hover:bg-white/20 transition"
             >
-              {playing ? "🔊 Çalıyor..." : "▶️ Sesi Çal"}
+              {playing ? "Caliyor..." : "Sesi Cal"}
             </button>
           )}
         </div>
       </div>
     </div>
   );
-           }
+}
