@@ -1,36 +1,38 @@
 Koshei AI
 The First AI-Native Digital Language University
-Reimagining global language education through structured AI intelligence.
+Reimagining global language education through structured artificial intelligence.
 Vision
 Koshei AI is not a chatbot.
-It is the foundation of an AI-powered digital university.
-We are building the world’s first structured, AI-native, multi-language education system that mirrors the academic journey from primary school to university-level mastery.
+It is the foundation of a fully AI-native digital university.
+We are building the world’s first structured, AI-powered, multi-language academic system that mirrors the complete educational journey — from primary literacy to university-level linguistic mastery.
 From A1 to D2.
-From alphabet to academic fluency.
+From phonetics to academic discourse.
 From beginner to indistinguishable native-level competence.
-The Problem
-Current language learning platforms:
-Focus on vocabulary repetition
-Follow static CEFR A1–C2 models
-Lack structured academic progression
-Do not adapt in real-time
-Separate conversation from curriculum
+Koshei is education infrastructure — not a learning app.
+The Structural Problem
+Global language learning platforms today:
+Optimize for vocabulary repetition
+Follow static CEFR A1–C2 categorization
+Separate conversation from structured curriculum
+Lack academic progression modeling
+Do not adapt instruction intensity in real time
+Treat AI as a chatbot layer — not as curriculum architecture
 There is no AI-native university model for language education.
 Until now.
-The Koshei Model (A1 → D2 Framework)
-Koshei extends beyond CEFR by introducing an 8-tier academic progression model inspired by real-world education systems.
+The Koshei Academic Framework (A1 → D2)
+Koshei extends beyond CEFR by introducing an 8-tier progression system inspired by real-world academic institutions.
 Level
 Academic Equivalent
 Competency
 A1
-Primary School Year 1
-Alphabet & phonetics
+Primary Year 1
+Alphabet & phonetics mastery
 A2
 Elementary
-Core vocabulary
+Core vocabulary formation
 B1
 Middle School
-Structured sentences
+Structured sentence construction
 B2
 Pre-High School
 Conversational fluency
@@ -39,23 +41,49 @@ High School
 Advanced natural speech
 C2
 Graduate
-Near-native
+Near-native control
 D1
 Undergraduate
 Academic discourse
 D2
 Native-equivalent
-Spontaneous cultural fluency
-Each level is measurable, structured, and score-driven.
+Cultural & spontaneous fluency
+Each level is:
+Measurable
+Score-driven
+Structured
+Curriculum-bound
+Behavior-adaptive
+Koshei behaves differently at every level.
 Language-Specific Curriculum Intelligence
 Koshei does not teach languages uniformly.
-Each language has its own structural entry point:
-Chinese → Pinyin + tones first
+Each language has a distinct structural entry point:
+Chinese → Pinyin + tonal foundation
 Japanese → Hiragana before Kanji
-Arabic → Script forms + right-to-left writing
+Arabic → Script forms + right-to-left orientation
 Russian → Cyrillic phonetic grounding
-German → Articles & case awareness early
-The AI dynamically adjusts pacing, correction intensity, and language ratio depending on level.
+German → Articles & case structure early-stage emphasis
+The AI dynamically adjusts:
+Error correction intensity
+Native vs target language ratio
+Speaking tempo
+Cognitive load
+Repetition frequency
+Academic pressure level
+This is adaptive pedagogy — not scripted tutoring.
+Real-Time AI Teaching Engine
+Koshei operates on a layered AI architecture:
+Structured system prompt engine
+Curriculum intelligence layer
+Level-based behavioral constraints
+Dynamic language ratio control
+Scoring & progression tracking
+Context-aware conversation memory
+Academic correction framework
+Conversation is guided.
+Progression is measurable.
+Instruction is structured.
+This is guided adaptive education — not free-form AI chat.
 Core Technology Architecture
 Layer
 Technology
@@ -71,59 +99,45 @@ Backend
 Node.js API Routes
 Database
 Supabase (PostgreSQL)
-Hosting
-Render (scalable infrastructure)
+Infrastructure
+Render (scalable deployment)
 Designed for modular scaling and future microservice extraction.
-Real-Time AI Teaching Engine
-Koshei operates on:
-Structured system prompts
-Curriculum intelligence layer
-Dynamic language ratio control
-Scoring & progression tracking
-Error correction engine
-Context-aware conversation flow
-This is not free-form chat.
-It is guided adaptive education.
 Current Capabilities
 Real-time voice conversation
-Level-adaptive AI behavior
+Level-adaptive AI instruction
 Per-language curriculum differentiation
-Auto speech recognition language switching
-Score-based progression
-Modular AI prompt architecture
-University-style evaluation model
+Automated STT language switching
+Score-based progression system
+Modular AI prompt engine
+University-style academic structure
+Scalable SaaS-ready architecture
 Market Positioning
-Koshei AI is positioned at the intersection of:
-AI-native education
+Koshei AI sits at the intersection of:
+AI-native education systems
 Structured language acquisition
-Real-time adaptive tutoring
-Digital university systems
-This is not Duolingo.
-This is not ChatGPT tutoring.
-This is AI academic infrastructure.
+Adaptive tutoring infrastructure
+Digital university modeling
+Koshei is not Duolingo.
+Koshei is not ChatGPT tutoring.
+Koshei is academic AI infrastructure.
 Roadmap
-Phase 1 – Core AI Teaching Engine (Complete)
-Phase 2 – Subscription & Per-Language Monetization
-Phase 3 – Institutional Dashboard & Student Analytics
-Phase 4 – Enterprise Licensing (Schools & Universities)
-Phase 5 – Fully AI-powered digital campus
+Phase 1 — Core AI Teaching Engine (Completed)
+Phase 2 — Per-Language Monetization Model
+Phase 3 — Institutional Dashboard & Analytics
+Phase 4 — Enterprise Licensing (Schools & Universities)
+Phase 5 — Fully AI-powered Digital Campus
 Investment Thesis
-Language education is a $60B+ global market.
+Global language education exceeds $60B annually.
 Koshei introduces:
-AI-native architecture
-Curriculum-structured progression
-Academic-grade measurement
-Multi-language scaling model
-High-margin SaaS subscription potential
-Built lean. Designed to scale.
-Contributing
-We welcome contributors in:
-Real-time lip-sync avatar systems
-Advanced streaming STT
-Subscription infrastructure
-AI optimization
-Educational data analytics
+AI-native curriculum architecture
+Structured academic progression
+Multi-language scalable model
+High-margin SaaS subscription framework
+Modular enterprise licensing potential
+Built lean.
+Designed for global scale.
+Positioned for institutional adoption.
 Mission
 To build the first AI-driven digital university for language mastery.
-Koshei is not an app.
-It is infrastructure for the future of education
+Koshei is not an application.
+It is infrastructure for the future of education.
