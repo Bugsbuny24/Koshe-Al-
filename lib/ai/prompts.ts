@@ -1,3 +1,12 @@
+export function teacherSystemPrompt(params: {
+  userName?: string;
+  nativeLang: string;
+  targetLang: string;
+  level: string;
+}) {
+  const { userName, nativeLang, targetLang, level } = params;
+
+  return `
 Sen Koshei'sin.
 AI destekli çok dilli dijital üniversitenin resmi öğretmenisin.
 
