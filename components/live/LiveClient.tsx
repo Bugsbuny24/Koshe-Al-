@@ -20,9 +20,8 @@ const LANGUAGES = [
   { code: "nl-NL",  label: "🇳🇱 Nederlands", targetLang: "Dutch"      },
 ];
 
-// A1/A2/B1 = Türkçe konuş, B2+ = hedef dil
 const EARLY_LEVELS = ["A1", "A2", "B1"];
-const ALL_LEVELS = ["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"];
+const ALL_LEVELS   = ["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"];
 
 export default function LiveClient() {
   const [listening, setListening]   = useState(false);
@@ -30,49 +29,89 @@ export default function LiveClient() {
   const [reply, setReply]           = useState("");
   const [err, setErr]               = useState("");
   const [loading, setLoading]       = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const [audioUrl, setAudioUrl]     = useState<string | null>(null);
   const [playing, setPlaying]       = useState(false);
+  const [score, setScore]           = useState(0);
 
   const [selectedLang, setSelectedLang] = useState(LANGUAGES[0]);
   const [level, setLevel]               = useState("A1");
   const [showLangPicker, setShowLangPicker] = useState(false);
 
-  const recRef        = useRef<any>(null);
+  const mediaRecRef   = useRef<MediaRecorder | null>(null);
+  const chunksRef     = useRef<Blob[]>([]);
   const audioRef      = useRef<HTMLAudioElement | null>(null);
   const transcriptRef = useRef("");
+
+  const isEarlyLevel = EARLY_LEVELS.includes(level);
+  const sttLang      = isEarlyLevel ? "tr-TR" : selectedLang.code;
 
   useEffect(() => {
     transcriptRef.current = transcript;
   }, [transcript]);
 
-  // STT dili seviyeye göre otomatik ayarlanır
-  const sttLang = EARLY_LEVELS.includes(level) ? "tr-TR" : selectedLang.code;
-  const isEarlyLevel = EARLY_LEVELS.includes(level);
+  async function startRecording() {
+    setErr("");
+    setTranscript("");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
+      const rec = new MediaRecorder(stream, { mimeType });
+      chunksRef.current = [];
 
-  useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
 
-    const rec = new SpeechRecognition();
-    rec.lang = sttLang; // seviyeye göre TR veya hedef dil
-    rec.interimResults = true;
-    rec.continuous = true;
+      rec.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: mimeType });
+        if (blob.size < 1000) return; // cok kisa ses, yoksay
+        await transcribeAudio(blob, mimeType);
+      };
 
-    rec.onresult = (e: any) => {
-      let t = "";
-      for (let i = e.resultIndex; i < e.results.length; i++)
-        t += e.results[i][0].transcript;
-      setTranscript(t.trim());
-    };
-    rec.onerror = (e: any) => { setErr(e?.error || "STT error"); setListening(false); };
-    rec.onend   = () => setListening(false);
+      rec.start(250);
+      mediaRecRef.current = rec;
+      setListening(true);
+    } catch (e: any) {
+      setErr("Mikrofon erisimi reddedildi. Tarayici ayarlarindan izin ver.");
+    }
+  }
 
-    recRef.current = rec;
-  }, [selectedLang, level, sttLang]);
+  async function stopRecording() {
+    if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") {
+      mediaRecRef.current.stop();
+    }
+    setListening(false);
+  }
+
+  async function transcribeAudio(blob: Blob, mimeType: string) {
+    setTranscribing(true);
+    try {
+      const fd = new FormData();
+      fd.append("audio", new File([blob], "audio.webm", { type: mimeType }));
+      fd.append("lang", sttLang);
+
+      const res  = await fetch("/api/stt", { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (!res.ok || data.error) throw new Error(data.error || "STT failed");
+
+      const text = data.transcript?.trim() || "";
+      setTranscript(text);
+      if (text) {
+        // Transcript gelince otomatik sor
+        setTimeout(() => ask(text), 300);
+      }
+    } catch (e: any) {
+      setErr(e?.message || "Ses anlasilamadi, tekrar deneyin.");
+    } finally {
+      setTranscribing(false);
+    }
+  }
 
   async function ask(overrideMsg?: string) {
-    const msg = (overrideMsg ?? transcript).trim();
+    const msg = (overrideMsg ?? transcriptRef.current).trim();
     if (!msg) return;
     setErr("");
     setAudioUrl(null);
@@ -95,6 +134,10 @@ export default function LiveClient() {
       const replyText = chatData.reply || "";
       setReply(replyText);
 
+      // Skoru parse et (+10, +5 gibi)
+      const scoreMatch = replyText.match(/\+(\d+)\s*puan/i);
+      if (scoreMatch) setScore(s => s + parseInt(scoreMatch[1]));
+
       const ttsRes = await fetch("/api/tts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -102,16 +145,15 @@ export default function LiveClient() {
       });
       if (ttsRes.ok) {
         const contentType = ttsRes.headers.get("Content-Type") || "audio/wav";
-        const arrayBuf = await ttsRes.arrayBuffer();
-        const blob = new Blob([arrayBuf], { type: contentType });
-        const url = URL.createObjectURL(blob);
+        const arrayBuf    = await ttsRes.arrayBuffer();
+        const blob2       = new Blob([arrayBuf], { type: contentType });
+        const url         = URL.createObjectURL(blob2);
         setAudioUrl(url);
-        // Otomatik oynat
         const audio = new Audio(url);
-        audioRef.current = audio;
-        audio.onplay  = () => setPlaying(true);
-        audio.onended = () => setPlaying(false);
-        audio.onerror = () => setPlaying(false);
+        audioRef.current  = audio;
+        audio.onplay      = () => setPlaying(true);
+        audio.onended     = () => setPlaying(false);
+        audio.onerror     = () => setPlaying(false);
         audio.play().catch(() => {});
       }
     } catch (e: any) {
@@ -125,38 +167,28 @@ export default function LiveClient() {
     if (!audioUrl) return;
     audioRef.current?.pause();
     const audio = new Audio(audioUrl);
-    audioRef.current = audio;
-    audio.onplay  = () => setPlaying(true);
-    audio.onended = () => setPlaying(false);
-    audio.onerror = () => setPlaying(false);
+    audioRef.current  = audio;
+    audio.onplay      = () => setPlaying(true);
+    audio.onended     = () => setPlaying(false);
+    audio.onerror     = () => setPlaying(false);
     audio.play();
-  }
-
-  function start() {
-    setErr("");
-    setTranscript("");
-    if (!recRef.current) return setErr("Tarayici mikrofonu desteklemiyor (Chrome onerilir).");
-    try { recRef.current.start(); setListening(true); } catch {}
-  }
-
-  function stop() {
-    try { recRef.current?.stop?.(); } catch {}
-    setListening(false);
-    setTimeout(() => {
-      const t = transcriptRef.current.trim();
-      if (t) ask(t);
-    }, 400);
   }
 
   function silence() { audioRef.current?.pause?.(); setPlaying(false); }
 
+  const statusText = transcribing
+    ? "Ses analiz ediliyor..."
+    : loading
+    ? "Koshei dusunuyor..."
+    : listening
+    ? "Dinleniyor..."
+    : "Hazir";
+
   return (
     <div className="space-y-4">
 
-      {/* Dil & Seviye Secici */}
+      {/* Dil & Seviye */}
       <div className="flex flex-wrap items-center gap-2">
-
-        {/* Dil */}
         <div className="relative">
           <button
             onClick={() => setShowLangPicker(!showLangPicker)}
@@ -182,7 +214,6 @@ export default function LiveClient() {
           )}
         </div>
 
-        {/* Seviye */}
         <div className="flex gap-1 flex-wrap">
           {ALL_LEVELS.map((l) => (
             <button
@@ -199,7 +230,7 @@ export default function LiveClient() {
           ))}
         </div>
 
-        {/* Mikrofon dili gostergesi */}
+        {/* Mikrofon dili + Skor */}
         <div className={`rounded-xl px-3 py-1.5 text-xs font-semibold border ${
           isEarlyLevel
             ? "bg-orange-500/20 border-orange-500/40 text-orange-300"
@@ -207,6 +238,12 @@ export default function LiveClient() {
         }`}>
           {isEarlyLevel ? "Mikrofon: Turkce" : `Mikrofon: ${selectedLang.targetLang}`}
         </div>
+
+        {score > 0 && (
+          <div className="rounded-xl px-3 py-1.5 text-xs font-semibold border bg-yellow-500/20 border-yellow-500/40 text-yellow-300">
+            Puan: {score}
+          </div>
+        )}
       </div>
 
       {/* Avatar */}
@@ -223,15 +260,22 @@ export default function LiveClient() {
         <KosheiAvatar isSpeaking={playing} />
       </Suspense>
 
+      {/* Durum */}
+      <div className="text-center text-sm text-white/50">{statusText}</div>
+
       {/* Kontroller */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-2 justify-center">
         {!listening ? (
-          <Button onClick={start}>Dinle</Button>
+          <Button onClick={startRecording} disabled={transcribing || loading}>
+            Dinle
+          </Button>
         ) : (
-          <Button onClick={stop} variant="secondary">Durdur</Button>
+          <Button onClick={stopRecording} variant="secondary">
+            Durdur ve Gonder
+          </Button>
         )}
-        <Button onClick={() => ask()} variant="secondary" disabled={loading || !transcript.trim()}>
-          {loading ? "Dusunuyor..." : "Sor"}
+        <Button onClick={() => ask()} variant="secondary" disabled={loading || transcribing || !transcript.trim()}>
+          Tekrar Sor
         </Button>
         <Button onClick={silence} variant="secondary">Sustur</Button>
       </div>
@@ -245,15 +289,17 @@ export default function LiveClient() {
       <div className="grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="text-sm text-white/60">
-            Sen {isEarlyLevel ? "(Turkce konusuyorsun)" : `(${selectedLang.targetLang} pratik)`}:
+            Sen {isEarlyLevel ? "(Turkce)" : `(${selectedLang.targetLang})`}:
           </div>
-          <div className="mt-2 whitespace-pre-wrap">
-            {transcript || "Konus ya da metin olusmasini bekle..."}
+          <div className="mt-2 whitespace-pre-wrap text-sm">
+            {transcribing
+              ? "Ses analiz ediliyor..."
+              : transcript || "Konusmak icin 'Dinle' butonuna bas..."}
           </div>
         </div>
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <div className="text-sm text-white/60">Koshei:</div>
-          <div className="mt-2 whitespace-pre-wrap">
+          <div className="mt-2 whitespace-pre-wrap text-sm">
             {loading ? "Yanit geliyor..." : reply || "Cevap burada..."}
           </div>
           {audioUrl && !loading && (
