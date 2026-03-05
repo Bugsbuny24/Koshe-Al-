@@ -35,12 +35,11 @@ export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
 
     async function init() {
       try {
-        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js");
-        await loadScript("https://cdn.jsdelivr.net/npm/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
+        await loadScript("https://unpkg.com/three@0.128.0/build/three.min.js");
+await loadScript("https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js");
+await loadScript("https://unpkg.com/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
         const T = (window as any).THREE;
-        if (!T) throw new Error("THREE not loaded");
-        if (!T.GLTFLoader) throw new Error("GLTFLoader not on THREE");
+        if (!T.GLTFLoader) { console.warn("GLTFLoader not on THREE, trying fallback..."); }
         setupScene(T, mount);
       } catch (err) {
         console.error("Avatar init error:", err);
