@@ -1,134 +1,142 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 
 interface AvatarProps {
   isSpeaking: boolean;
 }
 
 export default function KosheiAvatar({ isSpeaking }: AvatarProps) {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const isSpeakingRef = useRef(isSpeaking);
-  const cleanupRef = useRef<(() => void) | null>(null);
+  const [blink, setBlink] = useState(false);
 
   useEffect(() => {
-    isSpeakingRef.current = isSpeaking;
-  }, [isSpeaking]);
-
-  useEffect(() => {
-    if (!mountRef.current) return;
-    const mount = mountRef.current;
-
-    function loadScript(src: string): Promise<void> {
-      return new Promise((resolve, reject) => {
-        if (document.querySelector(`script[src="${src}"]`)) {
-          resolve();
-          return;
-        }
-        const script = document.createElement("script");
-        script.src = src;
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error(`Failed to load ${src}`));
-        document.head.appendChild(script);
-      });
-    }
-
-    async function init() {
-      try {
-        await loadScript("https://unpkg.com/three@0.128.0/build/three.min.js");
-        await loadScript("https://unpkg.com/three@0.128.0/examples/js/loaders/GLTFLoader.js");
-        await loadScript("https://unpkg.com/@pixiv/three-vrm@0.6.7/lib/three-vrm.js");
-        const T = (window as any).THREE;
-        if (!T) throw new Error("THREE not loaded");
-        const GLTFLoaderClass = T.GLTFLoader || (window as any).GLTFLoader;
-        if (!GLTFLoaderClass) throw new Error("GLTFLoader not found");
-        setupScene(T, GLTFLoaderClass, mount);
-      } catch (err) {
-        console.error("Avatar init error:", err);
-        mount.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.3);font-size:13px;">Avatar yüklenemedi</div>`;
-      }
-    }
-
-    function setupScene(T: any, GLTFLoaderClass: any, container: HTMLDivElement) {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-      const renderer = new T.WebGLRenderer({ antialias: true, alpha: true });
-      renderer.setSize(w, h);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      container.appendChild(renderer.domElement);
-      const scene = new T.Scene();
-      const camera = new T.PerspectiveCamera(30, w / h, 0.1, 20);
-      camera.position.set(0, 1.35, 1.6);
-      camera.lookAt(0, 1.3, 0);
-      scene.add(new T.AmbientLight(0xffffff, 0.7));
-      const dir = new T.DirectionalLight(0xffffff, 0.8);
-      dir.position.set(1, 2, 2);
-      scene.add(dir);
-      const fill = new T.DirectionalLight(0x8899ff, 0.3);
-      fill.position.set(-1, 0, 1);
-      scene.add(fill);
-      let vrm: any = null;
-      let mouthOpen = 0;
-      let animFrame = 0;
-      const clock = new T.Clock();
-      const loader = new GLTFLoaderClass();
-      const VRM = (window as any).THREE_VRM;
-      if (VRM) loader.register((p: any) => new VRM.VRMLoaderPlugin(p));
-      loader.load(
-        "/Youko.vrm",
-        (gltf: any) => {
-          vrm = gltf.userData.vrm || gltf.scene;
-          const vrmScene = vrm.scene || vrm;
-          vrmScene.rotation.y = Math.PI;
-          scene.add(vrmScene);
-        },
-        undefined,
-        (e: any) => console.warn("VRM load error:", e)
-      );
-      function animate() {
-        animFrame = requestAnimationFrame(animate);
-        const delta = clock.getDelta();
-        const t = Date.now();
-        if (vrm) {
-          const target = isSpeakingRef.current ? 0.5 + Math.sin(t * 0.012) * 0.35 : 0;
-          mouthOpen += (target - mouthOpen) * 0.12;
-          try {
-            const exp = vrm.expressionManager;
-            if (exp) exp.setValue("aa", mouthOpen);
-          } catch {}
-          const vrmScene = vrm.scene || vrm;
-          if (vrmScene?.rotation) {
-            vrmScene.rotation.y = Math.PI + Math.sin(t * 0.0004) * 0.04;
-            vrmScene.rotation.x = Math.sin(t * 0.0003) * 0.015;
-          }
-          if (vrm.update) vrm.update(delta);
-        }
-        renderer.render(scene, camera);
-      }
-      animate();
-      cleanupRef.current = () => {
-        cancelAnimationFrame(animFrame);
-        renderer.dispose();
-        if (container.contains(renderer.domElement)) {
-          container.removeChild(renderer.domElement);
-        }
-      };
-    }
-
-    init();
-    return () => { cleanupRef.current?.(); };
+    const interval = setInterval(() => {
+      setBlink(true);
+      setTimeout(() => setBlink(false), 150);
+    }, 3000 + Math.random() * 2000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
-    <div
-      ref={mountRef}
-      style={{
-        width: "100%",
-        height: "320px",
-        borderRadius: "1rem",
+    <div style={{
+      width: "100%",
+      height: "320px",
+      borderRadius: "1rem",
+      overflow: "hidden",
+      background: "linear-gradient(180deg, #050510 0%, #130820 100%)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      position: "relative",
+    }}>
+
+      <style>{`
+        @keyframes speakPulse {
+          0%, 100% { box-shadow: 0 0 30px rgba(150,80,255,0.5), 0 0 60px rgba(100,60,200,0.3); }
+          50% { box-shadow: 0 0 50px rgba(150,80,255,0.9), 0 0 100px rgba(100,60,200,0.6); }
+        }
+        @keyframes soundBar {
+          from { transform: scaleY(0.4); opacity: 0.6; }
+          to { transform: scaleY(1.2); opacity: 1; }
+        }
+        @keyframes idlePulse {
+          0%, 100% { box-shadow: 0 0 15px rgba(100,60,200,0.2); }
+          50% { box-shadow: 0 0 25px rgba(100,60,200,0.4); }
+        }
+      `}</style>
+
+      {/* Arka plan glow */}
+      <div style={{
+        position: "absolute",
+        inset: 0,
+        background: isSpeaking
+          ? "radial-gradient(ellipse at center, rgba(100,60,200,0.3) 0%, transparent 70%)"
+          : "radial-gradient(ellipse at center, rgba(40,20,80,0.15) 0%, transparent 70%)",
+        transition: "all 0.5s ease",
+      }} />
+
+      {/* Avatar */}
+      <div style={{
+        position: "relative",
+        width: "260px",
+        height: "260px",
+        borderRadius: "50%",
         overflow: "hidden",
-        background: "linear-gradient(180deg, #050510 0%, #130820 100%)",
-      }}
-    />
+        border: isSpeaking
+          ? "2px solid rgba(150,80,255,0.9)"
+          : "2px solid rgba(100,60,200,0.3)",
+        animation: isSpeaking
+          ? "speakPulse 1.2s ease-in-out infinite"
+          : "idlePulse 3s ease-in-out infinite",
+        transition: "border 0.3s ease",
+      }}>
+        <img
+          src="/koshei-avatar.png"
+          alt="Koshei"
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            objectPosition: "center top",
+            filter: blink ? "brightness(0.92)" : "brightness(1)",
+            transition: "filter 0.08s",
+          }}
+        />
+        {isSpeaking && (
+          <div style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: "35%",
+            background: "linear-gradient(to top, rgba(120,60,255,0.45), transparent)",
+          }} />
+        )}
+      </div>
+
+      {/* Durum göstergesi */}
+      <div style={{
+        position: "absolute",
+        bottom: "16px",
+        left: "50%",
+        transform: "translateX(-50%)",
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        background: "rgba(0,0,0,0.55)",
+        backdropFilter: "blur(10px)",
+        borderRadius: "20px",
+        padding: "6px 16px",
+        border: "1px solid rgba(255,255,255,0.08)",
+        whiteSpace: "nowrap",
+      }}>
+        {isSpeaking ? (
+          <>
+            <div style={{ display: "flex", gap: "3px", alignItems: "center", height: "20px" }}>
+              {[1,2,3,4,5].map(i => (
+                <div key={i} style={{
+                  width: "3px",
+                  borderRadius: "2px",
+                  background: "rgba(150,80,255,0.9)",
+                  animation: `soundBar 0.5s ease-in-out infinite alternate`,
+                  animationDelay: `${i * 0.08}s`,
+                  height: `${6 + i * 3}px`,
+                }} />
+              ))}
+            </div>
+            <span style={{ fontSize: "12px", color: "rgba(200,150,255,0.9)" }}>Koshei konuşuyor</span>
+          </>
+        ) : (
+          <>
+            <div style={{
+              width: "8px", height: "8px", borderRadius: "50%",
+              background: "rgba(100,220,100,0.9)",
+              boxShadow: "0 0 8px rgba(100,220,100,0.6)",
+            }} />
+            <span style={{ fontSize: "12px", color: "rgba(180,255,180,0.8)" }}>Hazır</span>
+          </>
+        )}
+      </div>
+    </div>
   );
 }
