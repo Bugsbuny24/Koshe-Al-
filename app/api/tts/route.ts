@@ -92,13 +92,13 @@ export async function POST(req: Request) {
     );
 
     return new NextResponse(responseBody as unknown as BodyInit, {
-      status: 200,
-      headers: {
-        "Content-Type": "audio/wav",
-        "Content-Length": String(responseBody.length),
-        "Cache-Control": "no-store",
-      },
-    });
+  status: 200,
+  headers: {
+    "Content-Type": "audio/wav",
+    "Content-Length": String(responseBody.length),
+    "Cache-Control": "no-store",
+  },
+});
   } catch (e: any) {
     console.error("TTS error:", e?.message);
     return NextResponse.json(
