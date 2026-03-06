@@ -2,34 +2,27 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-// Gemini TTS returns raw PCM (L16, 24kHz, mono)
-// We need to wrap it in a WAV header for browser playback
-function pcmToWav(pcmBuffer: Buffer, sampleRate = 24000, channels = 1, bitDepth = 16): Buffer {
+function pcmToWav(pcmBuffer: Buffer, sampleRate = 24000, channels = 1, bitDepth = 16): Uint8Array {
   const dataSize = pcmBuffer.length;
   const headerSize = 44;
   const wav = Buffer.alloc(headerSize + dataSize);
 
-  // RIFF header
   wav.write("RIFF", 0);
   wav.writeUInt32LE(36 + dataSize, 4);
   wav.write("WAVE", 8);
-
-  // fmt chunk
   wav.write("fmt ", 12);
-  wav.writeUInt32LE(16, 16);           // chunk size
-  wav.writeUInt16LE(1, 20);            // PCM format
+  wav.writeUInt32LE(16, 16);
+  wav.writeUInt16LE(1, 20);
   wav.writeUInt16LE(channels, 22);
   wav.writeUInt32LE(sampleRate, 24);
-  wav.writeUInt32LE(sampleRate * channels * bitDepth / 8, 28); // byte rate
-  wav.writeUInt16LE(channels * bitDepth / 8, 32);              // block align
+  wav.writeUInt32LE(sampleRate * channels * bitDepth / 8, 28);
+  wav.writeUInt16LE(channels * bitDepth / 8, 32);
   wav.writeUInt16LE(bitDepth, 34);
-
-  // data chunk
   wav.write("data", 36);
   wav.writeUInt32LE(dataSize, 40);
   pcmBuffer.copy(wav, 44);
 
-  return wav;
+  return new Uint8Array(wav);
 }
 
 export async function POST(req: Request) {
@@ -68,7 +61,6 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       const msg = (err as any)?.error?.message || "Gemini TTS error";
-      console.error("Gemini TTS error:", msg);
       return NextResponse.json({ error: msg }, { status: 500 });
     }
 
@@ -80,16 +72,16 @@ export async function POST(req: Request) {
     }
 
     const pcmBuffer = Buffer.from(part.data, "base64");
-    
-    // Check if it's already WAV (has RIFF header)
     const isWav = pcmBuffer.slice(0, 4).toString() === "RIFF";
-    const audioBuffer = isWav ? pcmBuffer : pcmToWav(pcmBuffer);
+    const audioBytes: Uint8Array = isWav
+      ? new Uint8Array(pcmBuffer)
+      : pcmToWav(pcmBuffer);
 
-    return new NextResponse(audioBuffer, {
+    return new NextResponse(audioBytes, {
       status: 200,
       headers: {
         "Content-Type": "audio/wav",
-        "Content-Length": audioBuffer.byteLength.toString(),
+        "Content-Length": audioBytes.byteLength.toString(),
       },
     });
   } catch (e: any) {
