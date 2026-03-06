@@ -91,7 +91,7 @@ export async function POST(req: Request) {
       audioBytes.byteLength
     );
 
-    return new NextResponse(responseBody, {
+    return new NextResponse(responseBody as unknown as BodyInit, {
       status: 200,
       headers: {
         "Content-Type": "audio/wav",
