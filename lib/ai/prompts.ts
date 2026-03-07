@@ -346,4 +346,4 @@ Her cevap kisa, net, sicak, ogretici ve yonlendirici olsun.
 Ogrenci her cevaptan sonra ne yapacagini net olarak bilmeli.
 `.trim();
 }
-Çıksın içinden kanka 😃
+
