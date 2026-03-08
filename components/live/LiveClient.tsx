@@ -5,6 +5,41 @@ import { Button } from "@/components/ui/Button";
 
 const KosheiAvatar = lazy(() => import("@/components/avatar/KosheiAvatar"));
 
+// Minimal type definitions for the Web Speech API (not fully typed in older DOM libs)
+interface ISpeechRecognitionResult {
+  readonly length: number;
+  [index: number]: { transcript: string; confidence: number };
+}
+interface ISpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: ISpeechRecognitionResult;
+  [Symbol.iterator](): Iterator<ISpeechRecognitionResult>;
+}
+interface ISpeechRecognitionEvent extends Event {
+  readonly results: ISpeechRecognitionResultList;
+}
+interface ISpeechRecognition extends EventTarget {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start(): void;
+  stop(): void;
+  onresult: ((event: ISpeechRecognitionEvent) => void) | null;
+  onerror: ((event: { error: string }) => void) | null;
+  onend: (() => void) | null;
+}
+interface SpeechRecognitionConstructor {
+  new(): ISpeechRecognition;
+}
+function getSpeechRecognitionAPI(): SpeechRecognitionConstructor | null {
+  if (typeof window === "undefined") return null;
+  const w = window as unknown as {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  };
+  return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
+}
+
 const LANGUAGES = [
   { code: "en-US",  label: "🇬🇧 English",    targetLang: "English"    },
   { code: "de-DE",  label: "🇩🇪 Deutsch",    targetLang: "German"     },
@@ -42,6 +77,7 @@ export default function LiveClient() {
   const chunksRef     = useRef<Blob[]>([]);
   const audioRef      = useRef<HTMLAudioElement | null>(null);
   const transcriptRef = useRef("");
+  const speechRecRef  = useRef<ISpeechRecognition | null>(null);
 
   const isEarlyLevel = EARLY_LEVELS.includes(level);
   const sttLang      = isEarlyLevel ? "tr-TR" : selectedLang.code;
@@ -53,6 +89,46 @@ export default function LiveClient() {
   async function startRecording() {
     setErr("");
     setTranscript("");
+
+    // --- Web Speech API fallback for browsers without MediaRecorder (e.g. iOS Safari) ---
+    const SpeechRecognitionAPI = getSpeechRecognitionAPI();
+    const mediaRecorderSupported =
+      typeof MediaRecorder !== "undefined" &&
+      (MediaRecorder.isTypeSupported("audio/webm") || MediaRecorder.isTypeSupported("audio/mp4"));
+
+    if (!mediaRecorderSupported && SpeechRecognitionAPI) {
+      const recognition = new SpeechRecognitionAPI();
+      recognition.lang = sttLang;
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onresult = (event: ISpeechRecognitionEvent) => {
+        const results = event.results;
+        const parts: string[] = [];
+        for (let i = 0; i < results.length; i++) {
+          parts.push(results[i][0].transcript);
+        }
+        const text = parts.join(" ").trim();
+        setTranscript(text);
+        if (text) setTimeout(() => ask(text), 300);
+      };
+
+      recognition.onerror = (event: { error: string }) => {
+        if (event.error !== "no-speech") {
+          setErr("Ses tanıma hatası: " + event.error);
+        }
+        setListening(false);
+      };
+
+      recognition.onend = () => setListening(false);
+
+      speechRecRef.current = recognition;
+      recognition.start();
+      setListening(true);
+      return;
+    }
+
+    // --- Primary path: MediaRecorder + Gemini STT ---
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mimeType = MediaRecorder.isTypeSupported("audio/webm") ? "audio/webm" : "audio/mp4";
@@ -66,21 +142,27 @@ export default function LiveClient() {
       rec.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        if (blob.size < 1000) return; // cok kisa ses, yoksay
+        if (blob.size < 1000) return; // çok kısa ses, yoksay
         await transcribeAudio(blob, mimeType);
       };
 
       rec.start(250);
       mediaRecRef.current = rec;
       setListening(true);
-    } catch (e: any) {
-      setErr("Mikrofon erisimi reddedildi. Tarayici ayarlarindan izin ver.");
+    } catch {
+      setErr("Mikrofon erişimi reddedildi. Tarayıcı ayarlarından izin ver.");
     }
   }
 
   async function stopRecording() {
+    // Stop MediaRecorder if active
     if (mediaRecRef.current && mediaRecRef.current.state !== "inactive") {
       mediaRecRef.current.stop();
+    }
+    // Stop Web Speech API if active
+    if (speechRecRef.current) {
+      speechRecRef.current.stop();
+      speechRecRef.current = null;
     }
     setListening(false);
   }
@@ -257,7 +339,7 @@ export default function LiveClient() {
           Koshei yukleniyor...
         </div>
       }>
-        <KosheiAvatar isSpeaking={playing} />
+        <KosheiAvatar isSpeaking={playing} audioRef={audioRef} />
       </Suspense>
 
       {/* Durum */}
