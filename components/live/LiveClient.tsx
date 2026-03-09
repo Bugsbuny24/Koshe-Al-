@@ -338,7 +338,8 @@ export default function LiveClient() {
         }}>
           Koshei yukleniyor...
         </div>
-      <KosheiAvatar isSpeaking={playing} />
+      }>
+        <KosheiAvatar isSpeaking={playing} />
       </Suspense>
 
       {/* Durum */}
