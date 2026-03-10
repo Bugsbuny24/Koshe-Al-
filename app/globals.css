@@ -3,23 +3,16 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0b1020;
-  --panel: #121933;
-  --panel-2: #182141;
-  --text: #f3f7ff;
-  --muted: #9fb0d3;
-  --accent: #6ea8fe;
-  --border: rgba(255, 255, 255, 0.08);
+  --bg: #020617;
+  --text: #f8fafc;
 }
 
 html,
 body {
-  padding: 0;
   margin: 0;
+  padding: 0;
   min-height: 100%;
-  background:
-    radial-gradient(circle at top, rgba(110, 168, 254, 0.12), transparent 30%),
-    linear-gradient(180deg, #0b1020 0%, #0a0f1b 100%);
+  background: var(--bg);
   color: var(--text);
 }
 
@@ -29,7 +22,8 @@ body {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
@@ -37,22 +31,26 @@ a {
   color: inherit;
   text-decoration: none;
 }
-body {
-  margin: 0;
-  min-height: 100%;
-  background: #020617;
-  color: white;
-}
 
-* {
-  box-sizing: border-box;
+::selection {
+  background: rgba(34, 211, 238, 0.28);
+  color: white;
 }
 
 ::-webkit-scrollbar {
   width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.65);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.25);
+  background: rgba(100, 116, 139, 0.35);
   border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
 }
