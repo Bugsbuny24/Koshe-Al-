@@ -16,7 +16,7 @@ export default function MainBoard({
   onListen,
 }: MainBoardProps) {
   return (
-    <BoardShell title="Main Board" className="min-h-[220px]">
+    <BoardShell title="Main Board" className="min-h-[260px]">
       <div className="flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-3 py-1 text-xs font-medium text-cyan-100">
           Topic: {topic}
@@ -27,21 +27,22 @@ export default function MainBoard({
       </div>
 
       <div className="mt-6">
-        <p className="text-sm uppercase tracking-[0.2em] text-slate-400">
-          Speaking Task
+        <p className="text-[11px] uppercase tracking-[0.22em] text-slate-400">
+          Current Speaking Task
         </p>
-        <h1 className="mt-3 max-w-3xl text-2xl font-semibold leading-tight text-white md:text-4xl">
+
+        <h1 className="mt-3 max-w-3xl text-3xl font-semibold leading-tight text-white md:text-5xl">
           {question}
         </h1>
 
         {helper ? (
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
+          <p className="mt-5 max-w-2xl text-sm leading-7 text-slate-300 md:text-base">
             {helper}
           </p>
         ) : null}
       </div>
 
-      <div className="mt-6">
+      <div className="mt-7 flex flex-wrap gap-3">
         <button
           type="button"
           onClick={onListen}
@@ -49,6 +50,10 @@ export default function MainBoard({
         >
           🔊 Listen Again
         </button>
+
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm text-slate-300">
+          Read the task, answer naturally, continue.
+        </div>
       </div>
     </BoardShell>
   );
