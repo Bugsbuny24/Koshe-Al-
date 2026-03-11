@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import MainBoard from "@/components/board/MainBoard";
-import AnswerBoard from "@/components/board/AnswerBoard";
 import CorrectionBoard from "@/components/board/CorrectionBoard";
 import GrammarBoard from "@/components/board/GrammarBoard";
 import VocabBoard from "@/components/board/VocabBoard";
@@ -27,13 +26,14 @@ type SpeechRecognitionEventLike = {
   }>;
 };
 
-type AiBoardResponse = {
-  reply: string;
-  correction?: string;
-  grammarNotes?: string[];
-  vocab?: string[];
-  nextAction?: string;
-  nextQuestion?: string;
+type ChatApiResponse = {
+  conversationId: string;
+  teacherReply: string;
+  correction: string;
+  grammarNotes: string[];
+  nextAction: string;
+  nextQuestion: string;
+  difficulty: "easier" | "same" | "harder";
 };
 
 declare global {
@@ -58,6 +58,7 @@ export default function LiveClient() {
   const [level] = useState("A2");
   const [question, setQuestion] = useState(FALLBACK_QUESTION);
   const [helper, setHelper] = useState(INITIAL_HELPER);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   const [input, setInput] = useState("");
   const [lastUserAnswer, setLastUserAnswer] = useState("");
@@ -72,8 +73,6 @@ export default function LiveClient() {
   const [isListening, setIsListening] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const [sessionStep, setSessionStep] = useState(1);
   const [submittedCount, setSubmittedCount] = useState(0);
 
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
@@ -132,22 +131,16 @@ export default function LiveClient() {
   }, [isListening, isThinking]);
 
   function speakText(text: string) {
-    if (
-      !autoSpeak ||
-      typeof window === "undefined" ||
-      !("speechSynthesis" in window)
-    ) {
+    if (!autoSpeak || typeof window === "undefined" || !("speechSynthesis" in window)) {
       return;
     }
 
     window.speechSynthesis.cancel();
-
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = selectedLang;
     utterance.rate = 0.96;
     utterance.pitch = 1;
     utterance.volume = 1;
-
     window.speechSynthesis.speak(utterance);
   }
 
@@ -189,20 +182,21 @@ export default function LiveClient() {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          mode: "board",
+          conversationId,
           targetLanguage: "English",
-          userNativeLanguage: "Turkish",
+          nativeLanguage: "Turkish",
           level,
+          mode: "conversation",
           topic,
-          question,
-          answer: userAnswer,
-        }),
+          currentQuestion: question,
+          userAnswer
+        })
       });
 
-      const data = (await response.json()) as AiBoardResponse & {
+      const data = (await response.json()) as Partial<ChatApiResponse> & {
         error?: string;
       };
 
@@ -210,24 +204,23 @@ export default function LiveClient() {
         throw new Error(data?.error || "Koshei response failed.");
       }
 
-      const teacherReply = data.reply || "Good. Let's continue.";
-      const nextQuestion = data.nextQuestion || question;
-
-      setCorrection(data.correction || teacherReply);
+      setConversationId(data.conversationId || conversationId);
+      setHelper(data.teacherReply || "Good. Let's continue.");
+      setCorrection(data.correction || "Good. Let's continue.");
       setGrammarNotes(
         data.grammarNotes?.length
           ? data.grammarNotes
           : ["Keep going. Use short and clear sentences."]
       );
-      setVocab(data.vocab?.length ? data.vocab : INITIAL_VOCAB);
       setNextAction(data.nextAction || "Read the correction and continue.");
-      setHelper(teacherReply);
-      setQuestion(nextQuestion);
+      setQuestion(data.nextQuestion || question);
       setInput("");
       setSubmittedCount((prev) => prev + 1);
-      setSessionStep((prev) => prev + 1);
 
-      speakText(teacherReply);
+      const nextVocab = extractWordsFromQuestion(data.nextQuestion || question);
+      setVocab(nextVocab.length ? nextVocab : INITIAL_VOCAB);
+
+      speakText(data.teacherReply || "Good. Let's continue.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error.");
     } finally {
@@ -236,50 +229,12 @@ export default function LiveClient() {
   }
 
   async function nextQuestion() {
-    setError(null);
-    setIsThinking(true);
-
-    try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          mode: "next-question",
-          targetLanguage: "English",
-          userNativeLanguage: "Turkish",
-          level,
-          topic,
-          previousQuestion: question,
-          previousAnswer: lastUserAnswer,
-        }),
-      });
-
-      const data = (await response.json()) as AiBoardResponse & {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(data?.error || "Next question failed.");
-      }
-
-      const nextQ = data.nextQuestion || data.reply || FALLBACK_QUESTION;
-
-      setQuestion(nextQ);
-      setHelper("Answer in simple English. Koshei will continue the lesson.");
-      setCorrection("");
-      setGrammarNotes(["Read the new task and answer naturally."]);
-      setVocab(data.vocab?.length ? data.vocab : INITIAL_VOCAB);
-      setNextAction("Answer the new speaking task.");
-      setSessionStep((prev) => prev + 1);
-
-      speakText(nextQ);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unexpected error.");
-    } finally {
-      setIsThinking(false);
-    }
+    if (!correction && !lastUserAnswer) return;
+    setQuestion((prev) => prev);
+    setHelper("Answer in simple English. Koshei will continue the lesson.");
+    setCorrection("");
+    setGrammarNotes(["Read the new task and answer naturally."]);
+    setNextAction("Answer the new speaking task.");
   }
 
   function resetLesson() {
@@ -288,6 +243,7 @@ export default function LiveClient() {
       window.speechSynthesis.cancel();
     }
 
+    setConversationId(null);
     setQuestion(FALLBACK_QUESTION);
     setHelper(INITIAL_HELPER);
     setInput("");
@@ -297,7 +253,6 @@ export default function LiveClient() {
     setVocab(INITIAL_VOCAB);
     setNextAction(INITIAL_ACTION);
     setError(null);
-    setSessionStep(1);
     setSubmittedCount(0);
   }
 
@@ -362,7 +317,7 @@ export default function LiveClient() {
           <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <TopMiniCard label="Topic" value={topic} />
             <TopMiniCard label="Level" value={level} />
-            <TopMiniCard label="Step" value={`0${sessionStep}`} />
+            <TopMiniCard label="Answers" value={String(submittedCount)} />
             <TopMiniCard label="Status" value={statusText} />
           </div>
         </header>
@@ -412,10 +367,7 @@ export default function LiveClient() {
           </div>
 
           <div className="md:col-span-7">
-            <CorrectionBoard
-              userAnswer={lastUserAnswer}
-              correction={correction}
-            />
+            <CorrectionBoard userAnswer={lastUserAnswer} correction={correction} />
           </div>
 
           <div className="md:col-span-5 space-y-4">
@@ -443,7 +395,7 @@ function SessionOverviewCard({
   submittedCount,
   nextAction,
   isListening,
-  isThinking,
+  isThinking
 }: {
   submittedCount: number;
   nextAction: string;
@@ -505,7 +457,7 @@ function SessionOverviewCard({
 function FlowRow({
   title,
   desc,
-  active,
+  active
 }: {
   title: string;
   desc: string;
@@ -517,7 +469,7 @@ function FlowRow({
         "rounded-2xl border px-4 py-4 transition",
         active
           ? "border-cyan-300/18 bg-cyan-400/[0.07]"
-          : "border-white/10 bg-white/[0.03]",
+          : "border-white/10 bg-white/[0.03]"
       ].join(" ")}
     >
       <p className="text-sm font-medium text-white">{title}</p>
@@ -535,7 +487,7 @@ function EnhancedAnswerSection({
   canSpeak,
   isListening,
   isThinking,
-  recognitionSupported,
+  recognitionSupported
 }: {
   input: string;
   setInput: (value: string) => void;
@@ -630,7 +582,7 @@ function EnhancedAnswerSection({
 
 function StatusPill({
   active,
-  text,
+  text
 }: {
   active: boolean;
   text: string;
@@ -641,10 +593,19 @@ function StatusPill({
         "rounded-full border px-3 py-1 text-xs font-medium transition",
         active
           ? "border-cyan-300/20 bg-cyan-400/10 text-cyan-100"
-          : "border-white/10 bg-white/[0.03] text-slate-300",
+          : "border-white/10 bg-white/[0.03] text-slate-300"
       ].join(" ")}
     >
       {text}
     </span>
   );
-                             }
+}
+
+function extractWordsFromQuestion(question: string) {
+  return question
+    .toLowerCase()
+    .replace(/[^a-z\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3)
+    .slice(0, 5);
+      }
