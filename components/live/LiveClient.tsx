@@ -36,6 +36,8 @@ type ChatApiResponse = {
   difficulty: "easier" | "same" | "harder";
 };
 
+type KosheiMode = "foundation" | "lesson" | "practice" | "conversation";
+
 declare global {
   interface Window {
     webkitSpeechRecognition?: new () => SpeechRecognitionType;
@@ -43,15 +45,108 @@ declare global {
   }
 }
 
-const FALLBACK_QUESTION =
-  "Describe your city. Is it big, small, crowded, or quiet?";
-
-const INITIAL_HELPER =
-  "Speak in simple English. Use 1 to 3 sentences. Koshei will correct you and continue the lesson.";
-
 const INITIAL_VOCAB = ["big", "small", "crowded", "quiet", "beautiful"];
 const INITIAL_NOTES = ["Use short and clear sentences."];
 const INITIAL_ACTION = "Answer the speaking task using your own words.";
+
+function getModeFromStage(stage: string): KosheiMode {
+  if (stage === "A1" || stage === "A2") return "foundation";
+  if (stage === "B1" || stage === "B2") return "lesson";
+  if (stage === "C1" || stage === "C2") return "practice";
+  return "conversation";
+}
+
+function getTopicFromStage(stage: string) {
+  if (stage === "A1") return "Alphabet";
+  if (stage === "A2") return "Word Building";
+  if (stage === "B1") return "Sentence Building";
+  if (stage === "B2") return "Speaking and Understanding";
+  if (stage === "C1") return "Guided Practice";
+  if (stage === "C2") return "Advanced Practice";
+  if (stage === "D1") return "Real Conversation";
+  return "Fluency";
+}
+
+function getInitialQuestion(stage: string, targetLanguage: string) {
+  if (stage === "A1") {
+    return `Listen: My name is Koshei. Repeat: My name is...`;
+  }
+
+  if (stage === "A2") {
+    return `Read this word and repeat it.`;
+  }
+
+  if (stage === "B1") {
+    return `Describe your city in simple ${targetLanguage}.`;
+  }
+
+  if (stage === "B2") {
+    return `Tell me about your daily life in ${targetLanguage}.`;
+  }
+
+  if (stage === "C1") {
+    return `Practice speaking about your favorite topic in ${targetLanguage}.`;
+  }
+
+  if (stage === "C2") {
+    return `Explain your opinion clearly and naturally in ${targetLanguage}.`;
+  }
+
+  if (stage === "D1") {
+    return `Let's have a real conversation in ${targetLanguage}.`;
+  }
+
+  return `Speak naturally in ${targetLanguage}.`;
+}
+
+function getInitialHelper(stage: string, targetLanguage: string) {
+  if (stage === "A1") {
+    return `Start from zero. Listen, repeat, and say very short answers in ${targetLanguage}.`;
+  }
+
+  if (stage === "A2") {
+    return `Build simple words and repeat them clearly in ${targetLanguage}.`;
+  }
+
+  if (stage === "B1") {
+    return `Use short and simple sentences in ${targetLanguage}.`;
+  }
+
+  if (stage === "B2") {
+    return `Speak clearly and try to answer with 1 to 3 sentences in ${targetLanguage}.`;
+  }
+
+  if (stage === "C1") {
+    return `Practice speaking naturally. Koshei will correct and guide you in ${targetLanguage}.`;
+  }
+
+  if (stage === "C2") {
+    return `Give longer answers and improve fluency in ${targetLanguage}.`;
+  }
+
+  if (stage === "D1") {
+    return `Have a real conversation in ${targetLanguage}.`;
+  }
+
+  return `Speak naturally and fluently in ${targetLanguage}.`;
+}
+
+function getSpeechLangFromTargetLanguage(targetLanguage: string) {
+  const map: Record<string, string> = {
+    English: "en-US",
+    German: "de-DE",
+    Spanish: "es-ES",
+    French: "fr-FR",
+    Italian: "it-IT",
+    Portuguese: "pt-PT",
+    Arabic: "ar-SA",
+    Japanese: "ja-JP",
+    Chinese: "zh-CN",
+    Turkish: "tr-TR",
+  };
+
+  return map[targetLanguage] || "en-US";
+}
 
 export default function LiveClient({
   nativeLanguage,
@@ -62,28 +157,21 @@ export default function LiveClient({
   targetLanguage: string;
   stage: string;
 }) {
-  const [topic] = useState("Daily Life");
+  const mode = useMemo(() => getModeFromStage(stage), [stage]);
+  const initialTopic = useMemo(() => getTopicFromStage(stage), [stage]);
+  const initialQuestion = useMemo(
+    () => getInitialQuestion(stage, targetLanguage),
+    [stage, targetLanguage]
+  );
+  const initialHelper = useMemo(
+    () => getInitialHelper(stage, targetLanguage),
+    [stage, targetLanguage]
+  );
+
+  const [topic] = useState(initialTopic);
   const [level] = useState(stage);
-
-  const initialQuestion =
-    stage === "A1"
-      ? `Listen: My name is Koshei. Repeat: My name is...`
-      : stage === "A2"
-      ? `Read this word and repeat it.`
-      : stage === "B1"
-      ? `Describe your city in simple ${targetLanguage}.`
-      : stage === "B2"
-      ? `Tell me about your daily life in ${targetLanguage}.`
-      : stage === "C1"
-      ? `Practice speaking about your favorite topic.`
-      : stage === "C2"
-      ? `Explain your opinion clearly and naturally.`
-      : stage === "D1"
-      ? `Let's have a real conversation in ${targetLanguage}.`
-      : `Speak naturally in ${targetLanguage}.`;
-
   const [question, setQuestion] = useState(initialQuestion);
-  const [helper, setHelper] = useState(INITIAL_HELPER);
+  const [helper, setHelper] = useState(initialHelper);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const [input, setInput] = useState("");
@@ -94,7 +182,9 @@ export default function LiveClient({
   const [nextAction, setNextAction] = useState(INITIAL_ACTION);
 
   const [recognitionSupported, setRecognitionSupported] = useState(false);
-  const [selectedLang, setSelectedLang] = useState("en-US");
+  const [selectedLang, setSelectedLang] = useState(
+    getSpeechLangFromTargetLanguage(targetLanguage)
+  );
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
@@ -102,6 +192,10 @@ export default function LiveClient({
   const [submittedCount, setSubmittedCount] = useState(0);
 
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
+
+  useEffect(() => {
+    setSelectedLang(getSpeechLangFromTargetLanguage(targetLanguage));
+  }, [targetLanguage]);
 
   useEffect(() => {
     const Recognition =
@@ -157,7 +251,11 @@ export default function LiveClient({
   }, [isListening, isThinking]);
 
   function speakText(text: string) {
-    if (!autoSpeak || typeof window === "undefined" || !("speechSynthesis" in window)) {
+    if (
+      !autoSpeak ||
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window)
+    ) {
       return;
     }
 
@@ -208,18 +306,18 @@ export default function LiveClient({
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           conversationId,
-          targetLanguage: "English",
-          nativeLanguage: "Turkish",
+          targetLanguage,
+          nativeLanguage,
           level,
-          mode: "conversation",
+          mode,
           topic,
           currentQuestion: question,
-          userAnswer
-        })
+          userAnswer,
+        }),
       });
 
       const data = (await response.json()) as Partial<ChatApiResponse> & {
@@ -227,6 +325,11 @@ export default function LiveClient({
       };
 
       if (!response.ok) {
+        if (response.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
+
         throw new Error(data?.error || "Koshei response failed.");
       }
 
@@ -256,8 +359,25 @@ export default function LiveClient({
 
   async function nextQuestion() {
     if (!correction && !lastUserAnswer) return;
-    setQuestion((prev) => prev);
-    setHelper("Answer in simple English. Koshei will continue the lesson.");
+
+    if (mode === "foundation") {
+      setHelper(
+        `Continue slowly in ${targetLanguage}. Listen, repeat, then answer.`
+      );
+    } else if (mode === "lesson") {
+      setHelper(
+        `Continue building clearer answers in ${targetLanguage}.`
+      );
+    } else if (mode === "practice") {
+      setHelper(
+        `Keep practicing naturally in ${targetLanguage}.`
+      );
+    } else {
+      setHelper(
+        `Continue the conversation naturally in ${targetLanguage}.`
+      );
+    }
+
     setCorrection("");
     setGrammarNotes(["Read the new task and answer naturally."]);
     setNextAction("Answer the new speaking task.");
@@ -265,13 +385,14 @@ export default function LiveClient({
 
   function resetLesson() {
     stopListening();
+
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
 
     setConversationId(null);
-    setQuestion(FALLBACK_QUESTION);
-    setHelper(INITIAL_HELPER);
+    setQuestion(getInitialQuestion(stage, targetLanguage));
+    setHelper(getInitialHelper(stage, targetLanguage));
     setInput("");
     setLastUserAnswer("");
     setCorrection("");
@@ -298,6 +419,9 @@ export default function LiveClient({
                 Speak, get corrected, continue. Clean interface, clear flow,
                 real speaking practice.
               </p>
+              <div className="mt-3 text-xs text-cyan-200/80">
+                {nativeLanguage} → {targetLanguage} | Stage: {stage} | Mode: {mode}
+              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
@@ -311,6 +435,12 @@ export default function LiveClient({
                 <option value="de-DE">Deutsch</option>
                 <option value="fr-FR">Français</option>
                 <option value="es-ES">Español</option>
+                <option value="it-IT">Italiano</option>
+                <option value="pt-PT">Português</option>
+                <option value="ar-SA">العربية</option>
+                <option value="ja-JP">日本語</option>
+                <option value="zh-CN">中文</option>
+                <option value="tr-TR">Türkçe</option>
               </select>
 
               <label className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-200">
@@ -393,7 +523,10 @@ export default function LiveClient({
           </div>
 
           <div className="md:col-span-7">
-            <CorrectionBoard userAnswer={lastUserAnswer} correction={correction} />
+            <CorrectionBoard
+              userAnswer={lastUserAnswer}
+              correction={correction}
+            />
           </div>
 
           <div className="md:col-span-5 space-y-4">
@@ -421,7 +554,7 @@ function SessionOverviewCard({
   submittedCount,
   nextAction,
   isListening,
-  isThinking
+  isThinking,
 }: {
   submittedCount: number;
   nextAction: string;
@@ -483,7 +616,7 @@ function SessionOverviewCard({
 function FlowRow({
   title,
   desc,
-  active
+  active,
 }: {
   title: string;
   desc: string;
@@ -495,7 +628,7 @@ function FlowRow({
         "rounded-2xl border px-4 py-4 transition",
         active
           ? "border-cyan-300/18 bg-cyan-400/[0.07]"
-          : "border-white/10 bg-white/[0.03]"
+          : "border-white/10 bg-white/[0.03]",
       ].join(" ")}
     >
       <p className="text-sm font-medium text-white">{title}</p>
@@ -513,7 +646,7 @@ function EnhancedAnswerSection({
   canSpeak,
   isListening,
   isThinking,
-  recognitionSupported
+  recognitionSupported,
 }: {
   input: string;
   setInput: (value: string) => void;
@@ -608,7 +741,7 @@ function EnhancedAnswerSection({
 
 function StatusPill({
   active,
-  text
+  text,
 }: {
   active: boolean;
   text: string;
@@ -619,7 +752,7 @@ function StatusPill({
         "rounded-full border px-3 py-1 text-xs font-medium transition",
         active
           ? "border-cyan-300/20 bg-cyan-400/10 text-cyan-100"
-          : "border-white/10 bg-white/[0.03] text-slate-300"
+          : "border-white/10 bg-white/[0.03] text-slate-300",
       ].join(" ")}
     >
       {text}
@@ -634,4 +767,4 @@ function extractWordsFromQuestion(question: string) {
     .split(/\s+/)
     .filter((w) => w.length > 3)
     .slice(0, 5);
-      }
+            }
