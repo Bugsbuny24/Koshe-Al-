@@ -4,16 +4,6 @@ import { buildTeacherPrompt, type KosheiMode } from "@/lib/ai/teacher-engine";
 import { extractJson } from "@/lib/ai/parse-json";
 import type { TeacherEngineResponse } from "@/lib/ai/types";
 
-type DbMessageRow = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string | null;
-  model: string | null;
-  input_tokens: number | null;
-  output_tokens: number | null;
-  created_at: string;
-};
-
 type ChatRequestBody = {
   conversationId?: string;
   targetLanguage?: string;
@@ -31,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const {
       data: { user },
-      error: authError,
+      error: authError
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -51,20 +41,14 @@ export async function POST(req: NextRequest) {
     const userAnswer = String(body?.userAnswer || "").trim();
 
     if (!userAnswer) {
-      return NextResponse.json(
-        { error: "userAnswer is required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "userAnswer is required." }, { status: 400 });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY is missing." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "GEMINI_API_KEY is missing." }, { status: 500 });
     }
 
     const conversationId = await getOrCreateConversation({
@@ -72,24 +56,24 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       conversationId: body?.conversationId,
       language: targetLanguage,
-      mode,
+      mode
     });
 
     await insertUserMessage({
       supabase,
       conversationId,
       userId: user.id,
-      userAnswer,
+      userAnswer
     });
 
     const contextSummary = await getConversationSummary({
       supabase,
-      conversationId,
+      conversationId
     });
 
     const recentMessages = await getRecentMessages({
       supabase,
-      conversationId,
+      conversationId
     });
 
     const prompt = buildTeacherPrompt({
@@ -101,7 +85,7 @@ export async function POST(req: NextRequest) {
       currentQuestion,
       userAnswer,
       contextSummary,
-      recentMessages,
+      recentMessages
     });
 
     const geminiResponse = await fetch(
@@ -109,20 +93,20 @@ export async function POST(req: NextRequest) {
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: prompt }],
-            },
+              parts: [{ text: prompt }]
+            }
           ],
           generationConfig: {
             temperature: 0.7,
             topP: 0.9,
-            maxOutputTokens: 500,
-          },
-        }),
+            maxOutputTokens: 500
+          }
+        })
       }
     );
 
@@ -148,14 +132,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const inputTokens = estimateTokens(prompt);
+    const outputTokens = estimateTokens(rawText);
+
     await insertAssistantMessage({
       supabase,
       conversationId,
       userId: user.id,
       content: parsed.teacherReply,
       model,
-      inputTokens: estimateTokens(prompt),
-      outputTokens: estimateTokens(rawText),
+      inputTokens,
+      outputTokens
     });
 
     if (Array.isArray(parsed.memoryItems) && parsed.memoryItems.length > 0) {
@@ -163,7 +150,7 @@ export async function POST(req: NextRequest) {
         supabase,
         userId: user.id,
         language: targetLanguage,
-        items: parsed.memoryItems,
+        items: parsed.memoryItems
       });
     }
 
@@ -171,13 +158,13 @@ export async function POST(req: NextRequest) {
       supabase,
       userId: user.id,
       model,
-      inputTokens: estimateTokens(prompt),
-      outputTokens: estimateTokens(rawText),
+      inputTokens,
+      outputTokens,
       cost: estimateGeminiCost({
         model,
-        inputTokens: estimateTokens(prompt),
-        outputTokens: estimateTokens(rawText),
-      }),
+        inputTokens,
+        outputTokens
+      })
     });
 
     await updateConversationSummary({
@@ -185,7 +172,7 @@ export async function POST(req: NextRequest) {
       conversationId,
       targetLanguage,
       nativeLanguage,
-      level,
+      level
     });
 
     return NextResponse.json({
@@ -196,14 +183,11 @@ export async function POST(req: NextRequest) {
       nextAction: parsed.nextAction,
       nextQuestion: parsed.nextQuestion,
       difficulty: parsed.difficulty,
-      memoryItems: parsed.memoryItems || [],
+      memoryItems: parsed.memoryItems || []
     });
   } catch (error) {
     console.error("Production chat route error:", error);
-    return NextResponse.json(
-      { error: "Unexpected server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Unexpected server error." }, { status: 500 });
   }
 }
 
@@ -212,7 +196,7 @@ async function getOrCreateConversation({
   userId,
   conversationId,
   language,
-  mode,
+  mode
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -238,7 +222,7 @@ async function getOrCreateConversation({
     .insert({
       user_id: userId,
       language,
-      mode,
+      mode
     })
     .select("id")
     .single();
@@ -254,7 +238,7 @@ async function insertUserMessage({
   supabase,
   conversationId,
   userId,
-  userAnswer,
+  userAnswer
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -268,7 +252,7 @@ async function insertUserMessage({
     content: userAnswer,
     model: null,
     input_tokens: 0,
-    output_tokens: 0,
+    output_tokens: 0
   });
 
   if (error) {
@@ -283,7 +267,7 @@ async function insertAssistantMessage({
   content,
   model,
   inputTokens,
-  outputTokens,
+  outputTokens
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -300,7 +284,7 @@ async function insertAssistantMessage({
     content,
     model,
     input_tokens: inputTokens,
-    output_tokens: outputTokens,
+    output_tokens: outputTokens
   });
 
   if (error) {
@@ -310,7 +294,7 @@ async function insertAssistantMessage({
 
 async function getConversationSummary({
   supabase,
-  conversationId,
+  conversationId
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -331,7 +315,7 @@ async function getConversationSummary({
 
 async function getRecentMessages({
   supabase,
-  conversationId,
+  conversationId
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -348,19 +332,17 @@ async function getRecentMessages({
     return [];
   }
 
-  return [...data]
-    .reverse()
-    .map((m) => ({
-      role: (m.role || "user") as "user" | "assistant" | "system",
-      content: String(m.content || ""),
-    }));
+  return [...data].reverse().map((m) => ({
+    role: (m.role || "user") as "user" | "assistant" | "system",
+    content: String(m.content || "")
+  }));
 }
 
 async function insertLearningMemory({
   supabase,
   userId,
   language,
-  items,
+  items
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -373,7 +355,7 @@ async function insertLearningMemory({
     error_type: item.errorType,
     wrong_sentence: item.wrongSentence,
     correct_sentence: item.correctSentence,
-    explanation: item.explanation,
+    explanation: item.explanation
   }));
 
   const { error } = await supabase.from("learning_memory").insert(payload);
@@ -389,7 +371,7 @@ async function insertAiUsage({
   model,
   inputTokens,
   outputTokens,
-  cost,
+  cost
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -403,7 +385,7 @@ async function insertAiUsage({
     model,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
-    cost,
+    cost
   });
 
   if (error) {
@@ -416,7 +398,7 @@ async function updateConversationSummary({
   conversationId,
   targetLanguage,
   nativeLanguage,
-  level,
+  level
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -431,9 +413,7 @@ async function updateConversationSummary({
     .order("created_at", { ascending: false })
     .limit(8);
 
-  if (error || !data?.length) {
-    return;
-  }
+  if (error || !data?.length) return;
 
   const compactConversation = [...data]
     .reverse()
@@ -444,7 +424,7 @@ async function updateConversationSummary({
     `Language: ${targetLanguage}`,
     `Native language: ${nativeLanguage}`,
     `Level: ${level}`,
-    `Recent summary: ${compactConversation.slice(0, 1200)}`,
+    `Recent summary: ${compactConversation.slice(0, 1200)}`
   ].join("\n");
 
   const { data: existing } = await supabase
@@ -454,30 +434,21 @@ async function updateConversationSummary({
     .maybeSingle();
 
   if (existing?.id) {
-    const { error: updateError } = await supabase
+    await supabase
       .from("conversation_context")
       .update({
         summary,
-        last_updated: new Date().toISOString(),
+        last_updated: new Date().toISOString()
       })
       .eq("conversation_id", conversationId);
-
-    if (updateError) {
-      console.error("Conversation context update error:", updateError.message);
-    }
-
     return;
   }
 
-  const { error: insertError } = await supabase.from("conversation_context").insert({
+  await supabase.from("conversation_context").insert({
     conversation_id: conversationId,
     summary,
-    last_updated: new Date().toISOString(),
+    last_updated: new Date().toISOString()
   });
-
-  if (insertError) {
-    console.error("Conversation context insert error:", insertError.message);
-  }
 }
 
 function estimateTokens(text: string) {
@@ -488,36 +459,30 @@ function estimateTokens(text: string) {
 function estimateGeminiCost({
   model,
   inputTokens,
-  outputTokens,
+  outputTokens
 }: {
   model: string;
   inputTokens: number;
   outputTokens: number;
 }) {
-  const pricing: Record<
-    string,
-    { inputPerMillion: number; outputPerMillion: number }
-  > = {
+  const pricing: Record<string, { inputPerMillion: number; outputPerMillion: number }> = {
     "gemini-2.5-flash-lite": {
       inputPerMillion: 0.1,
-      outputPerMillion: 0.4,
+      outputPerMillion: 0.4
     },
     "gemini-2.5-flash": {
       inputPerMillion: 0.3,
-      outputPerMillion: 2.5,
+      outputPerMillion: 2.5
     },
     "gemini-2.5-pro": {
       inputPerMillion: 1.25,
-      outputPerMillion: 10,
-    },
+      outputPerMillion: 10
+    }
   };
 
-  const modelPricing =
-    pricing[model] || pricing["gemini-2.5-flash-lite"];
-
-  const inputCost = (inputTokens / 1_000_000) * modelPricing.inputPerMillion;
-  const outputCost =
-    (outputTokens / 1_000_000) * modelPricing.outputPerMillion;
+  const p = pricing[model] || pricing["gemini-2.5-flash-lite"];
+  const inputCost = (inputTokens / 1_000_000) * p.inputPerMillion;
+  const outputCost = (outputTokens / 1_000_000) * p.outputPerMillion;
 
   return Number((inputCost + outputCost).toFixed(8));
-}
+    }
