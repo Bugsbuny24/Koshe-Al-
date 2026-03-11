@@ -15,13 +15,19 @@ export default async function LivePage() {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("onboarding_completed")
+    .select("native_language,target_language,learning_stage,onboarding_completed")
     .eq("id", user.id)
-    .maybeSingle();
+    .single();
 
   if (!profile?.onboarding_completed) {
     redirect("/onboarding");
   }
 
-  return <LiveClient />;
+  return (
+    <LiveClient
+      nativeLanguage={profile.native_language || "Turkish"}
+      targetLanguage={profile.target_language || "English"}
+      stage={profile.learning_stage || "A1"}
+    />
+  );
 }
