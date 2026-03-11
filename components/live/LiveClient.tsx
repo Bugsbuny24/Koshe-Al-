@@ -53,10 +53,36 @@ const INITIAL_VOCAB = ["big", "small", "crowded", "quiet", "beautiful"];
 const INITIAL_NOTES = ["Use short and clear sentences."];
 const INITIAL_ACTION = "Answer the speaking task using your own words.";
 
-export default function LiveClient() {
+export default function LiveClient({
+  nativeLanguage,
+  targetLanguage,
+  stage,
+}: {
+  nativeLanguage: string;
+  targetLanguage: string;
+  stage: string;
+}) {
   const [topic] = useState("Daily Life");
-  const [level] = useState("A2");
-  const [question, setQuestion] = useState(FALLBACK_QUESTION);
+  const [level] = useState(stage);
+
+  const initialQuestion =
+    stage === "A1"
+      ? `Listen: My name is Koshei. Repeat: My name is...`
+      : stage === "A2"
+      ? `Read this word and repeat it.`
+      : stage === "B1"
+      ? `Describe your city in simple ${targetLanguage}.`
+      : stage === "B2"
+      ? `Tell me about your daily life in ${targetLanguage}.`
+      : stage === "C1"
+      ? `Practice speaking about your favorite topic.`
+      : stage === "C2"
+      ? `Explain your opinion clearly and naturally.`
+      : stage === "D1"
+      ? `Let's have a real conversation in ${targetLanguage}.`
+      : `Speak naturally in ${targetLanguage}.`;
+
+  const [question, setQuestion] = useState(initialQuestion);
   const [helper, setHelper] = useState(INITIAL_HELPER);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
