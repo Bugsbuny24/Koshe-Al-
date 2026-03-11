@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
 
     const {
       data: { user },
-      error: authError
+      error: authError,
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
@@ -32,23 +32,29 @@ export async function POST(req: NextRequest) {
 
     const targetLanguage = String(body?.targetLanguage || "English").trim();
     const nativeLanguage = String(body?.nativeLanguage || "Turkish").trim();
-    const level = String(body?.level || "A2").trim();
-    const mode = (body?.mode || "conversation") as KosheiMode;
+    const level = String(body?.level || "A1").trim();
+    const mode = normalizeMode(body?.mode, level);
     const topic = String(body?.topic || "Daily Life").trim();
     const currentQuestion = String(
-      body?.currentQuestion || "Describe your city in simple English."
+      body?.currentQuestion || getDefaultQuestion(level, targetLanguage)
     ).trim();
     const userAnswer = String(body?.userAnswer || "").trim();
 
     if (!userAnswer) {
-      return NextResponse.json({ error: "userAnswer is required." }, { status: 400 });
+      return NextResponse.json(
+        { error: "userAnswer is required." },
+        { status: 400 }
+      );
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
     if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY is missing." }, { status: 500 });
+      return NextResponse.json(
+        { error: "GEMINI_API_KEY is missing." },
+        { status: 500 }
+      );
     }
 
     const conversationId = await getOrCreateConversation({
@@ -56,24 +62,24 @@ export async function POST(req: NextRequest) {
       userId: user.id,
       conversationId: body?.conversationId,
       language: targetLanguage,
-      mode
+      mode,
     });
 
     await insertUserMessage({
       supabase,
       conversationId,
       userId: user.id,
-      userAnswer
+      userAnswer,
     });
 
     const contextSummary = await getConversationSummary({
       supabase,
-      conversationId
+      conversationId,
     });
 
     const recentMessages = await getRecentMessages({
       supabase,
-      conversationId
+      conversationId,
     });
 
     const prompt = buildTeacherPrompt({
@@ -85,7 +91,7 @@ export async function POST(req: NextRequest) {
       currentQuestion,
       userAnswer,
       contextSummary,
-      recentMessages
+      recentMessages,
     });
 
     const geminiResponse = await fetch(
@@ -93,20 +99,20 @@ export async function POST(req: NextRequest) {
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text: prompt }]
-            }
+              parts: [{ text: prompt }],
+            },
           ],
           generationConfig: {
-            temperature: 0.7,
+            temperature: getTemperatureForMode(mode),
             topP: 0.9,
-            maxOutputTokens: 500
-          }
-        })
+            maxOutputTokens: 500,
+          },
+        }),
       }
     );
 
@@ -142,7 +148,7 @@ export async function POST(req: NextRequest) {
       content: parsed.teacherReply,
       model,
       inputTokens,
-      outputTokens
+      outputTokens,
     });
 
     if (Array.isArray(parsed.memoryItems) && parsed.memoryItems.length > 0) {
@@ -150,7 +156,7 @@ export async function POST(req: NextRequest) {
         supabase,
         userId: user.id,
         language: targetLanguage,
-        items: parsed.memoryItems
+        items: parsed.memoryItems,
       });
     }
 
@@ -163,8 +169,8 @@ export async function POST(req: NextRequest) {
       cost: estimateGeminiCost({
         model,
         inputTokens,
-        outputTokens
-      })
+        outputTokens,
+      }),
     });
 
     await updateConversationSummary({
@@ -172,7 +178,9 @@ export async function POST(req: NextRequest) {
       conversationId,
       targetLanguage,
       nativeLanguage,
-      level
+      level,
+      mode,
+      topic,
     });
 
     return NextResponse.json({
@@ -183,12 +191,44 @@ export async function POST(req: NextRequest) {
       nextAction: parsed.nextAction,
       nextQuestion: parsed.nextQuestion,
       difficulty: parsed.difficulty,
-      memoryItems: parsed.memoryItems || []
+      memoryItems: parsed.memoryItems || [],
     });
   } catch (error) {
     console.error("Production chat route error:", error);
-    return NextResponse.json({ error: "Unexpected server error." }, { status: 500 });
+    return NextResponse.json(
+      { error: "Unexpected server error." },
+      { status: 500 }
+    );
   }
+}
+
+function normalizeMode(mode: KosheiMode | undefined, level: string): KosheiMode {
+  if (mode === "foundation" || mode === "lesson" || mode === "practice" || mode === "conversation") {
+    return mode;
+  }
+
+  if (level === "A1" || level === "A2") return "foundation";
+  if (level === "B1" || level === "B2") return "lesson";
+  if (level === "C1" || level === "C2") return "practice";
+  return "conversation";
+}
+
+function getDefaultQuestion(level: string, targetLanguage: string) {
+  if (level === "A1") return `Listen and repeat in ${targetLanguage}.`;
+  if (level === "A2") return `Read and repeat a simple word in ${targetLanguage}.`;
+  if (level === "B1") return `Describe your city in simple ${targetLanguage}.`;
+  if (level === "B2") return `Tell me about your daily life in ${targetLanguage}.`;
+  if (level === "C1") return `Practice speaking about your favorite topic in ${targetLanguage}.`;
+  if (level === "C2") return `Explain your opinion clearly in ${targetLanguage}.`;
+  if (level === "D1") return `Let's have a real conversation in ${targetLanguage}.`;
+  return `Speak naturally in ${targetLanguage}.`;
+}
+
+function getTemperatureForMode(mode: KosheiMode) {
+  if (mode === "foundation") return 0.4;
+  if (mode === "lesson") return 0.55;
+  if (mode === "practice") return 0.7;
+  return 0.75;
 }
 
 async function getOrCreateConversation({
@@ -196,13 +236,13 @@ async function getOrCreateConversation({
   userId,
   conversationId,
   language,
-  mode
+  mode,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
   conversationId?: string;
   language: string;
-  mode: string;
+  mode: KosheiMode;
 }) {
   if (conversationId) {
     const { data, error } = await supabase
@@ -222,7 +262,7 @@ async function getOrCreateConversation({
     .insert({
       user_id: userId,
       language,
-      mode
+      mode,
     })
     .select("id")
     .single();
@@ -238,7 +278,7 @@ async function insertUserMessage({
   supabase,
   conversationId,
   userId,
-  userAnswer
+  userAnswer,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -252,7 +292,7 @@ async function insertUserMessage({
     content: userAnswer,
     model: null,
     input_tokens: 0,
-    output_tokens: 0
+    output_tokens: 0,
   });
 
   if (error) {
@@ -267,7 +307,7 @@ async function insertAssistantMessage({
   content,
   model,
   inputTokens,
-  outputTokens
+  outputTokens,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -284,7 +324,7 @@ async function insertAssistantMessage({
     content,
     model,
     input_tokens: inputTokens,
-    output_tokens: outputTokens
+    output_tokens: outputTokens,
   });
 
   if (error) {
@@ -294,7 +334,7 @@ async function insertAssistantMessage({
 
 async function getConversationSummary({
   supabase,
-  conversationId
+  conversationId,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -315,7 +355,7 @@ async function getConversationSummary({
 
 async function getRecentMessages({
   supabase,
-  conversationId
+  conversationId,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -334,7 +374,7 @@ async function getRecentMessages({
 
   return [...data].reverse().map((m) => ({
     role: (m.role || "user") as "user" | "assistant" | "system",
-    content: String(m.content || "")
+    content: String(m.content || ""),
   }));
 }
 
@@ -342,21 +382,31 @@ async function insertLearningMemory({
   supabase,
   userId,
   language,
-  items
+  items,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
   language: string;
   items: TeacherEngineResponse["memoryItems"];
 }) {
-  const payload = items.map((item) => ({
-    user_id: userId,
-    language,
-    error_type: item.errorType,
-    wrong_sentence: item.wrongSentence,
-    correct_sentence: item.correctSentence,
-    explanation: item.explanation
-  }));
+  const payload = items
+    .filter(
+      (item) =>
+        item &&
+        (item.wrongSentence?.trim() ||
+          item.correctSentence?.trim() ||
+          item.explanation?.trim())
+    )
+    .map((item) => ({
+      user_id: userId,
+      language,
+      error_type: item.errorType,
+      wrong_sentence: item.wrongSentence,
+      correct_sentence: item.correctSentence,
+      explanation: item.explanation,
+    }));
+
+  if (!payload.length) return;
 
   const { error } = await supabase.from("learning_memory").insert(payload);
 
@@ -371,7 +421,7 @@ async function insertAiUsage({
   model,
   inputTokens,
   outputTokens,
-  cost
+  cost,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -385,7 +435,7 @@ async function insertAiUsage({
     model,
     input_tokens: inputTokens,
     output_tokens: outputTokens,
-    cost
+    cost,
   });
 
   if (error) {
@@ -398,13 +448,17 @@ async function updateConversationSummary({
   conversationId,
   targetLanguage,
   nativeLanguage,
-  level
+  level,
+  mode,
+  topic,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
   targetLanguage: string;
   nativeLanguage: string;
   level: string;
+  mode: KosheiMode;
+  topic: string;
 }) {
   const { data, error } = await supabase
     .from("messages")
@@ -421,10 +475,12 @@ async function updateConversationSummary({
     .join("\n");
 
   const summary = [
-    `Language: ${targetLanguage}`,
+    `Target language: ${targetLanguage}`,
     `Native language: ${nativeLanguage}`,
-    `Level: ${level}`,
-    `Recent summary: ${compactConversation.slice(0, 1200)}`
+    `Stage: ${level}`,
+    `Mode: ${mode}`,
+    `Topic: ${topic}`,
+    `Recent summary: ${compactConversation.slice(0, 1200)}`,
   ].join("\n");
 
   const { data: existing } = await supabase
@@ -434,21 +490,32 @@ async function updateConversationSummary({
     .maybeSingle();
 
   if (existing?.id) {
-    await supabase
+    const { error: updateError } = await supabase
       .from("conversation_context")
       .update({
         summary,
-        last_updated: new Date().toISOString()
+        last_updated: new Date().toISOString(),
       })
       .eq("conversation_id", conversationId);
+
+    if (updateError) {
+      console.error("Conversation context update error:", updateError.message);
+    }
+
     return;
   }
 
-  await supabase.from("conversation_context").insert({
-    conversation_id: conversationId,
-    summary,
-    last_updated: new Date().toISOString()
-  });
+  const { error: insertError } = await supabase
+    .from("conversation_context")
+    .insert({
+      conversation_id: conversationId,
+      summary,
+      last_updated: new Date().toISOString(),
+    });
+
+  if (insertError) {
+    console.error("Conversation context insert error:", insertError.message);
+  }
 }
 
 function estimateTokens(text: string) {
@@ -459,25 +526,28 @@ function estimateTokens(text: string) {
 function estimateGeminiCost({
   model,
   inputTokens,
-  outputTokens
+  outputTokens,
 }: {
   model: string;
   inputTokens: number;
   outputTokens: number;
 }) {
-  const pricing: Record<string, { inputPerMillion: number; outputPerMillion: number }> = {
+  const pricing: Record<
+    string,
+    { inputPerMillion: number; outputPerMillion: number }
+  > = {
     "gemini-2.5-flash-lite": {
       inputPerMillion: 0.1,
-      outputPerMillion: 0.4
+      outputPerMillion: 0.4,
     },
     "gemini-2.5-flash": {
       inputPerMillion: 0.3,
-      outputPerMillion: 2.5
+      outputPerMillion: 2.5,
     },
     "gemini-2.5-pro": {
       inputPerMillion: 1.25,
-      outputPerMillion: 10
-    }
+      outputPerMillion: 10,
+    },
   };
 
   const p = pricing[model] || pricing["gemini-2.5-flash-lite"];
@@ -485,4 +555,4 @@ function estimateGeminiCost({
   const outputCost = (outputTokens / 1_000_000) * p.outputPerMillion;
 
   return Number((inputCost + outputCost).toFixed(8));
-    }
+         }
