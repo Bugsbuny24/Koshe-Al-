@@ -12,9 +12,21 @@ export async function createClient() {
         get(name: string) {
           return cookieStore.get(name)?.value;
         },
-        set() {},
-        remove() {}
-      }
+        set(name: string, value: string, options: Record<string, unknown>) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {
+            // Server component'te set edilemez, middleware halleder
+          }
+        },
+        remove(name: string, options: Record<string, unknown>) {
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch {
+            // Server component'te remove edilemez, middleware halleder
+          }
+        },
+      },
     }
   );
 }
