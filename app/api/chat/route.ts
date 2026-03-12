@@ -47,6 +47,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Usage limit: free users get 20 speaking questions per day
+    const isPremium = await checkPremiumStatus({ supabase, userId: user.id });
+    if (!isPremium) {
+      const dailyCount = await getDailyMessageCount({ supabase, userId: user.id });
+      if (dailyCount >= 20) {
+        return NextResponse.json(
+          {
+            error: "daily_limit_reached",
+            message: "Free plan limit: 20 speaking questions per day. Upgrade to Premium for unlimited access.",
+            limit: 20,
+            used: dailyCount,
+          },
+          { status: 429 }
+        );
+      }
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
@@ -183,6 +200,20 @@ export async function POST(req: NextRequest) {
       topic,
     });
 
+    // Save speaking session entry
+    if (parsed.speakingScore) {
+      await upsertSpeakingSession({
+        supabase,
+        userId: user.id,
+        conversationId,
+        language: targetLanguage,
+        level,
+        fluencyScore: parsed.speakingScore.fluency,
+        grammarScore: parsed.speakingScore.grammar,
+        vocabularyScore: parsed.speakingScore.vocabulary,
+      });
+    }
+
     return NextResponse.json({
       conversationId,
       teacherReply: parsed.teacherReply,
@@ -191,6 +222,7 @@ export async function POST(req: NextRequest) {
       nextAction: parsed.nextAction,
       nextQuestion: parsed.nextQuestion,
       difficulty: parsed.difficulty,
+      speakingScore: parsed.speakingScore || null,
       memoryItems: parsed.memoryItems || [],
     });
   } catch (error) {
@@ -555,4 +587,75 @@ function estimateGeminiCost({
   const outputCost = (outputTokens / 1_000_000) * p.outputPerMillion;
 
   return Number((inputCost + outputCost).toFixed(8));
-         }
+}
+
+async function checkPremiumStatus({
+  supabase,
+  userId,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+}) {
+  const { data } = await supabase
+    .from("profiles")
+    .select("is_premium")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return Boolean(data?.is_premium);
+}
+
+async function getDailyMessageCount({
+  supabase,
+  userId,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+}) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const { count } = await supabase
+    .from("messages")
+    .select("*", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("role", "user")
+    .gte("created_at", todayStart.toISOString());
+
+  return count ?? 0;
+}
+
+async function upsertSpeakingSession({
+  supabase,
+  userId,
+  conversationId,
+  language,
+  level,
+  fluencyScore,
+  grammarScore,
+  vocabularyScore,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  conversationId: string;
+  language: string;
+  level: string;
+  fluencyScore: number;
+  grammarScore: number;
+  vocabularyScore: number;
+}) {
+  const { error } = await supabase.from("speaking_sessions").insert({
+    user_id: userId,
+    conversation_id: conversationId,
+    language,
+    level,
+    fluency_score: fluencyScore,
+    grammar_score: grammarScore,
+    vocabulary_score: vocabularyScore,
+    created_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    console.error("Speaking session insert error:", error.message);
+  }
+}
