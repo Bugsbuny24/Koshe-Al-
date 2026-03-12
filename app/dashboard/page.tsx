@@ -187,6 +187,8 @@ export default async function DashboardPage() {
                   const grammar = s.grammar_score ?? 0;
                   const vocab = s.vocabulary_score ?? 0;
                   const avg = Math.round((fluency + grammar + vocab) / 3);
+                  // Minimum 4px so bars are always visible, even for very low scores
+                  const MIN_BAR_PX = 4;
 
                   return (
                     <div
@@ -196,7 +198,7 @@ export default async function DashboardPage() {
                       <p className="text-xs font-medium text-cyan-100">{avg}</p>
                       <div
                         className="w-10 rounded-t-lg bg-cyan-400/60 transition-all"
-                        style={{ height: `${Math.max(avg, 4)}px` }}
+                        style={{ height: `${Math.max(avg, MIN_BAR_PX)}px` }}
                         title={`Fluency: ${fluency} | Grammar: ${grammar} | Vocab: ${vocab}`}
                       />
                       <p className="text-[10px] text-slate-500">#{i + 1}</p>

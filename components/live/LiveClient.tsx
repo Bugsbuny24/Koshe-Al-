@@ -825,6 +825,7 @@ function SpeakingScoreCard({
   stage: string;
 }) {
   const avg = Math.round((score.fluency + score.grammar + score.vocabulary) / 3);
+  const [copied, setCopied] = useState(false);
 
   function handleShare() {
     const text = `My Koshei ${targetLanguage} Score (Stage: ${stage})\n\nFluency: ${score.fluency}\nGrammar: ${score.grammar}\nVocabulary: ${score.vocabulary}\nOverall: ${avg}\n\nLearn languages with Koshei AI 🤖`;
@@ -833,7 +834,8 @@ function SpeakingScoreCard({
       navigator.share({ text }).catch(() => {});
     } else {
       navigator.clipboard.writeText(text).then(() => {
-        alert("Score copied to clipboard!");
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
       }).catch(() => {});
     }
   }
@@ -856,13 +858,20 @@ function SpeakingScoreCard({
             Son konuşma puanın
           </h2>
         </div>
-        <button
-          type="button"
-          onClick={handleShare}
-          className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/15"
-        >
-          📤 Share Score
-        </button>
+        <div className="flex items-center gap-2">
+          {copied ? (
+            <span className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              ✓ Kopyalandı
+            </span>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleShare}
+            className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/15"
+          >
+            📤 Share Score
+          </button>
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-4">

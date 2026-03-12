@@ -47,16 +47,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Usage limit: free users get 20 speaking questions per day
+    // Usage limit: free users get FREE_TIER_DAILY_LIMIT speaking questions per day
+    const FREE_TIER_DAILY_LIMIT = 20;
     const isPremium = await checkPremiumStatus({ supabase, userId: user.id });
     if (!isPremium) {
       const dailyCount = await getDailyMessageCount({ supabase, userId: user.id });
-      if (dailyCount >= 20) {
+      if (dailyCount >= FREE_TIER_DAILY_LIMIT) {
         return NextResponse.json(
           {
             error: "daily_limit_reached",
-            message: "Free plan limit: 20 speaking questions per day. Upgrade to Premium for unlimited access.",
-            limit: 20,
+            message: `Free plan limit: ${FREE_TIER_DAILY_LIMIT} speaking questions per day. Upgrade to Premium for unlimited access.`,
+            limit: FREE_TIER_DAILY_LIMIT,
             used: dailyCount,
           },
           { status: 429 }
