@@ -1,152 +1,84 @@
-"use client";
+import Link from "next/link";
 
-import { useEffect, useRef } from "react";
-
-// Dil noktaları: [x%, y%, bayrak, dil adı]
-const LANG_DOTS: [number, number, string, string][] = [
-  [22, 38, "🇺🇸", "English"],
-  [28, 55, "🇧🇷", "Português"],
-  [26, 32, "🇨🇦", "French"],
-  [45, 28, "🇩🇪", "Deutsch"],
-  [44, 26, "🇬🇧", "English"],
-  [47, 32, "🇫🇷", "Français"],
-  [50, 30, "🇮🇹", "Italiano"],
-  [48, 27, "🇪🇸", "Español"],
-  [55, 35, "🇹🇷", "Türkçe"],
-  [60, 38, "🇸🇦", "العربية"],
-  [68, 35, "🇮🇳", "Hindi"],
-  [78, 32, "🇨🇳", "中文"],
-  [80, 30, "🇯🇵", "日本語"],
-  [79, 38, "🇰🇷", "한국어"],
-  [52, 52, "🇪🇬", "Arabic"],
-  [48, 60, "🇿🇦", "Zulu"],
-  [72, 55, "🇹🇭", "Thai"],
-  [74, 50, "🇻🇳", "Vietnamese"],
+const languages = [
+  { label: "English", x: "10%", y: "20%", delay: "0s" },
+  { label: "Deutsch", x: "22%", y: "55%", delay: "0.6s" },
+  { label: "Español", x: "36%", y: "18%", delay: "1.2s" },
+  { label: "Français", x: "52%", y: "60%", delay: "0.4s" },
+  { label: "Türkçe",  x: "66%", y: "22%", delay: "1.8s" },
+  { label: "日本語",  x: "78%", y: "50%", delay: "0.9s" },
+  { label: "中文",    x: "88%", y: "28%", delay: "1.5s" },
 ];
 
-export default function HeroMap() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let frame = 0;
-    let animId: number;
-
-    const W = canvas.offsetWidth;
-    const H = canvas.offsetHeight;
-    canvas.width = W * window.devicePixelRatio;
-    canvas.height = H * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-
-    // Convert % to px
-    const dots = LANG_DOTS.map(([x, y, flag, name]) => ({
-      x: (x / 100) * W,
-      y: (y / 100) * H,
-      flag,
-      name,
-      phase: Math.random() * Math.PI * 2,
-      speed: 0.4 + Math.random() * 0.4,
-    }));
-
-    function draw() {
-      if (!ctx) return;
-      ctx.clearRect(0, 0, W, H);
-
-      const t = frame * 0.012;
-
-      // Draw connection lines between some dots
-      const pairs = [[0,2],[2,4],[4,5],[5,7],[7,8],[8,9],[9,10],[10,11],[11,12],[0,3]];
-      for (const [a, b] of pairs) {
-        const da = dots[a], db = dots[b];
-        const alpha = 0.06 + 0.04 * Math.sin(t + da.phase);
-        ctx.beginPath();
-        ctx.moveTo(da.x, da.y);
-        ctx.lineTo(db.x, db.y);
-        ctx.strokeStyle = `rgba(79, 126, 255, ${alpha})`;
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-      }
-
-      // Draw dots + pulse
-      for (const dot of dots) {
-        const pulse = 0.5 + 0.5 * Math.sin(t * dot.speed + dot.phase);
-
-        // Outer pulse ring
-        ctx.beginPath();
-        ctx.arc(dot.x, dot.y, 6 + pulse * 8, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(79, 126, 255, ${0.06 * pulse})`;
-        ctx.fill();
-
-        // Inner dot
-        ctx.beginPath();
-        ctx.arc(dot.x, dot.y, 3, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(99, 146, 255, ${0.7 + 0.3 * pulse})`;
-        ctx.fill();
-      }
-
-      frame++;
-      animId = requestAnimationFrame(draw);
-    }
-
-    draw();
-    return () => cancelAnimationFrame(animId);
-  }, []);
-
+export default function Hero() {
   return (
-    <div className="relative w-full h-full select-none">
-      {/* World map SVG paths - simplified continents */}
-      <svg
-        viewBox="0 0 800 420"
-        className="absolute inset-0 w-full h-full opacity-[0.07]"
-        fill="none"
-      >
-        {/* North America */}
-        <path d="M60 80 L180 70 L220 100 L240 160 L200 220 L160 240 L120 210 L80 180 L60 130 Z" fill="#4f7eff" />
-        {/* South America */}
-        <path d="M160 250 L220 240 L240 280 L230 350 L200 390 L170 380 L150 330 L140 280 Z" fill="#4f7eff" />
-        {/* Europe */}
-        <path d="M330 60 L400 55 L420 80 L410 120 L380 130 L350 120 L330 100 Z" fill="#4f7eff" />
-        {/* Africa */}
-        <path d="M340 140 L420 130 L440 180 L430 280 L400 330 L360 320 L330 260 L320 190 Z" fill="#4f7eff" />
-        {/* Asia */}
-        <path d="M420 50 L620 40 L660 80 L650 150 L580 180 L500 160 L440 130 L420 90 Z" fill="#4f7eff" />
-        {/* Australia */}
-        <path d="M600 250 L680 240 L700 280 L680 320 L630 320 L600 290 Z" fill="#4f7eff" />
-      </svg>
+    <section className="relative overflow-hidden rounded-[28px] border border-cyan-400/10 bg-[#040816] px-6 py-16 text-white">
 
-      {/* Animated canvas */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" />
+      {/* glow */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(34,211,238,0.12),transparent_35%),radial-gradient(circle_at_80%_20%,rgba(59,130,246,0.12),transparent_30%)]" />
 
-      {/* Floating flag labels */}
-      {LANG_DOTS.slice(0, 10).map(([x, y, flag, name], i) => (
+      {/* grid */}
+      <div className="absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.2)_1px,transparent_1px)] [background-size:40px_40px]" />
+
+      {/* floating language pills */}
+      {languages.map((lang) => (
         <div
-          key={i}
-          className="absolute pointer-events-none"
+          key={lang.label}
+          className="absolute hidden md:block text-xs border border-cyan-300/20 bg-white/5 backdrop-blur-sm px-3 py-1 rounded-full text-slate-300"
           style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            transform: "translate(-50%, -200%)",
-            animation: `floatLabel ${3 + i * 0.3}s ease-in-out infinite alternate`,
-            animationDelay: `${i * 0.2}s`,
+            left: lang.x,
+            top: lang.y,
+            animation: `floatPill 4s ease-in-out infinite`,
+            animationDelay: lang.delay,
           }}
         >
-          <div className="flex items-center gap-1 rounded-full border border-white/10 bg-slate-900/80 px-2 py-0.5 backdrop-blur-sm whitespace-nowrap">
-            <span className="text-xs">{flag}</span>
-            <span className="text-[10px] text-slate-300 font-medium">{name}</span>
-          </div>
+          {lang.label}
         </div>
       ))}
 
+      <div className="relative max-w-2xl">
+        <p className="text-[11px] tracking-[0.22em] uppercase text-cyan-300/60">
+          Koshei · AI Dil Öğretmeni
+        </p>
+
+        <h1 className="mt-5 text-4xl md:text-5xl font-bold leading-tight tracking-tight">
+          AI ile konuş,<br />
+          <span className="text-cyan-300">gerçekten öğren.</span>
+        </h1>
+
+        <p className="mt-5 text-base leading-7 text-slate-400 max-w-lg">
+          Sana soru sorar. Cevabını dinler. Hatanı düzeltir.
+          Duolingo gibi quiz değil — gerçek konuşma pratiği.
+        </p>
+
+        <div className="mt-8 flex flex-wrap gap-3">
+          <Link
+            href="/login"
+            className="rounded-xl bg-blue-500 px-6 py-3 text-sm font-semibold text-white hover:bg-blue-400 transition"
+          >
+            Hemen Başla →
+          </Link>
+          <Link
+            href="/lesson"
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-6 py-3 text-sm text-slate-200 hover:bg-white/[0.08] transition"
+          >
+            Örnek Ders
+          </Link>
+        </div>
+
+        <div className="mt-8 flex flex-wrap gap-4 text-sm text-slate-500">
+          <span>✓ 63 dil</span>
+          <span>✓ Ücretsiz başla</span>
+          <span>✓ Kayıt gerekmiyor</span>
+        </div>
+      </div>
+
       <style>{`
-        @keyframes floatLabel {
-          from { transform: translate(-50%, -200%) translateY(0px); opacity: 0.6; }
-          to   { transform: translate(-50%, -200%) translateY(-6px); opacity: 1; }
+        @keyframes floatPill {
+          0%, 100% { transform: translateY(0px); opacity: 0.5; }
+          50%       { transform: translateY(-10px); opacity: 1; }
         }
       `}</style>
-    </div>
+    </section>
   );
 }
