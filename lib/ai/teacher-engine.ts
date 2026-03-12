@@ -260,6 +260,11 @@ Return ONLY valid JSON in this exact format:
   "nextAction": "short instruction in ${targetLanguage}",
   "nextQuestion": "next learning question in ${targetLanguage}",
   "difficulty": "easier|same|harder",
+  "speakingScore": {
+    "fluency": 0,
+    "grammar": 0,
+    "vocabulary": 0
+  },
   "memoryItems": [
     {
       "errorType": "grammar|vocab|tense|preposition|pronunciation",
@@ -280,5 +285,9 @@ Output rules:
 - correction can be a polished version if the answer is already mostly correct
 - nextQuestion must match the student's real stage
 - foundation/A1 must be very easy and guided
+- speakingScore.fluency: 0-100 score for how naturally the student expressed themselves
+- speakingScore.grammar: 0-100 score for grammatical accuracy
+- speakingScore.vocabulary: 0-100 score for vocabulary range and appropriateness
+- For A1/A2 levels use simpler criteria; for D1/D2 apply stricter standards
 `.trim();
 }

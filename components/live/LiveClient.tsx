@@ -34,6 +34,11 @@ type ChatApiResponse = {
   nextAction: string;
   nextQuestion: string;
   difficulty: "easier" | "same" | "harder";
+  speakingScore?: {
+    fluency: number;
+    grammar: number;
+    vocabulary: number;
+  } | null;
 };
 
 type KosheiMode = "foundation" | "lesson" | "practice" | "conversation";
@@ -190,6 +195,12 @@ export default function LiveClient({
   const [isThinking, setIsThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submittedCount, setSubmittedCount] = useState(0);
+  const [speakingScore, setSpeakingScore] = useState<{
+    fluency: number;
+    grammar: number;
+    vocabulary: number;
+  } | null>(null);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
 
@@ -322,12 +333,18 @@ export default function LiveClient({
 
       const data = (await response.json()) as Partial<ChatApiResponse> & {
         error?: string;
+        message?: string;
       };
 
       if (!response.ok) {
         if (response.status === 401) {
           window.location.href = "/login";
           return;
+        }
+
+        if (response.status === 429) {
+          setDailyLimitReached(true);
+          throw new Error(data?.message || "Daily limit reached. Upgrade to Premium for unlimited access.");
         }
 
         throw new Error(data?.error || "Koshei response failed.");
@@ -345,6 +362,10 @@ export default function LiveClient({
       setQuestion(data.nextQuestion || question);
       setInput("");
       setSubmittedCount((prev) => prev + 1);
+
+      if (data.speakingScore) {
+        setSpeakingScore(data.speakingScore);
+      }
 
       const nextVocab = extractWordsFromQuestion(data.nextQuestion || question);
       setVocab(nextVocab.length ? nextVocab : INITIAL_VOCAB);
@@ -401,6 +422,8 @@ export default function LiveClient({
     setNextAction(INITIAL_ACTION);
     setError(null);
     setSubmittedCount(0);
+    setSpeakingScore(null);
+    setDailyLimitReached(false);
   }
 
   return (
@@ -478,10 +501,33 @@ export default function LiveClient({
           </div>
         </header>
 
+        {dailyLimitReached ? (
+          <div className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
+            <p className="font-semibold">🔒 Günlük limit doldu</p>
+            <p className="mt-1 text-amber-200/80">
+              Free plan: 20 konuşma sorusu / gün. Sınırsız erişim için Premium&apos;a geç.
+            </p>
+            <a
+              href="/pricing"
+              className="mt-3 inline-block rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-400 transition"
+            >
+              Premium&apos;a Geç →
+            </a>
+          </div>
+        ) : null}
+
         {error ? (
           <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             {error}
           </div>
+        ) : null}
+
+        {speakingScore ? (
+          <SpeakingScoreCard
+            score={speakingScore}
+            targetLanguage={targetLanguage}
+            stage={stage}
+          />
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-12">
@@ -767,4 +813,76 @@ function extractWordsFromQuestion(question: string) {
     .split(/\s+/)
     .filter((w) => w.length > 3)
     .slice(0, 5);
-            }
+}
+
+function SpeakingScoreCard({
+  score,
+  targetLanguage,
+  stage,
+}: {
+  score: { fluency: number; grammar: number; vocabulary: number };
+  targetLanguage: string;
+  stage: string;
+}) {
+  const avg = Math.round((score.fluency + score.grammar + score.vocabulary) / 3);
+
+  function handleShare() {
+    const text = `My Koshei ${targetLanguage} Score (Stage: ${stage})\n\nFluency: ${score.fluency}\nGrammar: ${score.grammar}\nVocabulary: ${score.vocabulary}\nOverall: ${avg}\n\nLearn languages with Koshei AI 🤖`;
+
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Score copied to clipboard!");
+      }).catch(() => {});
+    }
+  }
+
+  function scoreColor(val: number) {
+    if (val >= 80) return "text-emerald-400";
+    if (val >= 60) return "text-cyan-400";
+    if (val >= 40) return "text-amber-400";
+    return "text-red-400";
+  }
+
+  return (
+    <div className="mb-4 rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
+            Speaking Score
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-white">
+            Son konuşma puanın
+          </h2>
+        </div>
+        <button
+          type="button"
+          onClick={handleShare}
+          className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/15"
+        >
+          📤 Share Score
+        </button>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Fluency</p>
+          <p className={`mt-2 text-3xl font-bold ${scoreColor(score.fluency)}`}>{score.fluency}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Grammar</p>
+          <p className={`mt-2 text-3xl font-bold ${scoreColor(score.grammar)}`}>{score.grammar}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Vocabulary</p>
+          <p className={`mt-2 text-3xl font-bold ${scoreColor(score.vocabulary)}`}>{score.vocabulary}</p>
+        </div>
+        <div className="rounded-2xl border border-cyan-300/12 bg-cyan-400/[0.08] p-4 text-center">
+          <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/70">Overall</p>
+          <p className={`mt-2 text-3xl font-bold ${scoreColor(avg)}`}>{avg}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
