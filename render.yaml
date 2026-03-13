@@ -9,7 +9,17 @@ services:
         value: production
       - key: GEMINI_API_KEY
         sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-lite
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: NEXT_PUBLIC_PI_SANDBOX
+        value: "true"
+      - key: PI_API_KEY
+        sync: false
+      - key: PI_API_BASE_URL
+        value: https://api.minepi.com
