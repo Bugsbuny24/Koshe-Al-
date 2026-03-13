@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import MainBoard from "@/components/board/MainBoard";
 import CorrectionBoard from "@/components/board/CorrectionBoard";
 import GrammarBoard from "@/components/board/GrammarBoard";
 import VocabBoard from "@/components/board/VocabBoard";
 import NextActionBoard from "@/components/board/NextActionBoard";
+import { getSpeechLocaleByLanguageName } from "@/lib/constants/languages";
 
 type SpeechRecognitionType = {
   lang: string;
@@ -34,14 +36,20 @@ type ChatApiResponse = {
   nextAction: string;
   nextQuestion: string;
   difficulty: "easier" | "same" | "harder";
-  speakingScore?: {
+  scores?: {
     fluency: number;
     grammar: number;
     vocabulary: number;
   } | null;
+  memoryItems?: Array<{
+    errorType: string;
+    wrongSentence: string;
+    correctSentence: string;
+    explanation: string;
+  }>;
+  message?: string;
+  error?: string;
 };
-
-type KosheiMode = "foundation" | "lesson" | "practice" | "conversation";
 
 declare global {
   interface Window {
@@ -50,108 +58,12 @@ declare global {
   }
 }
 
-const INITIAL_VOCAB = ["big", "small", "crowded", "quiet", "beautiful"];
+const INITIAL_HELPER =
+  "Speak in simple sentences. Koshei will correct you and continue the lesson.";
+
 const INITIAL_NOTES = ["Use short and clear sentences."];
-const INITIAL_ACTION = "Answer the speaking task using your own words.";
-
-function getModeFromStage(stage: string): KosheiMode {
-  if (stage === "A1" || stage === "A2") return "foundation";
-  if (stage === "B1" || stage === "B2") return "lesson";
-  if (stage === "C1" || stage === "C2") return "practice";
-  return "conversation";
-}
-
-function getTopicFromStage(stage: string) {
-  if (stage === "A1") return "Alphabet";
-  if (stage === "A2") return "Word Building";
-  if (stage === "B1") return "Sentence Building";
-  if (stage === "B2") return "Speaking and Understanding";
-  if (stage === "C1") return "Guided Practice";
-  if (stage === "C2") return "Advanced Practice";
-  if (stage === "D1") return "Real Conversation";
-  return "Fluency";
-}
-
-function getInitialQuestion(stage: string, targetLanguage: string) {
-  if (stage === "A1") {
-    return `Listen: My name is Koshei. Repeat: My name is...`;
-  }
-
-  if (stage === "A2") {
-    return `Read this word and repeat it.`;
-  }
-
-  if (stage === "B1") {
-    return `Describe your city in simple ${targetLanguage}.`;
-  }
-
-  if (stage === "B2") {
-    return `Tell me about your daily life in ${targetLanguage}.`;
-  }
-
-  if (stage === "C1") {
-    return `Practice speaking about your favorite topic in ${targetLanguage}.`;
-  }
-
-  if (stage === "C2") {
-    return `Explain your opinion clearly and naturally in ${targetLanguage}.`;
-  }
-
-  if (stage === "D1") {
-    return `Let's have a real conversation in ${targetLanguage}.`;
-  }
-
-  return `Speak naturally in ${targetLanguage}.`;
-}
-
-function getInitialHelper(stage: string, targetLanguage: string) {
-  if (stage === "A1") {
-    return `Start from zero. Listen, repeat, and say very short answers in ${targetLanguage}.`;
-  }
-
-  if (stage === "A2") {
-    return `Build simple words and repeat them clearly in ${targetLanguage}.`;
-  }
-
-  if (stage === "B1") {
-    return `Use short and simple sentences in ${targetLanguage}.`;
-  }
-
-  if (stage === "B2") {
-    return `Speak clearly and try to answer with 1 to 3 sentences in ${targetLanguage}.`;
-  }
-
-  if (stage === "C1") {
-    return `Practice speaking naturally. Koshei will correct and guide you in ${targetLanguage}.`;
-  }
-
-  if (stage === "C2") {
-    return `Give longer answers and improve fluency in ${targetLanguage}.`;
-  }
-
-  if (stage === "D1") {
-    return `Have a real conversation in ${targetLanguage}.`;
-  }
-
-  return `Speak naturally and fluently in ${targetLanguage}.`;
-}
-
-function getSpeechLangFromTargetLanguage(targetLanguage: string) {
-  const map: Record<string, string> = {
-    English: "en-US",
-    German: "de-DE",
-    Spanish: "es-ES",
-    French: "fr-FR",
-    Italian: "it-IT",
-    Portuguese: "pt-PT",
-    Arabic: "ar-SA",
-    Japanese: "ja-JP",
-    Chinese: "zh-CN",
-    Turkish: "tr-TR",
-  };
-
-  return map[targetLanguage] || "en-US";
-}
+const INITIAL_ACTION = "Answer the current speaking task using your own words.";
+const INITIAL_VOCAB = ["speak", "learn", "answer", "question", "practice"];
 
 export default function LiveClient({
   nativeLanguage,
@@ -162,21 +74,13 @@ export default function LiveClient({
   targetLanguage: string;
   stage: string;
 }) {
-  const mode = useMemo(() => getModeFromStage(stage), [stage]);
-  const initialTopic = useMemo(() => getTopicFromStage(stage), [stage]);
-  const initialQuestion = useMemo(
-    () => getInitialQuestion(stage, targetLanguage),
-    [stage, targetLanguage]
-  );
-  const initialHelper = useMemo(
-    () => getInitialHelper(stage, targetLanguage),
-    [stage, targetLanguage]
-  );
+  const topic = "Daily Life";
+  const level = stage;
 
-  const [topic] = useState(initialTopic);
-  const [level] = useState(stage);
-  const [question, setQuestion] = useState(initialQuestion);
-  const [helper, setHelper] = useState(initialHelper);
+  const [question, setQuestion] = useState(
+    getInitialQuestion(stage, targetLanguage)
+  );
+  const [helper, setHelper] = useState(INITIAL_HELPER);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const [input, setInput] = useState("");
@@ -186,26 +90,27 @@ export default function LiveClient({
   const [vocab, setVocab] = useState<string[]>(INITIAL_VOCAB);
   const [nextAction, setNextAction] = useState(INITIAL_ACTION);
 
+  const [scores, setScores] = useState<{
+    fluency: number;
+    grammar: number;
+    vocabulary: number;
+  } | null>(null);
+
   const [recognitionSupported, setRecognitionSupported] = useState(false);
   const [selectedLang, setSelectedLang] = useState(
-    getSpeechLangFromTargetLanguage(targetLanguage)
+    getSpeechLocaleByLanguageName(targetLanguage)
   );
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [isListening, setIsListening] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [quotaMessage, setQuotaMessage] = useState<string | null>(null);
   const [submittedCount, setSubmittedCount] = useState(0);
-  const [speakingScore, setSpeakingScore] = useState<{
-    fluency: number;
-    grammar: number;
-    vocabulary: number;
-  } | null>(null);
-  const [dailyLimitReached, setDailyLimitReached] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognitionType | null>(null);
 
   useEffect(() => {
-    setSelectedLang(getSpeechLangFromTargetLanguage(targetLanguage));
+    setSelectedLang(getSpeechLocaleByLanguageName(targetLanguage));
   }, [targetLanguage]);
 
   useEffect(() => {
@@ -310,6 +215,7 @@ export default function LiveClient({
     if (!userAnswer) return;
 
     setError(null);
+    setQuotaMessage(null);
     setIsThinking(true);
     setLastUserAnswer(userAnswer);
 
@@ -324,27 +230,22 @@ export default function LiveClient({
           targetLanguage,
           nativeLanguage,
           level,
-          mode,
+          mode: normalizeMode(level),
           topic,
           currentQuestion: question,
           userAnswer,
         }),
       });
 
-      const data = (await response.json()) as Partial<ChatApiResponse> & {
-        error?: string;
-        message?: string;
-      };
+      const data = (await response.json()) as ChatApiResponse;
 
       if (!response.ok) {
-        if (response.status === 401) {
-          window.location.href = "/login";
-          return;
-        }
-
         if (response.status === 429) {
-          setDailyLimitReached(true);
-          throw new Error(data?.message || "Daily limit reached. Upgrade to Premium for unlimited access.");
+          setQuotaMessage(
+            data.message ||
+              "Daily free limit reached. Upgrade to continue speaking."
+          );
+          return;
         }
 
         throw new Error(data?.error || "Koshei response failed.");
@@ -363,11 +264,17 @@ export default function LiveClient({
       setInput("");
       setSubmittedCount((prev) => prev + 1);
 
-      if (data.speakingScore) {
-        setSpeakingScore(data.speakingScore);
-      }
+      setScores(
+        data.scores || {
+          fluency: 70,
+          grammar: 70,
+          vocabulary: 70,
+        }
+      );
 
-      const nextVocab = extractWordsFromQuestion(data.nextQuestion || question);
+      const nextVocab = extractWordsFromText(
+        `${data.correction || ""} ${data.nextQuestion || ""}`
+      );
       setVocab(nextVocab.length ? nextVocab : INITIAL_VOCAB);
 
       speakText(data.teacherReply || "Good. Let's continue.");
@@ -378,27 +285,8 @@ export default function LiveClient({
     }
   }
 
-  async function nextQuestion() {
-    if (!correction && !lastUserAnswer) return;
-
-    if (mode === "foundation") {
-      setHelper(
-        `Continue slowly in ${targetLanguage}. Listen, repeat, then answer.`
-      );
-    } else if (mode === "lesson") {
-      setHelper(
-        `Continue building clearer answers in ${targetLanguage}.`
-      );
-    } else if (mode === "practice") {
-      setHelper(
-        `Keep practicing naturally in ${targetLanguage}.`
-      );
-    } else {
-      setHelper(
-        `Continue the conversation naturally in ${targetLanguage}.`
-      );
-    }
-
+  function nextQuestion() {
+    setHelper("Answer in a natural way. Koshei will continue the lesson.");
     setCorrection("");
     setGrammarNotes(["Read the new task and answer naturally."]);
     setNextAction("Answer the new speaking task.");
@@ -413,17 +301,17 @@ export default function LiveClient({
 
     setConversationId(null);
     setQuestion(getInitialQuestion(stage, targetLanguage));
-    setHelper(getInitialHelper(stage, targetLanguage));
+    setHelper(INITIAL_HELPER);
     setInput("");
     setLastUserAnswer("");
     setCorrection("");
     setGrammarNotes(INITIAL_NOTES);
     setVocab(INITIAL_VOCAB);
     setNextAction(INITIAL_ACTION);
+    setScores(null);
     setError(null);
+    setQuotaMessage(null);
     setSubmittedCount(0);
-    setSpeakingScore(null);
-    setDailyLimitReached(false);
   }
 
   return (
@@ -439,12 +327,9 @@ export default function LiveClient({
                 AI Speaking Teacher
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                Speak, get corrected, continue. Clean interface, clear flow,
-                real speaking practice.
+                Speak, get corrected, continue. Clear flow, real speaking
+                practice.
               </p>
-              <div className="mt-3 text-xs text-cyan-200/80">
-                {nativeLanguage} → {targetLanguage} | Stage: {stage} | Mode: {mode}
-              </div>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:items-center">
@@ -459,11 +344,11 @@ export default function LiveClient({
                 <option value="fr-FR">Français</option>
                 <option value="es-ES">Español</option>
                 <option value="it-IT">Italiano</option>
-                <option value="pt-PT">Português</option>
-                <option value="ar-SA">العربية</option>
+                <option value="tr-TR">Türkçe</option>
                 <option value="ja-JP">日本語</option>
                 <option value="zh-CN">中文</option>
-                <option value="tr-TR">Türkçe</option>
+                <option value="ko-KR">한국어</option>
+                <option value="ar-SA">العربية</option>
               </select>
 
               <label className="flex h-11 items-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-200">
@@ -501,33 +386,24 @@ export default function LiveClient({
           </div>
         </header>
 
-        {dailyLimitReached ? (
-          <div className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm text-amber-100">
-            <p className="font-semibold">🔒 Günlük limit doldu</p>
-            <p className="mt-1 text-amber-200/80">
-              Free plan: 20 konuşma sorusu / gün. Sınırsız erişim için Premium&apos;a geç.
-            </p>
-            <a
-              href="/pricing"
-              className="mt-3 inline-block rounded-xl bg-amber-500 px-4 py-2 text-xs font-semibold text-white hover:bg-amber-400 transition"
-            >
-              Premium&apos;a Geç →
-            </a>
-          </div>
-        ) : null}
-
         {error ? (
           <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-100">
             {error}
           </div>
         ) : null}
 
-        {speakingScore ? (
-          <SpeakingScoreCard
-            score={speakingScore}
-            targetLanguage={targetLanguage}
-            stage={stage}
-          />
+        {quotaMessage ? (
+          <div className="mb-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <span>{quotaMessage}</span>
+              <Link
+                href="/pricing"
+                className="inline-flex h-10 items-center justify-center rounded-xl bg-amber-400/15 px-4 text-sm font-medium text-amber-50 transition hover:bg-amber-400/20"
+              >
+                View Pricing
+              </Link>
+            </div>
+          </div>
         ) : null}
 
         <div className="grid gap-4 md:grid-cols-12">
@@ -573,6 +449,10 @@ export default function LiveClient({
               userAnswer={lastUserAnswer}
               correction={correction}
             />
+          </div>
+
+          <div className="md:col-span-5">
+            <SpeakingScoreCard scores={scores} />
           </div>
 
           <div className="md:col-span-5 space-y-4">
@@ -806,92 +686,120 @@ function StatusPill({
   );
 }
 
-function extractWordsFromQuestion(question: string) {
-  return question
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 3)
-    .slice(0, 5);
-}
-
 function SpeakingScoreCard({
-  score,
-  targetLanguage,
-  stage,
+  scores,
 }: {
-  score: { fluency: number; grammar: number; vocabulary: number };
-  targetLanguage: string;
-  stage: string;
+  scores: { fluency: number; grammar: number; vocabulary: number } | null;
 }) {
-  const avg = Math.round((score.fluency + score.grammar + score.vocabulary) / 3);
-  const [copied, setCopied] = useState(false);
+  const hasScores =
+    !!scores &&
+    (scores.fluency > 0 || scores.grammar > 0 || scores.vocabulary > 0);
 
-  function handleShare() {
-    const text = `My Koshei ${targetLanguage} Score (Stage: ${stage})\n\nFluency: ${score.fluency}\nGrammar: ${score.grammar}\nVocabulary: ${score.vocabulary}\nOverall: ${avg}\n\nLearn languages with Koshei AI 🤖`;
+  async function handleShare() {
+    if (!scores) return;
 
-    if (navigator.share) {
-      navigator.share({ text }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(text).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
-      }).catch(() => {});
+    const text = `My Koshei speaking score
+Fluency: ${scores.fluency}
+Grammar: ${scores.grammar}
+Vocabulary: ${scores.vocabulary}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Koshei Speaking Score",
+          text,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(text);
+      alert("Score copied to clipboard.");
+    } catch {
+      alert("Share failed.");
     }
   }
 
-  function scoreColor(val: number) {
-    if (val >= 80) return "text-emerald-400";
-    if (val >= 60) return "text-cyan-400";
-    if (val >= 40) return "text-amber-400";
-    return "text-red-400";
-  }
-
   return (
-    <div className="mb-4 rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
-            Speaking Score
-          </p>
-          <h2 className="mt-1 text-xl font-semibold text-white">
-            Son konuşma puanın
-          </h2>
-        </div>
-        <div className="flex items-center gap-2">
-          {copied ? (
-            <span className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
-              ✓ Kopyalandı
-            </span>
-          ) : null}
+    <div className="rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
+        Speaking Score
+      </p>
+      <h2 className="mt-2 text-xl font-semibold text-white">
+        Son konuşma sonucu
+      </h2>
+
+      {hasScores && scores ? (
+        <>
+          <div className="mt-5 space-y-4">
+            <ScoreRow label="Fluency" value={scores.fluency} />
+            <ScoreRow label="Grammar" value={scores.grammar} />
+            <ScoreRow label="Vocabulary" value={scores.vocabulary} />
+          </div>
+
           <button
             type="button"
             onClick={handleShare}
-            className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/15"
+            className="mt-5 h-11 w-full rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/15"
           >
-            📤 Share Score
+            Sonucu Paylaş
           </button>
+        </>
+      ) : (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-sm text-slate-300">
+          İlk cevabını gönder. Koshei konuşma puanını oluştursun.
         </div>
+      )}
+    </div>
+  );
+}
+
+function ScoreRow({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="text-sm text-slate-200">{label}</span>
+        <span className="text-sm font-semibold text-white">{value}</span>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-4">
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Fluency</p>
-          <p className={`mt-2 text-3xl font-bold ${scoreColor(score.fluency)}`}>{score.fluency}</p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Grammar</p>
-          <p className={`mt-2 text-3xl font-bold ${scoreColor(score.grammar)}`}>{score.grammar}</p>
-        </div>
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">Vocabulary</p>
-          <p className={`mt-2 text-3xl font-bold ${scoreColor(score.vocabulary)}`}>{score.vocabulary}</p>
-        </div>
-        <div className="rounded-2xl border border-cyan-300/12 bg-cyan-400/[0.08] p-4 text-center">
-          <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/70">Overall</p>
-          <p className={`mt-2 text-3xl font-bold ${scoreColor(avg)}`}>{avg}</p>
-        </div>
+      <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-cyan-300 to-blue-400"
+          style={{ width: `${value}%` }}
+        />
       </div>
     </div>
   );
+}
+
+function getInitialQuestion(stage: string, targetLanguage: string) {
+  if (stage === "A1") return `Listen: My name is Koshei. Repeat in ${targetLanguage}.`;
+  if (stage === "A2") return `Read this word and repeat it in ${targetLanguage}.`;
+  if (stage === "B1") return `Describe your city in simple ${targetLanguage}.`;
+  if (stage === "B2") return `Tell me about your daily life in ${targetLanguage}.`;
+  if (stage === "C1") return `Practice speaking about your favorite topic in ${targetLanguage}.`;
+  if (stage === "C2") return `Explain your opinion clearly and naturally in ${targetLanguage}.`;
+  if (stage === "D1") return `Let's have a real conversation in ${targetLanguage}.`;
+  return `Speak naturally in ${targetLanguage}.`;
+}
+
+function normalizeMode(stage: string) {
+  if (stage === "A1" || stage === "A2") return "foundation";
+  if (stage === "B1" || stage === "B2") return "lesson";
+  if (stage === "C1" || stage === "C2") return "practice";
+  return "conversation";
+}
+
+function extractWordsFromText(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-zA-ZğüşöçıİĞÜŞÖÇ\s]/g, " ")
+    .split(/\s+/)
+    .filter((w) => w.length > 3)
+    .slice(0, 5);
 }
