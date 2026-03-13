@@ -11,33 +11,57 @@ export async function POST(req: NextRequest) {
     const accessToken = body?.accessToken;
 
     if (!uid || !username || !accessToken) {
-      return NextResponse.json({ error: "Eksik Pi auth verisi." }, { status: 400 });
+      return NextResponse.json(
+        { error: "Eksik Pi auth verisi." },
+        { status: 400 }
+      );
     }
 
     const email = `${username}@pi.local`;
 
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, username")
       .eq("username", username)
       .maybeSingle();
 
+    if (existingError) {
+      return NextResponse.json(
+        { error: existingError.message },
+        { status: 500 }
+      );
+    }
+
     if (!existing) {
-      const { error } = await supabase.from("profiles").insert({
+      const { error: insertError } = await supabase.from("profiles").insert({
         id: crypto.randomUUID(),
         username,
         full_name: username,
         email,
         role: "user",
+        onboarding_completed: false,
       });
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+      if (insertError) {
+        return NextResponse.json(
+          { error: insertError.message },
+          { status: 500 }
+        );
       }
     }
 
-    return NextResponse.json({ ok: true, uid, username });
-  } catch {
-    return NextResponse.json({ error: "Pi auth server hatası." }, { status: 500 });
+    return NextResponse.json({
+      ok: true,
+      uid,
+      username,
+      accessTokenPresent: true,
+      note: "Profile synced. Full Supabase auth bridge may still require a custom session integration.",
+    });
+  } catch (error) {
+    console.error("Pi auth route error:", error);
+    return NextResponse.json(
+      { error: "Pi auth server hatası." },
+      { status: 500 }
+    );
   }
 }
