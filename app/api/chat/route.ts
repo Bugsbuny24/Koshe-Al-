@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildTeacherPrompt, type KosheiMode } from "@/lib/ai/teacher-engine";
 import { extractJson } from "@/lib/ai/parse-json";
-import type { TeacherEngineResponse } from "@/lib/ai/types";
+import type { MemoryItem, SpeakingScore, TeacherEngineResponse } from "@/lib/ai/types";
 
 const FREE_TIER_DAILY_LIMIT = 20;
 
@@ -20,37 +20,29 @@ type ChatRequestBody = {
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
-
     const {
       data: { user },
-      error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = (await req.json()) as ChatRequestBody;
-
-    const targetLanguage = String(body?.targetLanguage || "English").trim();
-    const nativeLanguage = String(body?.nativeLanguage || "Turkish").trim();
-    const level = String(body?.level || "A1").trim();
-    const mode = normalizeMode(body?.mode, level);
-    const topic = String(body?.topic || "Daily Life").trim();
+    const targetLanguage = String(body.targetLanguage || "English").trim();
+    const nativeLanguage = String(body.nativeLanguage || "Turkish").trim();
+    const level = String(body.level || "A1").trim();
+    const mode = normalizeMode(body.mode, level);
+    const topic = String(body.topic || "Daily Life").trim();
     const currentQuestion = String(
-      body?.currentQuestion || getDefaultQuestion(level, targetLanguage)
+      body.currentQuestion || getDefaultQuestion(level, targetLanguage)
     ).trim();
-    const userAnswer = String(body?.userAnswer || "").trim();
+    const userAnswer = String(body.userAnswer || "").trim();
 
     if (!userAnswer) {
-      return NextResponse.json(
-        { error: "userAnswer is required." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "userAnswer is required." }, { status: 400 });
     }
 
-    // Usage limit: free users get FREE_TIER_DAILY_LIMIT questions per day
-    // Premium check via user_quotas.plan (not profiles.is_premium)
     const isPremium = await checkPremiumStatus({ supabase, userId: user.id });
     if (!isPremium) {
       const dailyCount = await getDailyMessageCount({ supabase, userId: user.id });
@@ -71,16 +63,13 @@ export async function POST(req: NextRequest) {
     const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
     if (!apiKey) {
-      return NextResponse.json(
-        { error: "GEMINI_API_KEY is missing." },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "GEMINI_API_KEY is missing." }, { status: 500 });
     }
 
     const conversationId = await getOrCreateConversation({
       supabase,
       userId: user.id,
-      conversationId: body?.conversationId,
+      conversationId: body.conversationId,
       language: targetLanguage,
       mode,
     });
@@ -92,15 +81,8 @@ export async function POST(req: NextRequest) {
       userAnswer,
     });
 
-    const contextSummary = await getConversationSummary({
-      supabase,
-      conversationId,
-    });
-
-    const recentMessages = await getRecentMessages({
-      supabase,
-      conversationId,
-    });
+    const contextSummary = await getConversationSummary({ supabase, conversationId });
+    const recentMessages = await getRecentMessages({ supabase, conversationId });
 
     const prompt = buildTeacherPrompt({
       targetLanguage,
@@ -124,7 +106,7 @@ export async function POST(req: NextRequest) {
           generationConfig: {
             temperature: getTemperatureForMode(mode),
             topP: 0.9,
-            maxOutputTokens: 500,
+            maxOutputTokens: 600,
           },
         }),
       }
@@ -133,7 +115,6 @@ export async function POST(req: NextRequest) {
     const geminiData = await geminiResponse.json();
 
     if (!geminiResponse.ok) {
-      console.error("Gemini API error:", geminiData);
       return NextResponse.json(
         { error: "Gemini request failed.", details: geminiData },
         { status: 500 }
@@ -152,6 +133,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const safeScore = normalizeScore(parsed.speakingScore);
+    const safeMemoryItems = normalizeMemoryItems(parsed.memoryItems);
+
     const inputTokens = estimateTokens(prompt);
     const outputTokens = estimateTokens(rawText);
 
@@ -165,14 +149,21 @@ export async function POST(req: NextRequest) {
       outputTokens,
     });
 
-    if (Array.isArray(parsed.memoryItems) && parsed.memoryItems.length > 0) {
+    if (safeMemoryItems.length > 0) {
       await insertLearningMemory({
         supabase,
         userId: user.id,
         language: targetLanguage,
-        items: parsed.memoryItems,
+        items: safeMemoryItems,
       });
     }
+
+    await upsertVocabMemory({
+      supabase,
+      userId: user.id,
+      language: targetLanguage,
+      sourceText: `${parsed.correction} ${parsed.nextQuestion}`,
+    });
 
     await insertAiUsage({
       supabase,
@@ -193,19 +184,17 @@ export async function POST(req: NextRequest) {
       topic,
     });
 
-    // Save speaking session (with grammar_score + vocabulary_score via schema update)
-    if (parsed.speakingScore) {
-      await upsertSpeakingSession({
-        supabase,
-        userId: user.id,
-        conversationId,
-        language: targetLanguage,
-        level,
-        fluencyScore: parsed.speakingScore.fluency,
-        grammarScore: parsed.speakingScore.grammar,
-        vocabularyScore: parsed.speakingScore.vocabulary,
-      });
-    }
+    await insertSpeakingSession({
+      supabase,
+      userId: user.id,
+      conversationId,
+      language: targetLanguage,
+      level,
+      userAnswer,
+      score: safeScore,
+      correction: parsed.correction,
+      grammarNotes: parsed.grammarNotes || [],
+    });
 
     return NextResponse.json({
       conversationId,
@@ -215,8 +204,8 @@ export async function POST(req: NextRequest) {
       nextAction: parsed.nextAction,
       nextQuestion: parsed.nextQuestion,
       difficulty: parsed.difficulty,
-      speakingScore: parsed.speakingScore || null,
-      memoryItems: parsed.memoryItems || [],
+      scores: safeScore,
+      memoryItems: safeMemoryItems,
     });
   } catch (error) {
     console.error("Production chat route error:", error);
@@ -255,7 +244,80 @@ function getTemperatureForMode(mode: KosheiMode) {
   return 0.75;
 }
 
-// Premium check: user_quotas.plan = 'premium' (profiles.is_premium kolonu yok)
+function estimateTokens(text: string) {
+  return Math.max(1, Math.ceil(text.length / 4));
+}
+
+function estimateGeminiCost({
+  model,
+  inputTokens,
+  outputTokens,
+}: {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+}) {
+  const isLite = model.includes("lite");
+  const inputRate = isLite ? 0.1 : 0.3;
+  const outputRate = isLite ? 0.4 : 2.5;
+
+  const inputCost = (inputTokens / 1_000_000) * inputRate;
+  const outputCost = (outputTokens / 1_000_000) * outputRate;
+
+  return Number((inputCost + outputCost).toFixed(8));
+}
+
+function normalizeScore(score?: SpeakingScore): SpeakingScore {
+  return {
+    fluency: clampScore(score?.fluency ?? 70),
+    grammar: clampScore(score?.grammar ?? 70),
+    vocabulary: clampScore(score?.vocabulary ?? 70),
+  };
+}
+
+function clampScore(value: number) {
+  return Math.max(1, Math.min(100, Math.round(value)));
+}
+
+function normalizeMemoryItems(items?: MemoryItem[]) {
+  return Array.isArray(items) ? items.filter(Boolean) : [];
+}
+
+function countWords(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function countSentences(text: string) {
+  const parts = text
+    .split(/[.!?]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return Math.max(1, parts.length);
+}
+
+function estimateMistakesCount({
+  correction,
+  grammarNotes,
+  userAnswer,
+}: {
+  correction: string;
+  grammarNotes: string[];
+  userAnswer: string;
+}) {
+  let mistakes = 0;
+
+  if (
+    correction &&
+    correction.trim().toLowerCase() !== userAnswer.trim().toLowerCase()
+  ) {
+    mistakes += 1;
+  }
+
+  mistakes += Math.min(grammarNotes.length, 4);
+  return mistakes;
+}
+
 async function checkPremiumStatus({
   supabase,
   userId,
@@ -268,6 +330,7 @@ async function checkPremiumStatus({
     .select("plan")
     .eq("user_id", userId)
     .maybeSingle();
+
   return data?.plan === "premium" || data?.plan === "pro";
 }
 
@@ -280,50 +343,23 @@ async function getDailyMessageCount({
 }) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
+
   const { count } = await supabase
     .from("messages")
     .select("*", { count: "exact", head: true })
     .eq("user_id", userId)
     .eq("role", "user")
     .gte("created_at", todayStart.toISOString());
+
   return count ?? 0;
 }
 
-async function upsertSpeakingSession({
+async function getOrCreateConversation({
   supabase,
   userId,
   conversationId,
   language,
-  level,
-  fluencyScore,
-  grammarScore,
-  vocabularyScore,
-}: {
-  supabase: Awaited<ReturnType<typeof createClient>>;
-  userId: string;
-  conversationId: string;
-  language: string;
-  level: string;
-  fluencyScore: number;
-  grammarScore: number;
-  vocabularyScore: number;
-}) {
-  const { error } = await supabase.from("speaking_sessions").insert({
-    user_id: userId,
-    conversation_id: conversationId,
-    language,
-    level,
-    fluency_score: fluencyScore,
-    grammar_score: grammarScore,
-    vocabulary_score: vocabularyScore,
-  });
-  if (error) {
-    console.error("Speaking session insert error:", error.message);
-  }
-}
-
-async function getOrCreateConversation({
-  supabase, userId, conversationId, language, mode,
+  mode,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -332,25 +368,38 @@ async function getOrCreateConversation({
   mode: KosheiMode;
 }) {
   if (conversationId) {
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from("conversations")
       .select("id")
       .eq("id", conversationId)
       .eq("user_id", userId)
-      .single();
-    if (!error && data?.id) return data.id as string;
+      .maybeSingle();
+
+    if (data?.id) return data.id as string;
   }
+
   const { data, error } = await supabase
     .from("conversations")
-    .insert({ user_id: userId, language, mode })
+    .insert({
+      user_id: userId,
+      language,
+      mode,
+    })
     .select("id")
     .single();
-  if (error || !data?.id) throw new Error(error?.message || "Failed to create conversation.");
+
+  if (error || !data?.id) {
+    throw new Error(error?.message || "Failed to create conversation.");
+  }
+
   return data.id as string;
 }
 
 async function insertUserMessage({
-  supabase, conversationId, userId, userAnswer,
+  supabase,
+  conversationId,
+  userId,
+  userAnswer,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -366,11 +415,18 @@ async function insertUserMessage({
     input_tokens: 0,
     output_tokens: 0,
   });
+
   if (error) throw new Error(`Failed to insert user message: ${error.message}`);
 }
 
 async function insertAssistantMessage({
-  supabase, conversationId, userId, content, model, inputTokens, outputTokens,
+  supabase,
+  conversationId,
+  userId,
+  content,
+  model,
+  inputTokens,
+  outputTokens,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -389,37 +445,42 @@ async function insertAssistantMessage({
     input_tokens: inputTokens,
     output_tokens: outputTokens,
   });
+
   if (error) throw new Error(`Failed to insert assistant message: ${error.message}`);
 }
 
 async function getConversationSummary({
-  supabase, conversationId,
+  supabase,
+  conversationId,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
 }) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("conversation_context")
     .select("summary")
     .eq("conversation_id", conversationId)
     .maybeSingle();
-  if (error) { console.error("Summary fetch error:", error.message); return ""; }
+
   return String(data?.summary || "");
 }
 
 async function getRecentMessages({
-  supabase, conversationId,
+  supabase,
+  conversationId,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
 }) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("messages")
     .select("role, content, created_at")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
     .limit(4);
-  if (error || !data) { console.error("Recent messages fetch error:", error?.message); return []; }
+
+  if (!data) return [];
+
   return [...data].reverse().map((m) => ({
     role: (m.role || "user") as "user" | "assistant" | "system",
     content: String(m.content || ""),
@@ -427,30 +488,88 @@ async function getRecentMessages({
 }
 
 async function insertLearningMemory({
-  supabase, userId, language, items,
+  supabase,
+  userId,
+  language,
+  items,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
   language: string;
-  items: TeacherEngineResponse["memoryItems"];
+  items: MemoryItem[];
 }) {
-  const payload = items
-    .filter((item) => item && (item.wrongSentence?.trim() || item.correctSentence?.trim() || item.explanation?.trim()))
-    .map((item) => ({
-      user_id: userId,
-      language,
-      error_type: item.errorType,
-      wrong_sentence: item.wrongSentence,
-      correct_sentence: item.correctSentence,
-      explanation: item.explanation,
-    }));
+  const payload = items.map((item) => ({
+    user_id: userId,
+    language,
+    error_type: item.errorType,
+    wrong_sentence: item.wrongSentence,
+    correct_sentence: item.correctSentence,
+    explanation: item.explanation,
+  }));
+
   if (!payload.length) return;
+
   const { error } = await supabase.from("learning_memory").insert(payload);
   if (error) console.error("Learning memory insert error:", error.message);
 }
 
+async function upsertVocabMemory({
+  supabase,
+  userId,
+  language,
+  sourceText,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  language: string;
+  sourceText: string;
+}) {
+  const words = [...new Set(
+    sourceText
+      .toLowerCase()
+      .replace(/[^a-zA-ZğüşöçıİĞÜŞÖÇ\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 4)
+      .slice(0, 8)
+  )];
+
+  for (const word of words) {
+    const { data: existing } = await supabase
+      .from("vocab_memory")
+      .select("id, strength")
+      .eq("user_id", userId)
+      .eq("language", language)
+      .eq("word", word)
+      .maybeSingle();
+
+    if (existing?.id) {
+      await supabase
+        .from("vocab_memory")
+        .update({
+          strength: Math.min((existing.strength || 1) + 1, 10),
+          last_seen: new Date().toISOString(),
+        })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("vocab_memory").insert({
+        user_id: userId,
+        language,
+        word,
+        meaning: null,
+        strength: 1,
+        last_seen: new Date().toISOString(),
+      });
+    }
+  }
+}
+
 async function insertAiUsage({
-  supabase, userId, model, inputTokens, outputTokens, cost,
+  supabase,
+  userId,
+  model,
+  inputTokens,
+  outputTokens,
+  cost,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   userId: string;
@@ -460,13 +579,24 @@ async function insertAiUsage({
   cost: number;
 }) {
   const { error } = await supabase.from("ai_usage").insert({
-    user_id: userId, model, input_tokens: inputTokens, output_tokens: outputTokens, cost,
+    user_id: userId,
+    model,
+    input_tokens: inputTokens,
+    output_tokens: outputTokens,
+    cost,
   });
+
   if (error) console.error("AI usage insert error:", error.message);
 }
 
 async function updateConversationSummary({
-  supabase, conversationId, targetLanguage, nativeLanguage, level, mode, topic,
+  supabase,
+  conversationId,
+  targetLanguage,
+  nativeLanguage,
+  level,
+  mode,
+  topic,
 }: {
   supabase: Awaited<ReturnType<typeof createClient>>;
   conversationId: string;
@@ -476,13 +606,14 @@ async function updateConversationSummary({
   mode: KosheiMode;
   topic: string;
 }) {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("messages")
     .select("role, content")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: false })
     .limit(8);
-  if (error || !data?.length) return;
+
+  if (!data?.length) return;
 
   const compactConversation = [...data]
     .reverse()
@@ -505,33 +636,58 @@ async function updateConversationSummary({
     .maybeSingle();
 
   if (existing?.id) {
-    const { error: updateError } = await supabase
+    await supabase
       .from("conversation_context")
       .update({ summary, last_updated: new Date().toISOString() })
       .eq("conversation_id", conversationId);
-    if (updateError) console.error("Conversation context update error:", updateError.message);
-    return;
+  } else {
+    await supabase.from("conversation_context").insert({
+      conversation_id: conversationId,
+      summary,
+      last_updated: new Date().toISOString(),
+    });
   }
-
-  const { error: insertError } = await supabase
-    .from("conversation_context")
-    .insert({ conversation_id: conversationId, summary, last_updated: new Date().toISOString() });
-  if (insertError) console.error("Conversation context insert error:", insertError.message);
 }
 
-function estimateTokens(text: string) {
-  if (!text) return 0;
-  return Math.ceil(text.length / 4);
-}
-
-function estimateGeminiCost({ model, inputTokens, outputTokens }: {
-  model: string; inputTokens: number; outputTokens: number;
+async function insertSpeakingSession({
+  supabase,
+  userId,
+  conversationId,
+  language,
+  level,
+  userAnswer,
+  score,
+  correction,
+  grammarNotes,
+}: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  conversationId: string;
+  language: string;
+  level: string;
+  userAnswer: string;
+  score: SpeakingScore;
+  correction: string;
+  grammarNotes: string[];
 }) {
-  const pricing: Record<string, { inputPerMillion: number; outputPerMillion: number }> = {
-    "gemini-2.5-flash-lite": { inputPerMillion: 0.1, outputPerMillion: 0.4 },
-    "gemini-2.5-flash": { inputPerMillion: 0.3, outputPerMillion: 2.5 },
-    "gemini-2.5-pro": { inputPerMillion: 1.25, outputPerMillion: 10 },
-  };
-  const p = pricing[model] || pricing["gemini-2.5-flash-lite"];
-  return Number(((inputTokens / 1_000_000) * p.inputPerMillion + (outputTokens / 1_000_000) * p.outputPerMillion).toFixed(8));
-}
+  const { error } = await supabase.from("speaking_sessions").insert({
+    user_id: userId,
+    conversation_id: conversationId,
+    language,
+    level,
+    duration_seconds: Math.max(5, Math.round(countWords(userAnswer) * 0.7)),
+    sentences_count: countSentences(userAnswer),
+    mistakes_count: estimateMistakesCount({
+      correction,
+      grammarNotes,
+      userAnswer,
+    }),
+    fluency_score: score.fluency,
+    grammar_score: score.grammar,
+    vocabulary_score: score.vocabulary,
+  });
+
+  if (error) {
+    console.error("Speaking session insert error:", error.message);
+  }
+  }
