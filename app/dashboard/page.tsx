@@ -40,6 +40,14 @@ export default async function DashboardPage() {
     .select("*", { count: "exact", head: true })
     .eq("user_id", user.id);
 
+  // Recent speaking scores for progress graph
+  const { data: recentScores } = await supabase
+    .from("speaking_sessions")
+    .select("fluency_score,grammar_score,vocabulary_score,created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: true })
+    .limit(10);
+
   const { data: recentMistakes } = await supabase
     .from("learning_memory")
     .select("wrong_sentence,correct_sentence,explanation,created_at")
@@ -80,6 +88,12 @@ export default async function DashboardPage() {
               className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
             >
               Daily Lesson
+            </Link>
+            <Link
+              href="/profile"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
+            >
+              Profil
             </Link>
           </div>
         </header>
@@ -153,6 +167,71 @@ export default async function DashboardPage() {
             </div>
           </div>
         </section>
+
+        {recentScores && recentScores.length > 0 ? (
+          <section className="mt-5 rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
+              Progress Graph
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-white">
+              Speaking ilerleme grafiği
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              Son {recentScores.length} oturumun puanları
+            </p>
+
+            <div className="mt-5 overflow-x-auto">
+              <div className="flex min-w-max items-end gap-3 pb-2">
+                {recentScores.map((s, i) => {
+                  const fluency = s.fluency_score ?? 0;
+                  const grammar = s.grammar_score ?? 0;
+                  const vocab = s.vocabulary_score ?? 0;
+                  const avg = Math.round((fluency + grammar + vocab) / 3);
+                  // Minimum 4px so bars are always visible, even for very low scores
+                  const MIN_BAR_PX = 4;
+
+                  return (
+                    <div
+                      key={`score-${s.created_at ?? i}`}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <p className="text-xs font-medium text-cyan-100">{avg}</p>
+                      <div
+                        className="w-10 rounded-t-lg bg-cyan-400/60 transition-all"
+                        style={{ height: `${Math.max(avg, MIN_BAR_PX)}px` }}
+                        title={`Fluency: ${fluency} | Grammar: ${grammar} | Vocab: ${vocab}`}
+                      />
+                      <p className="text-[10px] text-slate-500">#{i + 1}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
+              {(() => {
+                const n = recentScores.length;
+                const avgF = Math.round(
+                  recentScores.reduce((s, r) => s + (r.fluency_score ?? 0), 0) / n
+                );
+                const avgG = Math.round(
+                  recentScores.reduce((s, r) => s + (r.grammar_score ?? 0), 0) / n
+                );
+                const avgV = Math.round(
+                  recentScores.reduce((s, r) => s + (r.vocabulary_score ?? 0), 0) / n
+                );
+
+                return (
+                  <>
+                    <AvgScoreCard label="Fluency" value={avgF} />
+                    <AvgScoreCard label="Grammar" value={avgG} />
+                    <AvgScoreCard label="Vocabulary" value={avgV} />
+                  </>
+                );
+              })()}
+            </div>
+          </section>
+        ) : null}
 
         <section className="mt-5 grid gap-4 lg:grid-cols-2">
           <div className="rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
@@ -286,6 +365,26 @@ function EmptyCard({ text }: { text: string }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
       <p className="text-sm text-slate-300">{text}</p>
+    </div>
+  );
+}
+
+function AvgScoreCard({ label, value }: { label: string; value: number }) {
+  const color =
+    value >= 80
+      ? "text-emerald-400"
+      : value >= 60
+      ? "text-cyan-400"
+      : value >= 40
+      ? "text-amber-400"
+      : "text-red-400";
+
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
+      <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">
+        {label}
+      </p>
+      <p className={`mt-2 text-2xl font-bold ${color}`}>{value}</p>
     </div>
   );
 }
