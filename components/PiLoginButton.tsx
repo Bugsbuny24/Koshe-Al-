@@ -1,6 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+
+declare global {
+  interface Window {
+    Pi?: {
+      init: (options: { version: string; sandbox?: boolean }) => void;
+      authenticate: (
+        scopes: string[],
+        onIncompletePaymentFound?: (payment: unknown) => void
+      ) => Promise<{
+        user: {
+          uid: string;
+          username: string;
+        };
+        accessToken: string;
+      }>;
+    };
+  }
+}
 
 export default function PiLoginButton() {
   const [isPiBrowser, setIsPiBrowser] = useState(false);
@@ -8,25 +27,38 @@ export default function PiLoginButton() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    // Sadece Pi Browser'da window.Pi var
     setIsPiBrowser(!!window.Pi);
   }, []);
 
-  // Pi Browser değilse hiç render etme
   if (!isPiBrowser) return null;
 
   async function handlePiLogin() {
+    const supabase = createClient();
+
     try {
       setLoading(true);
       setMessage("");
 
-      window.Pi!.init({ version: "2.0" });
+      if (!window.Pi) {
+        setMessage("Pi Browser içinde açmalısın.");
+        return;
+      }
 
-      const auth = await window.Pi!.authenticate(["username", "payments"], () => {});
+      window.Pi.init({
+        version: "2.0",
+        sandbox: process.env.NEXT_PUBLIC_PI_SANDBOX === "true",
+      });
+
+      const auth = await window.Pi.authenticate(
+        ["username", "payments"],
+        () => {}
+      );
 
       const res = await fetch("/api/pi/auth", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(auth),
       });
 
@@ -37,7 +69,19 @@ export default function PiLoginButton() {
         return;
       }
 
-      window.location.href = data?.redirectTo || "/dashboard";
+      const { email, password } = data;
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setMessage(error.message || "Session açılamadı.");
+        return;
+      }
+
+      window.location.href = "/dashboard";
     } catch (error) {
       console.error("Pi login error:", error);
       setMessage("Pi ile giriş sırasında hata oluştu.");
@@ -57,9 +101,12 @@ export default function PiLoginButton() {
         <span className="text-base font-bold">π</span>
         {loading ? "Bağlanıyor..." : "Pi ile Giriş"}
       </button>
-      {message && (
-        <p className="max-w-[220px] text-xs leading-5 text-amber-300">{message}</p>
-      )}
+
+      {message ? (
+        <p className="max-w-[220px] text-xs leading-5 text-amber-300">
+          {message}
+        </p>
+      ) : null}
     </div>
   );
 }
