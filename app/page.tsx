@@ -1,4 +1,4 @@
-import Link from "next/link";
+  import Link from "next/link";
 import PiLoginButton from "@/components/PiLoginButton";
 
 export default function HomePage() {
@@ -11,20 +11,6 @@ export default function HomePage() {
 
             <div className="flex items-center gap-2">
               <PiLoginButton />
-
-              <Link
-                href="/login"
-                className="inline-flex h-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.03] px-4 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
-              >
-                Giriş Yap
-              </Link>
-
-              <Link
-                href="/register"
-                className="inline-flex h-10 items-center justify-center rounded-xl bg-blue-500 px-4 text-sm font-semibold text-white transition hover:bg-blue-400"
-              >
-                Ücretsiz Başla
-              </Link>
             </div>
           </div>
         </header>
@@ -51,12 +37,9 @@ export default function HomePage() {
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/register"
-                  className="inline-flex h-12 items-center justify-center rounded-2xl bg-blue-500 px-6 text-sm font-semibold text-white transition hover:bg-blue-400"
-                >
-                  Ücretsiz Başla
-                </Link>
+                <div className="sm:min-w-[180px]">
+                  <PiLoginButton />
+                </div>
 
                 <Link
                   href="/live"
@@ -64,10 +47,17 @@ export default function HomePage() {
                 >
                   Demo: Konuş
                 </Link>
+
+                <Link
+                  href="/pricing"
+                  className="inline-flex h-12 items-center justify-center rounded-2xl border border-cyan-300/15 bg-cyan-400/[0.08] px-6 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/[0.14]"
+                >
+                  Pi Planları
+                </Link>
               </div>
 
               <p className="mt-4 text-sm text-slate-400">
-                Pi Browser&apos;da aç → Pi ile giriş yap → anında başla
+                Pi Browser&apos;da aç → Pi ile giriş yap → konuşmaya başla
               </p>
             </div>
 
@@ -78,6 +68,10 @@ export default function HomePage() {
               <div className="absolute left-[49%] top-[30%] h-4 w-4 rounded-full bg-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.95)]" />
               <div className="absolute left-[56%] top-[40%] h-4 w-4 rounded-full bg-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.95)]" />
               <div className="absolute left-[82%] top-[41%] h-4 w-4 rounded-full bg-cyan-300 shadow-[0_0_24px_rgba(34,211,238,0.95)]" />
+
+              <div className="absolute inset-x-[16%] top-[28%] h-px bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
+              <div className="absolute inset-x-[36%] top-[39%] h-px bg-gradient-to-r from-transparent via-cyan-300/25 to-transparent" />
+              <div className="absolute inset-x-[42%] top-[35%] h-px bg-gradient-to-r from-transparent via-cyan-300/20 to-transparent" />
             </div>
           </div>
         </section>
@@ -104,10 +98,10 @@ export default function HomePage() {
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-4">
-            <StepCard number="1" text="Dil ve seviyeni seç" />
-            <StepCard number="2" text="Koshei sana konuşma görevi verir" />
-            <StepCard number="3" text="Yaz veya mikrofonla cevap ver" />
-            <StepCard number="4" text="AI düzeltir ve sonraki adıma geçer" />
+            <StepCard number="1" text="Pi Browser içinde aç" />
+            <StepCard number="2" text="Pi ile giriş yap" />
+            <StepCard number="3" text="Sorulara yazarak veya konuşarak cevap ver" />
+            <StepCard number="4" text="AI düzeltir ve sonraki adıma geçirir" />
           </div>
         </section>
       </div>
