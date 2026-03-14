@@ -1,33 +1,32 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function PiLoginButton() {
+  const [isPiBrowser, setIsPiBrowser] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    // Sadece Pi Browser'da window.Pi var
+    setIsPiBrowser(!!window.Pi);
+  }, []);
+
+  // Pi Browser değilse hiç render etme
+  if (!isPiBrowser) return null;
 
   async function handlePiLogin() {
     try {
       setLoading(true);
       setMessage("");
 
-      if (!window.Pi) {
-        setMessage("Pi Browser içinde açmalısın.");
-        return;
-      }
+      window.Pi!.init({ version: "2.0" });
 
-      window.Pi.init({ version: "2.0" });
-
-      const auth = await window.Pi.authenticate(
-        ["username", "payments"],
-        () => {}
-      );
+      const auth = await window.Pi!.authenticate(["username", "payments"], () => {});
 
       const res = await fetch("/api/pi/auth", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(auth),
       });
 
@@ -38,13 +37,7 @@ export default function PiLoginButton() {
         return;
       }
 
-      // Burada direkt dashboard yerine login'e yönlendiriyoruz
-      // çünkü gerçek Supabase session lazım
-      if (data?.redirectTo) {
-        window.location.href = data.redirectTo;
-      } else {
-        window.location.href = "/login";
-      }
+      window.location.href = data?.redirectTo || "/dashboard";
     } catch (error) {
       console.error("Pi login error:", error);
       setMessage("Pi ile giriş sırasında hata oluştu.");
@@ -54,21 +47,19 @@ export default function PiLoginButton() {
   }
 
   return (
-    <div className="flex flex-col items-start gap-2">
+    <div className="flex flex-col items-start gap-1">
       <button
         type="button"
         onClick={handlePiLogin}
         disabled={loading}
-        className="inline-flex h-10 items-center justify-center rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-purple-600 px-4 text-sm font-semibold text-white transition hover:bg-purple-500 disabled:opacity-50"
       >
+        <span className="text-base font-bold">π</span>
         {loading ? "Bağlanıyor..." : "Pi ile Giriş"}
       </button>
-
-      {message ? (
-        <p className="max-w-[220px] text-xs leading-5 text-amber-300">
-          {message}
-        </p>
-      ) : null}
+      {message && (
+        <p className="max-w-[220px] text-xs leading-5 text-amber-300">{message}</p>
+      )}
     </div>
   );
 }
