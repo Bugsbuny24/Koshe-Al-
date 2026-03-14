@@ -8,11 +8,9 @@ export default async function LessonPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
-
+if (!user) {
+  redirect("/");
+}
   const { data: profile } = await supabase
     .from("profiles")
     .select("native_language,target_language,learning_stage,difficulty_level,onboarding_completed")
