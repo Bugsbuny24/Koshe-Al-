@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+function buildPiEmail(piUid: string) {
+  return `${piUid}@pi.local`;
+}
+
+function buildPiPassword(piUid: string) {
+  return `PiAuth-${piUid}-Secure!2026`;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -33,12 +41,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Pi kullanıcı için sentetik ama stabil email
-    const email = `${piUid}@pi.local`;
-    const password = `PiAuth-${piUid}-Secure!2026`;
+    const email = buildPiEmail(piUid);
+    const password = buildPiPassword(piUid);
 
-    // Önce auth user var mı bak
-    const { data: usersData, error: listError } = await admin.auth.admin.listUsers();
+    const { data: usersData, error: listError } =
+      await admin.auth.admin.listUsers();
 
     if (listError) {
       return NextResponse.json(
@@ -49,7 +56,6 @@ export async function POST(req: NextRequest) {
 
     let authUser = usersData.users.find((u) => u.email === email);
 
-    // Yoksa oluştur
     if (!authUser) {
       const { data: createdUser, error: createError } =
         await admin.auth.admin.createUser({
@@ -71,9 +77,17 @@ export async function POST(req: NextRequest) {
       }
 
       authUser = createdUser.user;
+    } else {
+      await admin.auth.admin.updateUserById(authUser.id, {
+        password,
+        user_metadata: {
+          provider: "pi",
+          pi_uid: piUid,
+          username,
+        },
+      });
     }
 
-    // profiles upsert
     const { error: profileError } = await admin.from("profiles").upsert(
       {
         id: authUser.id,
@@ -93,7 +107,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // kullanıcı için quota kaydı da aç
     await admin.from("user_quotas").upsert(
       {
         user_id: authUser.id,
@@ -108,10 +121,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       ok: true,
+      email,
+      password,
       userId: authUser.id,
       username,
-      email,
-      redirectTo: "/login?pi=1&email=" + encodeURIComponent(email),
     });
   } catch (error) {
     console.error("Pi auth route error:", error);
