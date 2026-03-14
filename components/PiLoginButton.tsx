@@ -46,11 +46,18 @@ export default function PiLoginButton() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data?.error || "Pi login başarısız.");
+        setMessage(data?.error || "API hatası");
+        console.error("PI AUTH API ERROR:", data);
         return;
       }
 
       const { email, password } = data;
+
+      if (!email || !password) {
+        setMessage("Email veya şifre dönmedi.");
+        console.error("PI AUTH RESPONSE INVALID:", data);
+        return;
+      }
 
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -58,14 +65,15 @@ export default function PiLoginButton() {
       });
 
       if (error) {
-        setMessage(error.message);
+        setMessage(error.message || "Supabase session açılamadı.");
+        console.error("SUPABASE SIGNIN ERROR:", error);
         return;
       }
 
       window.location.href = "/dashboard";
-    } catch (e) {
-      console.error(e);
-      setMessage("Pi login hatası.");
+    } catch (e: any) {
+      console.error("PI LOGIN CATCH ERROR:", e);
+      setMessage(e?.message || "Bilinmeyen Pi login hatası.");
     } finally {
       setLoading(false);
     }
@@ -83,7 +91,7 @@ export default function PiLoginButton() {
         {loading ? "Bağlanıyor..." : "Pi ile Giriş"}
       </button>
 
-      {message && <p className="text-xs text-red-400">{message}</p>}
+      {message ? <p className="text-xs text-red-400">{message}</p> : null}
     </div>
   );
 }
