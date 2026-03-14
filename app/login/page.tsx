@@ -57,8 +57,7 @@ export default function LoginPage() {
 
         if (error) throw error;
 
-        router.push("/live");
-        router.refresh();
+        window.location.href = "/live";
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bir hata oluştu.");
