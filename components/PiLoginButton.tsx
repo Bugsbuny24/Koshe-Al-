@@ -13,19 +13,17 @@ export default function PiLoginButton() {
     let mounted = true;
 
     const boot = async () => {
-      // SDK objesi sayfaya düşsün diye kısa bekleme
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      // SDK'nın yüklenmesi için kısa bir bekleme
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       if (mounted && isPiBrowser()) {
-        setIsReady(true);
+        const ok = initPi(); // Sayfa açılırken SDK'yı başlat
+        if (ok) setIsReady(true);
       }
     };
 
     boot();
-
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   async function handlePiLogin() {
@@ -35,62 +33,41 @@ export default function PiLoginButton() {
       setLoading(true);
       setMessage("");
 
-      if (!isPiBrowser()) {
-        setMessage("Pi Browser içinde açmalısın.");
-        return;
+      if (!window.Pi) {
+        throw new Error("Pi SDK hazır değil. Pi Browser'ı yenilemeyi deneyin.");
       }
 
-      const initialized = initPi();
-
-      if (!initialized || !(window as any).Pi) {
-        setMessage("Pi SDK hazır değil. Uygulamayı Pi Browser içinde yeniden aç.");
-        return;
-      }
-
-      const auth = await (window as any).Pi.authenticate(
+      // Kullanıcıdan izin iste
+      const auth = await window.Pi.authenticate(
         ["username", "payments"],
-        () => {}
+        (onIncompletePaymentFound: any) => {
+          console.log("Tamamlanmamış ödeme bulundu:", onIncompletePaymentFound);
+        }
       );
 
+      // Backend'e gönder
       const res = await fetch("/api/pi/auth", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(auth),
       });
 
       const data = await res.json();
 
-      if (!res.ok) {
-        setMessage(data?.error || "Pi auth API hatası.");
-        console.error("PI AUTH API ERROR:", data);
-        return;
-      }
+      if (!res.ok) throw new Error(data?.error || "Giriş işlemi başarısız.");
 
-      const { email, password } = data;
-
-      if (!email || !password) {
-        setMessage("Pi auth dönüşü eksik.");
-        console.error("PI AUTH RESPONSE INVALID:", data);
-        return;
-      }
-
+      [span_2](start_span)// Supabase ile oturum aç[span_2](end_span)
       const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+        email: data.email,
+        password: data.password,
       });
 
-      if (error) {
-        setMessage(error.message || "Supabase session açılamadı.");
-        console.error("SUPABASE SIGNIN ERROR:", error);
-        return;
-      }
+      if (error) throw error;
 
       window.location.href = "/dashboard";
     } catch (e: any) {
-      console.error("PI LOGIN CATCH ERROR:", e);
-      setMessage(e?.message || "Bilinmeyen Pi login hatası.");
+      console.error("Giriş Hatası:", e);
+      setMessage(e?.message || "Bir hata oluştu.");
     } finally {
       setLoading(false);
     }
@@ -104,12 +81,11 @@ export default function PiLoginButton() {
         type="button"
         onClick={handlePiLogin}
         disabled={loading}
-        className="rounded-xl bg-purple-600 px-4 py-2 text-white disabled:opacity-50"
+        className="rounded-xl bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:opacity-50 transition-all"
       >
         {loading ? "Bağlanıyor..." : "Pi ile Giriş"}
       </button>
-
-      {message ? <p className="text-xs text-red-400">{message}</p> : null}
+      {message && <p className="text-xs text-red-400 font-medium">{message}</p>}
     </div>
   );
 }
