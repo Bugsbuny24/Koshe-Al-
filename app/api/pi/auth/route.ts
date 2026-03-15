@@ -1,9 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+type PiAuthBody = {
+  user?: {
+    uid?: string;
+    username?: string;
+  };
+  accessToken?: string;
+};
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const body = (await req.json()) as PiAuthBody;
 
     const piUid = body?.user?.uid;
     const username = body?.user?.username ?? "Pi User";
@@ -14,6 +22,8 @@ export async function POST(req: Request) {
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const siteUrl =
+      process.env.NEXT_PUBLIC_SITE_URL || "https://tradepigloball.co";
 
     if (!supabaseUrl || !serviceRoleKey) {
       return NextResponse.json(
@@ -36,10 +46,7 @@ export async function POST(req: Request) {
       await supabase.auth.admin.listUsers();
 
     if (listError) {
-      return NextResponse.json(
-        { error: listError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: listError.message }, { status: 500 });
     }
 
     let user = usersData.users.find((u) => u.email === email);
@@ -69,6 +76,7 @@ export async function POST(req: Request) {
       const { data: updatedData, error: updateError } =
         await supabase.auth.admin.updateUserById(user.id, {
           password,
+          email_confirm: true,
           user_metadata: {
             ...(user.user_metadata || {}),
             provider: "pi",
@@ -119,22 +127,37 @@ export async function POST(req: Request) {
     );
 
     if (quotaError) {
+      return NextResponse.json({ error: quotaError.message }, { status: 500 });
+    }
+
+    const { data: linkData, error: linkError } =
+      await supabase.auth.admin.generateLink({
+        type: "magiclink",
+        email,
+        options: {
+          redirectTo: `${siteUrl}/dashboard`,
+        },
+      });
+
+    if (linkError || !linkData?.properties?.action_link) {
       return NextResponse.json(
-        { error: quotaError.message },
+        { error: linkError?.message || "Magic link üretilemedi." },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       ok: true,
-      email,
-      password,
+      actionLink: linkData.properties.action_link,
       userId: user.id,
+      email,
       username,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error;
+
     return NextResponse.json(
-      { error: error?.message || "Bilinmeyen Pi auth hatası." },
+      { error: err?.message || "Bilinmeyen Pi auth hatası." },
       { status: 500 }
     );
   }
