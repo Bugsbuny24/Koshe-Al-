@@ -1,5 +1,10 @@
 import "./globals.css";
-import Script from "next/script";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Koshei — AI Dil Öğretmeni",
+  description: "80 dilde AI konuşma pratiği. Konuş, hata yap, düzelt.",
+};
 
 export default function RootLayout({
   children,
@@ -7,17 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <Script
-          src="https://sdk.minepi.com/pi-sdk.js"
-          strategy="beforeInteractive"
-        />
-      </head>
-
-      <body>
-        {children}
-      </body>
+    <html lang="tr">
+      <body>{children}</body>
     </html>
   );
 }
