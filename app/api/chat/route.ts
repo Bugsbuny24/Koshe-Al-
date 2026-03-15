@@ -670,7 +670,7 @@ async function insertSpeakingSession({
   correction: string;
   grammarNotes: string[];
 }) {
-  const { error } = await supabase.from("speaking_sessions").insert({
+  const { error } = await supabase.from("speaking_sessions").upsert({
     user_id: userId,
     conversation_id: conversationId,
     language,
@@ -685,9 +685,9 @@ async function insertSpeakingSession({
     fluency_score: score.fluency,
     grammar_score: score.grammar,
     vocabulary_score: score.vocabulary,
-  });
+  }, { onConflict: "conversation_id" });
 
   if (error) {
-    console.error("Speaking session insert error:", error.message);
+    console.error("Speaking session upsert error:", error.message);
   }
-  }
+}
