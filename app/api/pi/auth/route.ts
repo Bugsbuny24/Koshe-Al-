@@ -129,12 +129,16 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-      ok: true,
-      email,
-      password,
-      userId: user.id,
-      username,
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error?.message || "B
+    ok: true,
+    email,
+    password,
+    userId: user.id,
+    username,
+  });
+
+} catch (error: any) {
+  return NextResponse.json(
+    { error: error?.message || "Bilinmeyen Pi auth hatası." },
+    { status: 500 }
+  );
+  }
