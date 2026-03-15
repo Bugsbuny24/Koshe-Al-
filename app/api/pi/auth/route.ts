@@ -9,10 +9,7 @@ export async function POST(req: Request) {
     const username = body?.user?.username ?? "Pi User";
 
     if (!piUid) {
-      return NextResponse.json(
-        { error: "Pi UID yok." },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Pi UID yok." }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -129,16 +126,16 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({
-    ok: true,
-    email,
-    password,
-    userId: user.id,
-    username,
-  });
-
-} catch (error: any) {
-  return NextResponse.json(
-    { error: error?.message || "Bilinmeyen Pi auth hatası." },
-    { status: 500 }
-  );
+      ok: true,
+      email,
+      password,
+      userId: user.id,
+      username,
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { error: error?.message || "Bilinmeyen Pi auth hatası." },
+      { status: 500 }
+    );
   }
+}
