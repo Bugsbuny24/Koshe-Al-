@@ -11,58 +11,54 @@ export default function PiLoginButton() {
 
   useEffect(() => {
     let mounted = true;
-
     const boot = async () => {
-      // SDK'nın yüklenmesi için kısa bir bekleme
       await new Promise((resolve) => setTimeout(resolve, 500));
-
       if (mounted && isPiBrowser()) {
-        const ok = initPi(); // Sayfa açılırken SDK'yı başlat
+        const ok = initPi();
         if (ok) setIsReady(true);
       }
     };
-
     boot();
     return () => { mounted = false; };
   }, []);
 
   async function handlePiLogin() {
     const supabase = createClient();
-
     try {
       setLoading(true);
       setMessage("");
 
-      if (!window.Pi) {
-        throw new Error("Pi SDK hazır değil. Pi Browser'ı yenilemeyi deneyin.");
-      }
-
-      // Kullanıcıdan izin iste
+      // Pi SDK'yı çağırıyoruz
       const auth = await window.Pi.authenticate(
         ["username", "payments"],
-        (onIncompletePaymentFound: any) => {
-          console.log("Tamamlanmamış ödeme bulundu:", onIncompletePaymentFound);
-        }
+        (incomplete: any) => console.log("Eksik ödeme:", incomplete)
       );
 
-      // Backend'e gönder
+      // Backend isteği
       const res = await fetch("/api/pi/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(auth),
+        body: JSON.stringify(auth)
       });
 
       const data = await res.json();
 
-      if (!res.ok) throw new Error(data?.error || "Giriş işlemi başarısız.");
+      // Hata kontrolü (Noktalı virgül şart!)
+      if (!res.ok) {
+        throw new Error(data?.error || "Giriş işlemi başarısız.");
+      }
 
-      [span_2](start_span)// Supabase ile oturum aç[span_2](end_span)
-      const { error } = await supabase.auth.signInWithPassword({
+      // Supabase girişi - Başına boşluk ve ; koyarak TS'yi susturuyoruz
+      const loginParams = {
         email: data.email,
-        password: data.password,
-      });
+        password: data.password
+      };
 
-      if (error) throw error;
+      const { error } = await supabase.auth.signInWithPassword(loginParams);
+
+      if (error) {
+        throw error;
+      }
 
       window.location.href = "/dashboard";
     } catch (e: any) {
@@ -81,7 +77,7 @@ export default function PiLoginButton() {
         type="button"
         onClick={handlePiLogin}
         disabled={loading}
-        className="rounded-xl bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:opacity-50 transition-all"
+        className="rounded-xl bg-purple-600 px-4 py-2 text-white hover:bg-purple-700 disabled:opacity-50 transition-all font-semibold"
       >
         {loading ? "Bağlanıyor..." : "Pi ile Giriş"}
       </button>
