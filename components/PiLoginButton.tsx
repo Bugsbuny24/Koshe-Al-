@@ -2,16 +2,30 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { initPi, isPiBrowser } from "@/lib/pi";
 
 export default function PiLoginButton() {
-  const [isPiBrowser, setIsPiBrowser] = useState(false);
+  const [isReady, setIsReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined" && (window as any).Pi) {
-      setIsPiBrowser(true);
-    }
+    let mounted = true;
+
+    const boot = async () => {
+      // SDK objesi sayfaya düşsün diye kısa bekleme
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      if (mounted && isPiBrowser()) {
+        setIsReady(true);
+      }
+    };
+
+    boot();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   async function handlePiLogin() {
@@ -21,19 +35,22 @@ export default function PiLoginButton() {
       setLoading(true);
       setMessage("");
 
-      const Pi = (window as any).Pi;
-
-      if (!Pi) {
+      if (!isPiBrowser()) {
         setMessage("Pi Browser içinde açmalısın.");
         return;
       }
 
-      Pi.init({
-        version: "2.0",
-        sandbox: process.env.NEXT_PUBLIC_PI_SANDBOX === "true",
-      });
+      const initialized = initPi();
 
-      const auth = await Pi.authenticate(["username", "payments"], () => {});
+      if (!initialized || !(window as any).Pi) {
+        setMessage("Pi SDK hazır değil. Uygulamayı Pi Browser içinde yeniden aç.");
+        return;
+      }
+
+      const auth = await (window as any).Pi.authenticate(
+        ["username", "payments"],
+        () => {}
+      );
 
       const res = await fetch("/api/pi/auth", {
         method: "POST",
@@ -46,7 +63,7 @@ export default function PiLoginButton() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage(data?.error || "API hatası");
+        setMessage(data?.error || "Pi auth API hatası.");
         console.error("PI AUTH API ERROR:", data);
         return;
       }
@@ -54,7 +71,7 @@ export default function PiLoginButton() {
       const { email, password } = data;
 
       if (!email || !password) {
-        setMessage("Email veya şifre dönmedi.");
+        setMessage("Pi auth dönüşü eksik.");
         console.error("PI AUTH RESPONSE INVALID:", data);
         return;
       }
@@ -79,14 +96,15 @@ export default function PiLoginButton() {
     }
   }
 
-  if (!isPiBrowser) return null;
+  if (!isReady) return null;
 
   return (
     <div className="flex flex-col gap-2">
       <button
+        type="button"
         onClick={handlePiLogin}
         disabled={loading}
-        className="rounded-xl bg-purple-600 px-4 py-2 text-white"
+        className="rounded-xl bg-purple-600 px-4 py-2 text-white disabled:opacity-50"
       >
         {loading ? "Bağlanıyor..." : "Pi ile Giriş"}
       </button>
