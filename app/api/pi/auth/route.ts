@@ -1,50 +1,60 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextResponse } from "next/server"
+import { createClient } from "@supabase/supabase-js"
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
+
   try {
-    const body = await req.json();
-    const piUid = body?.user?.uid;
-    const username = body?.user?.username;
-    const accessToken = body?.accessToken;
 
-    if (!piUid || !accessToken) {
-      return NextResponse.json({ error: "Veri eksik." }, { status: 400 });
+    const body = await req.json()
+
+    const piUid = body?.user?.uid
+    const username = body?.user?.username
+
+    if (!piUid) {
+      return NextResponse.json({ error: "Pi UID yok" }, { status: 400 })
     }
 
-    const admin = createClient(
+    const email = `${piUid}@pi.local`
+    const password = `pi_${piUid}`
+
+    const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    )
 
-    const email = `${piUid}@pi.local`;
-    const password = `PiAuth-${piUid}-2026!`;
+    // kullanıcı var mı kontrol et
+    const { data: users } = await supabase.auth.admin.listUsers()
 
-    // Kullanıcı kontrolü
-    const { data: usersData } = await admin.auth.admin.listUsers();
-    let authUser = usersData.users.find((u) => u.email === email);
+    const exists = users.users.find(u => u.email === email)
 
-    if (!authUser) {
-      const { data: newUser, error: createError } = await admin.auth.admin.createUser({
+    if (!exists) {
+
+      const { error } = await supabase.auth.admin.createUser({
         email,
         password,
         email_confirm: true,
-        user_metadata: { pi_uid: piUid, username }
-      });
-      if (createError) throw createError;
-      authUser = newUser.user;
+        user_metadata: {
+          provider: "pi",
+          pi_uid: piUid,
+          username
+        }
+      })
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
     }
 
-    // HATA BURADAYDI: upsert kullanımı düzeltildi
-    await admin.from("profiles").upsert({ 
-      id: authUser.id, 
-      username: username,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'id' });
+    return NextResponse.json({
+      email,
+      password
+    })
 
-    return NextResponse.json({ ok: true, email, password });
-  } catch (error: any) {
-    console.error("Server Auth Hatası:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (e: any) {
+
+    return NextResponse.json({
+      error: e.message
+    }, { status: 500 })
+
   }
 }
