@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AnswerBoard from "@/components/board/AnswerBoard";
 import MainBoard from "@/components/board/MainBoard";
 import CorrectionBoard from "@/components/board/CorrectionBoard";
@@ -8,6 +8,14 @@ import GrammarBoard from "@/components/board/GrammarBoard";
 import VocabBoard from "@/components/board/VocabBoard";
 import NextActionBoard from "@/components/board/NextActionBoard";
 import type { ChatRouteResponse } from "@/lib/ai/types";
+import {
+  browserSupportsSpeechRecognition,
+  browserSupportsSpeechSynthesis,
+  createRecognition,
+  speakText,
+  stopSpeaking,
+} from "@/lib/live/speech";
+import { getSpeechLocaleByLanguageName } from "@/lib/constants/languages";
 
 type LiveClientProps = {
   nativeLanguage: string;
@@ -15,14 +23,10 @@ type LiveClientProps = {
   stage: string;
 };
 
-type SpeechRecognitionConstructor = new () => SpeechRecognition;
-
-declare global {
-  interface Window {
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    SpeechRecognition?: SpeechRecognitionConstructor;
-  }
-}
+type ConversationTurn = {
+  role: "user" | "assistant";
+  text: string;
+};
 
 export default function LiveClient({
   nativeLanguage,
@@ -33,14 +37,18 @@ export default function LiveClient({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-
+  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [micEnabled, setMicEnabled] = useState(true);
+  const [speechError, setSpeechError] = useState("");
   const [teacherReply, setTeacherReply] = useState(
     `Hello! I'm ready to help you practice ${targetLanguage}. Tell me about yourself.`
   );
   const [correction, setCorrection] = useState("");
   const [grammarNotes, setGrammarNotes] = useState<string[]>([]);
   const [vocabulary, setVocabulary] = useState<string[]>([]);
-  const [nextAction, setNextAction] = useState("");
+  const [nextAction, setNextAction] = useState(
+    "Try answering with a full sentence."
+  );
   const [nextQuestion, setNextQuestion] = useState(
     "Tell me about yourself in a few sentences."
   );
@@ -49,95 +57,161 @@ export default function LiveClient({
     grammar: number;
     vocabulary: number;
   } | null>(null);
+  const [history, setHistory] = useState<ConversationTurn[]>([
+    {
+      role: "assistant",
+      text: `Hello! I'm ready to help you practice ${targetLanguage}. Tell me about yourself.`,
+    },
+  ]);
 
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<ReturnType<typeof createRecognition> | null>(
+    null
+  );
+  const historyEndRef = useRef<HTMLDivElement | null>(null);
 
-  const browserSpeechSupported = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  }, []);
+  const speechLocale = useMemo(
+    () => getSpeechLocaleByLanguageName(targetLanguage) || "en-US",
+    [targetLanguage]
+  );
+
+  const recognitionSupported = useMemo(
+    () => browserSupportsSpeechRecognition(),
+    []
+  );
+  const synthesisSupported = useMemo(
+    () => browserSupportsSpeechSynthesis(),
+    []
+  );
+
+  useEffect(() => {
+    historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [history]);
+
+  useEffect(() => {
+    if (!autoSpeak || !teacherReply || !synthesisSupported) return;
+
+    const textToSpeak = teacherReply || nextQuestion;
+
+    void speakText({
+      text: textToSpeak,
+      lang: speechLocale,
+      rate: 0.98,
+      pitch: 1,
+      volume: 1,
+    });
+
+    return () => {
+      stopSpeaking();
+    };
+  }, [teacherReply, nextQuestion, autoSpeak, synthesisSupported, speechLocale]);
 
   function startRecording() {
-    if (typeof window === "undefined") return;
-
-    const SpeechRecognitionClass =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
-
-    if (!SpeechRecognitionClass) {
-      alert("Bu tarayıcı konuşma tanımayı desteklemiyor.");
+    if (!recognitionSupported) {
+      setSpeechError("Bu tarayıcı mikrofon konuşma tanımayı desteklemiyor.");
       return;
     }
 
-    const recognition = new SpeechRecognitionClass();
-    recognition.lang = "en-US";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
+    setSpeechError("");
 
-    recognition.onstart = () => setIsRecording(true);
+    try {
+      stopSpeaking();
 
-    recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || "";
-      setAnswer((prev) => (prev ? `${prev} ${transcript}` : transcript));
-    };
+      const recognition = createRecognition({
+        lang: speechLocale,
+        onStart: () => setIsRecording(true),
+        onEnd: () => setIsRecording(false),
+        onError: (message) => {
+          setIsRecording(false);
+          setSpeechError(message);
+        },
+        onFinalText: (text) => {
+          setAnswer(text);
+        },
+      });
 
-    recognition.onerror = () => {
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (error) {
       setIsRecording(false);
-    };
-
-    recognition.onend = () => {
-      setIsRecording(false);
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
+      setSpeechError("Mikrofon başlatılamadı.");
+    }
   }
 
-  function stopRecording() {
+  function stopRecordingHandler() {
     recognitionRef.current?.stop();
     setIsRecording(false);
   }
 
   async function submitAnswer() {
-    if (!answer.trim()) return;
+    const trimmed = answer.trim();
+    if (!trimmed || isLoading) return;
+
+    setSpeechError("");
+    setIsLoading(true);
+
+    const nextHistory: ConversationTurn[] = [
+      ...history,
+      { role: "user", text: trimmed },
+    ];
+    setHistory(nextHistory);
 
     try {
-      setIsLoading(true);
-
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          message: answer,
+          message: trimmed,
           conversationId,
         }),
       });
 
-      const data = (await res.json()) as ChatRouteResponse | { error?: string };
+      const json = await res.json();
 
       if (!res.ok) {
-        alert((data as { error?: string }).error || "Chat hatası");
+        setSpeechError(json?.error || "Chat hatası oluştu.");
+        setIsLoading(false);
         return;
       }
 
-      const typed = data as ChatRouteResponse;
+      const data = json as ChatRouteResponse;
 
-      setConversationId(typed.conversationId);
-      setTeacherReply(typed.teacherReply);
-      setCorrection(typed.correction);
-      setGrammarNotes(typed.grammarNotes || []);
-      setVocabulary(typed.vocabulary || []);
-      setNextAction(typed.nextAction);
-      setNextQuestion(typed.nextQuestion);
-      setSpeakingScore(typed.speakingScore || null);
+      setConversationId(data.conversationId);
+      setTeacherReply(data.teacherReply || "");
+      setCorrection(data.correction || "");
+      setGrammarNotes(data.grammarNotes || []);
+      setVocabulary(data.vocabulary || []);
+      setNextAction(data.nextAction || "");
+      setNextQuestion(data.nextQuestion || "");
+      setSpeakingScore(data.speakingScore || null);
+
+      setHistory((prev) => [
+        ...prev,
+        {
+          role: "assistant",
+          text: data.teacherReply || data.nextQuestion || "Let's continue.",
+        },
+      ]);
+
       setAnswer("");
     } catch (error) {
-      console.error(error);
-      alert("Bir hata oluştu.");
+      setSpeechError("Bağlantı hatası oluştu.");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function handleReplayTeacher() {
+    if (!teacherReply && !nextQuestion) return;
+
+    await speakText({
+      text: teacherReply || nextQuestion,
+      lang: speechLocale,
+      rate: 0.98,
+      pitch: 1,
+      volume: 1,
+    });
   }
 
   async function handleShareScore() {
@@ -165,84 +239,183 @@ Vocabulary: ${speakingScore.vocabulary}`;
     <main className="min-h-screen bg-[#050816] px-4 py-8 text-white md:px-6">
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-blue-500/10 to-cyan-500/10 p-6">
-          <div className="text-sm uppercase tracking-[0.25em] text-cyan-300">
-            Live Speaking
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold">
-            {targetLanguage} konuşma pratiği
-          </h1>
-          <p className="mt-2 text-slate-300">
-            Ana dil: {nativeLanguage} • Seviye: {stage}
-          </p>
-        </div>
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <div className="text-sm uppercase tracking-[0.25em] text-cyan-300">
+                Real Time Conversation
+              </div>
+              <h1 className="mt-2 text-3xl font-semibold">
+                {targetLanguage} konuşma pratiği
+              </h1>
+              <p className="mt-2 text-slate-300">
+                Ana dil: {nativeLanguage} • Seviye: {stage} • Speech locale:{" "}
+                {speechLocale}
+              </p>
+            </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <MainBoard
-            title="Bugünün görevi"
-            content={nextQuestion || teacherReply}
-          />
-
-          <CorrectionBoard correction={correction} />
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <GrammarBoard notes={grammarNotes} />
-          <VocabBoard items={vocabulary} />
-        </div>
-
-        <div className="mt-6 grid gap-6 lg:grid-cols-2">
-          <NextActionBoard action={nextAction} question={nextQuestion} />
-
-          <AnswerBoard
-            value={answer}
-            onChange={setAnswer}
-            onSubmit={submitAnswer}
-            onStartRecording={browserSpeechSupported ? startRecording : undefined}
-            onStopRecording={browserSpeechSupported ? stopRecording : undefined}
-            isLoading={isLoading}
-            isRecording={isRecording}
-            targetLanguage={targetLanguage}
-          />
-        </div>
-
-        {speakingScore ? (
-          <div className="mt-6 rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <h3 className="text-lg font-semibold">Speaking Score</h3>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => setAutoSpeak((prev) => !prev)}
+                className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                  autoSpeak
+                    ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/20"
+                    : "bg-white/5 text-slate-300 border border-white/10"
+                }`}
+              >
+                {autoSpeak ? "🔊 Auto Voice Açık" : "🔇 Auto Voice Kapalı"}
+              </button>
 
               <button
-                onClick={handleShareScore}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition hover:bg-white/10"
+                type="button"
+                onClick={() => setMicEnabled((prev) => !prev)}
+                className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                  micEnabled
+                    ? "bg-cyan-500/15 text-cyan-300 border border-cyan-400/20"
+                    : "bg-white/5 text-slate-300 border border-white/10"
+                }`}
               >
-                Sonucu Paylaş
+                {micEnabled ? "🎤 Mic Aktif" : "🎤 Mic Kapalı"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleReplayTeacher}
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Öğretmeni Tekrar Dinle
               </button>
             </div>
+          </div>
+        </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-sm text-slate-400">Fluency</div>
-                <div className="mt-2 text-2xl font-semibold">
-                  {speakingScore.fluency}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-sm text-slate-400">Grammar</div>
-                <div className="mt-2 text-2xl font-semibold">
-                  {speakingScore.grammar}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                <div className="text-sm text-slate-400">Vocabulary</div>
-                <div className="mt-2 text-2xl font-semibold">
-                  {speakingScore.vocabulary}
-                </div>
-              </div>
-            </div>
+        {speechError ? (
+          <div className="mb-6 rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
+            {speechError}
           </div>
         ) : null}
+
+        <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <MainBoard title="Bugünün görevi" content={nextQuestion || teacherReply} />
+
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Konuşma Geçmişi</h3>
+                <div className="text-sm text-slate-400">
+                  {history.length} mesaj
+                </div>
+              </div>
+
+              <div className="max-h-[460px] space-y-4 overflow-y-auto pr-1">
+                {history.map((item, index) => (
+                  <div
+                    key={`${item.role}-${index}`}
+                    className={`flex ${
+                      item.role === "user" ? "justify-end" : "justify-start"
+                    }`}
+                  >
+                    <div
+                      className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-7 ${
+                        item.role === "user"
+                          ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white"
+                          : "border border-white/10 bg-black/20 text-slate-100"
+                      }`}
+                    >
+                      {item.text}
+                    </div>
+                  </div>
+                ))}
+                <div ref={historyEndRef} />
+              </div>
+            </div>
+
+            {speakingScore ? (
+              <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <h3 className="text-lg font-semibold">Speaking Score</h3>
+
+                  <button
+                    onClick={handleShareScore}
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition hover:bg-white/10"
+                  >
+                    Sonucu Paylaş
+                  </button>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-sm text-slate-400">Fluency</div>
+                    <div className="mt-2 text-2xl font-semibold">
+                      {speakingScore.fluency}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-sm text-slate-400">Grammar</div>
+                    <div className="mt-2 text-2xl font-semibold">
+                      {speakingScore.grammar}
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="text-sm text-slate-400">Vocabulary</div>
+                    <div className="mt-2 text-2xl font-semibold">
+                      {speakingScore.vocabulary}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-6">
+            <CorrectionBoard correction={correction} />
+            <GrammarBoard notes={grammarNotes} />
+            <VocabBoard items={vocabulary} />
+            <NextActionBoard action={nextAction} question={nextQuestion} />
+
+            <AnswerBoard
+              value={answer}
+              onChange={setAnswer}
+              onSubmit={submitAnswer}
+              onStartRecording={
+                micEnabled && recognitionSupported ? startRecording : undefined
+              }
+              onStopRecording={stopRecordingHandler}
+              isLoading={isLoading}
+              isRecording={isRecording}
+              targetLanguage={targetLanguage}
+            />
+
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
+              <h3 className="text-lg font-semibold">Voice Engine Durumu</h3>
+
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-sm text-slate-400">Speech Recognition</div>
+                  <div className="mt-2 text-base font-medium text-white">
+                    {recognitionSupported ? "Destekleniyor" : "Desteklenmiyor"}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-sm text-slate-400">Speech Synthesis</div>
+                  <div className="mt-2 text-base font-medium text-white">
+                    {synthesisSupported ? "Destekleniyor" : "Desteklenmiyor"}
+                  </div>
+                </div>
+              </div>
+
+              <p className="mt-4 text-sm leading-7 text-slate-400">
+                Bu sürümde gerçek zamanlı sesli konuşma tarayıcı speech API ile
+                çalışır. Sunucu taraflı STT/TTS istersen sonraki adımda harici
+                provider bağlarız.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );
-      }
+            }
