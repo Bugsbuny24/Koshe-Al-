@@ -11,7 +11,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = async (e: any) => {
+  async function handleLogin(e: any) {
     e.preventDefault();
 
     const { error } = await supabase.auth.signInWithPassword({
@@ -25,11 +25,12 @@ export default function LoginPage() {
     }
 
     router.push("/dashboard");
-  };
+  }
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <form onSubmit={handleLogin} className="space-y-4 w-96">
+    <div className="flex justify-center items-center h-screen">
+      <form onSubmit={handleLogin} className="w-96 space-y-4">
+
         <h1 className="text-2xl font-bold">Giriş Yap</h1>
 
         <input
@@ -47,9 +48,10 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button className="bg-black text-white p-2 w-full">
+        <button className="bg-black text-white w-full p-2">
           Giriş Yap
         </button>
+
       </form>
     </div>
   );
