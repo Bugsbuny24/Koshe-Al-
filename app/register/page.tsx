@@ -10,30 +10,28 @@ export default function RegisterPage() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  const handleRegister = async (e: any) => {
+  async function handleRegister(e: any) {
     e.preventDefault();
-    setLoading(true);
 
-    const { data, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
 
     if (error) {
       alert(error.message);
-      setLoading(false);
       return;
     }
 
     router.push("/login");
-  };
+  }
 
   return (
-    <div className="flex items-center justify-center h-screen">
-      <form onSubmit={handleRegister} className="space-y-4 w-96">
-        <h1 className="text-2xl font-bold">Hesap Oluştur</h1>
+    <div className="flex justify-center items-center h-screen">
+      <form onSubmit={handleRegister} className="w-96 space-y-4">
+
+        <h1 className="text-2xl font-bold">Kayıt Ol</h1>
 
         <input
           className="border p-2 w-full"
@@ -50,12 +48,10 @@ export default function RegisterPage() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button
-          className="bg-black text-white p-2 w-full"
-          disabled={loading}
-        >
+        <button className="bg-black text-white w-full p-2">
           Kayıt Ol
         </button>
+
       </form>
     </div>
   );
