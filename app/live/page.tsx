@@ -8,17 +8,24 @@ export default async function LivePage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-if (!user) {
-  redirect("/");
-}
+
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("native_language,target_language,learning_stage,onboarding_completed")
+    .select(
+      "native_language,target_language,difficulty_level,learning_stage,onboarding_completed"
+    )
     .eq("id", user.id)
     .single();
 
-  if (!profile?.onboarding_completed) {
+  if (!profile) {
+    redirect("/onboarding");
+  }
+
+  if (!profile.onboarding_completed) {
     redirect("/onboarding");
   }
 
@@ -26,7 +33,7 @@ if (!user) {
     <LiveClient
       nativeLanguage={profile.native_language || "Turkish"}
       targetLanguage={profile.target_language || "English"}
-      stage={profile.learning_stage || "A1"}
+      stage={profile.difficulty_level || "A1"}
     />
   );
 }
