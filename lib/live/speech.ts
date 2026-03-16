@@ -1,16 +1,29 @@
-export type SupportedSpeechRecognition = SpeechRecognition & {
+export type SupportedSpeechRecognition = {
   lang: string;
   interimResults: boolean;
   continuous: boolean;
   maxAlternatives: number;
+  onstart: (() => void) | null;
+  onend: (() => void) | null;
+  onerror: ((event: { error?: string }) => void) | null;
+  onresult: ((event: {
+    results: ArrayLike<{
+      isFinal?: boolean;
+      0?: { transcript?: string };
+      length?: number;
+    }>;
+  }) => void) | null;
+  start: () => void;
+  stop: () => void;
 };
 
 type SpeechRecognitionConstructor = new () => SupportedSpeechRecognition;
 
 declare global {
   interface Window {
-    webkitSpeechRecognition?: SpeechRecognitionConstructor;
     SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+    speechSynthesis?: SpeechSynthesis;
   }
 }
 
@@ -18,7 +31,12 @@ export function getSpeechRecognitionConstructor():
   | SpeechRecognitionConstructor
   | null {
   if (typeof window === "undefined") return null;
-  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+
+  return (
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition ||
+    null
+  );
 }
 
 export function browserSupportsSpeechRecognition() {
@@ -26,7 +44,10 @@ export function browserSupportsSpeechRecognition() {
 }
 
 export function browserSupportsSpeechSynthesis() {
-  return typeof window !== "undefined" && "speechSynthesis" in window;
+  return (
+    typeof window !== "undefined" &&
+    typeof window.speechSynthesis !== "undefined"
+  );
 }
 
 export function stopSpeaking() {
@@ -41,9 +62,16 @@ export async function speakText(params: {
   pitch?: number;
   volume?: number;
 }) {
-  const { text, lang = "en-US", rate = 1, pitch = 1, volume = 1 } = params;
+  const {
+    text,
+    lang = "en-US",
+    rate = 1,
+    pitch = 1,
+    volume = 1,
+  } = params;
 
-  if (!browserSupportsSpeechSynthesis() || !text.trim()) return;
+  if (!browserSupportsSpeechSynthesis()) return;
+  if (!text.trim()) return;
 
   window.speechSynthesis.cancel();
 
@@ -54,14 +82,21 @@ export async function speakText(params: {
   utterance.volume = volume;
 
   const voices = window.speechSynthesis.getVoices();
-  const matchingVoice =
-    voices.find((voice) => voice.lang?.toLowerCase() === lang.toLowerCase()) ||
+
+  const exactVoice =
+    voices.find(
+      (voice) => voice.lang?.toLowerCase() === lang.toLowerCase()
+    ) || null;
+
+  const partialVoice =
     voices.find((voice) =>
       voice.lang?.toLowerCase().startsWith(lang.split("-")[0].toLowerCase())
-    );
+    ) || null;
 
-  if (matchingVoice) {
-    utterance.voice = matchingVoice;
+  const selectedVoice = exactVoice || partialVoice;
+
+  if (selectedVoice) {
+    utterance.voice = selectedVoice;
   }
 
   await new Promise<void>((resolve) => {
@@ -85,43 +120,39 @@ export function createRecognition(params: {
   }
 
   const recognition = new RecognitionClass();
+
   recognition.lang = params.lang;
   recognition.interimResults = true;
   recognition.continuous = false;
   recognition.maxAlternatives = 1;
 
-  let finalTranscript = "";
-
   recognition.onstart = () => {
     params.onStart?.();
-  };
-
-  recognition.onresult = (event: SpeechRecognitionEvent) => {
-    let interimText = "";
-    finalTranscript = "";
-
-    for (let i = 0; i < event.results.length; i += 1) {
-      const transcript = event.results[i][0]?.transcript || "";
-      if (event.results[i].isFinal) {
-        finalTranscript += transcript;
-      } else {
-        interimText += transcript;
-      }
-    }
-
-    const merged = `${finalTranscript} ${interimText}`.trim();
-    if (merged) {
-      params.onFinalText(merged);
-    }
-  };
-
-  recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-    params.onError?.(event.error || "speech_recognition_error");
   };
 
   recognition.onend = () => {
     params.onEnd?.();
   };
 
+  recognition.onerror = (event) => {
+    params.onError?.(event?.error || "speech_recognition_error");
+  };
+
+  recognition.onresult = (event) => {
+    let mergedText = "";
+
+    for (let i = 0; i < event.results.length; i += 1) {
+      const result = event.results[i];
+      const transcript = result?.[0]?.transcript || "";
+      mergedText += ` ${transcript}`;
+    }
+
+    const finalText = mergedText.trim();
+
+    if (finalText) {
+      params.onFinalText(finalText);
+    }
+  };
+
   return recognition;
-          }
+    }
