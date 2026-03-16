@@ -23,3 +23,22 @@ export type TeacherEngineResponse = {
   speakingScore?: SpeakingScore;
   memoryItems: MemoryItem[];
 };
+export type SpeakingScore = {
+  fluency: number;
+  grammar: number;
+  vocabulary: number;
+};
+
+export type TeacherEngineResponse = {
+  correction: {
+    wrong: string;
+    correct: string;
+    explanation: string;
+  };
+  grammarNotes: string[];
+  vocabulary: string[];
+  nextQuestion: string;
+  nextAction: string;
+  difficulty: string;
+  speakingScore?: SpeakingScore;
+};
