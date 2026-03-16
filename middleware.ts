@@ -1,74 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse } from "next/server";
 
-export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+export async function middleware(req: any) {
+  const res = NextResponse.next();
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key",
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
-
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-
-          response.cookies.set({
-            name,
-            value: "",
-            ...options,
-          });
+        get(name) {
+          return req.cookies.get(name)?.value;
         },
       },
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  return response;
+  if (!user && req.nextUrl.pathname.startsWith("/dashboard")) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  return res;
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/live/:path*",
-    "/lesson/:path*",
-    "/profile/:path*",
-    "/onboarding/:path*",
-  ],
+  matcher: ["/dashboard/:path*"],
 };
