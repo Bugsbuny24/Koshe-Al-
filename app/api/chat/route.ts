@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { buildTeacherPrompt } from "@/lib/ai/teacher-engine"
-
+import { calculateSpeakingScore } from "@/lib/ai/score-engine";
 export async function POST(req: Request) {
   try {
 
@@ -11,7 +11,14 @@ export async function POST(req: Request) {
 
     const userMessage = body.message
     const conversationId = body.conversationId
+    const score = calculateSpeakingScore({
+  userAnswer: userMessage,
+  correction: parsed.correction,
+  grammarNotes: parsed.grammarNotes,
+  vocabulary: parsed.vocabulary,
+});
 
+parsed.speakingScore = score;
     if (!userMessage) {
       return NextResponse.json({ error: "Message empty" }, { status: 400 })
     }
@@ -143,7 +150,23 @@ export async function POST(req: Request) {
             .eq("id", existing.id)
 
         } else {
-
+await supabase.from("speaking_sessions").upsert({
+  user_id: user.id,
+  conversation_id: conversationId,
+  language: profile.target_language,
+  level: profile.difficulty_level,
+  duration_seconds: 0,
+  sentences_count: 1,
+  mistakes_count:
+    parsed.correction?.wrong &&
+    parsed.correction?.correct &&
+    parsed.correction.wrong !== parsed.correction.correct
+      ? 1
+      : 0,
+  fluency_score: score.fluency,
+  grammar_score: score.grammar,
+  vocabulary_score: score.vocabulary,
+});
           await supabase.from("vocab_memory").insert({
             user_id: user.id,
             language: profile.target_language,
