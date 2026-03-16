@@ -3,7 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { LANGUAGES, LEARNING_STAGES } from "@/lib/constants/languages";
+import { LANGUAGES, STAGES } from "@/lib/constants/languages";
+
+const GOALS = [
+  { value: "conversation", label: "Günlük Konuşma" },
+  { value: "business", label: "İş Dili" },
+  { value: "travel", label: "Seyahat" },
+  { value: "academic", label: "Akademik" },
+  { value: "exam", label: "Sınav Hazırlığı" },
+];
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -14,11 +22,11 @@ export default function OnboardingPage() {
     []
   );
 
-  const [loading, setLoading] = useState(false);
   const [bootLoading, setBootLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState("");
 
-  const [nativeLanguage, setNativeLanguage] = useState("Türkçe");
+  const [nativeLanguage, setNativeLanguage] = useState("Turkish");
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [level, setLevel] = useState("A1");
   const [goal, setGoal] = useState("conversation");
@@ -36,7 +44,7 @@ export default function OnboardingPage() {
         return;
       }
 
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from("profiles")
         .select(
           "native_language,target_language,difficulty_level,learning_stage,onboarding_completed"
@@ -45,6 +53,12 @@ export default function OnboardingPage() {
         .single();
 
       if (!mounted) return;
+
+      if (error) {
+        setErrorText(error.message);
+        setBootLoading(false);
+        return;
+      }
 
       if (profile?.onboarding_completed) {
         router.push("/dashboard");
@@ -122,7 +136,8 @@ export default function OnboardingPage() {
             Koshei AI seni tanısın
           </h1>
           <p className="mt-2 max-w-2xl text-slate-300">
-            Ana dilini, hedef dilini, seviyeni ve öğrenme amacını seç. Böylece AI öğretmenin sana özel çalışır.
+            Ana dilini, hedef dilini, seviyeni ve öğrenme amacını seç. Böylece
+            AI öğretmenin sana özel çalışır.
           </p>
         </div>
 
@@ -133,7 +148,7 @@ export default function OnboardingPage() {
             <div className="mt-5 space-y-4 text-sm leading-7 text-slate-300">
               <p>• Onboarding tamamlanmadan dashboard açılmaz.</p>
               <p>• Seçimlerin AI öğretmenin davranışını belirler.</p>
-              <p>• Sonradan profil ekranından bu bilgileri değiştirebilirsin.</p>
+              <p>• Sonradan profil ekranından bilgileri değiştirebilirsin.</p>
             </div>
 
             <div className="mt-8">
@@ -143,7 +158,7 @@ export default function OnboardingPage() {
               <div className="flex flex-wrap gap-2">
                 {popularLanguages.slice(0, 12).map((language) => (
                   <span
-                    key={language.name}
+                    key={language.code}
                     className="rounded-full border border-white/10 bg-black/20 px-3 py-2 text-xs text-slate-200"
                   >
                     {language.name}
@@ -198,9 +213,9 @@ export default function OnboardingPage() {
                   onChange={(e) => setLevel(e.target.value)}
                   className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
                 >
-                  {["A1", "A2", "B1", "B2", "C1", "C2", "D1", "D2"].map((item) => (
-                    <option key={item} value={item}>
-                      {item}
+                  {STAGES.map((stage) => (
+                    <option key={stage} value={stage}>
+                      {stage}
                     </option>
                   ))}
                 </select>
@@ -215,7 +230,7 @@ export default function OnboardingPage() {
                   onChange={(e) => setGoal(e.target.value)}
                   className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
                 >
-                  {LEARNING_STAGES.map((item) => (
+                  {GOALS.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -239,18 +254,10 @@ export default function OnboardingPage() {
               >
                 {loading ? "Kaydediliyor..." : "Onboarding'i Tamamla"}
               </button>
-
-              <button
-                type="button"
-                onClick={() => router.push("/dashboard")}
-                className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-slate-100 transition hover:bg-white/10"
-              >
-                Şimdilik Geç
-              </button>
             </div>
           </div>
         </div>
       </div>
     </main>
   );
-}
+  }
