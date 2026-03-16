@@ -1,6 +1,34 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+type ProfileRow = {
+  full_name: string | null;
+  native_language: string | null;
+  target_language: string | null;
+  difficulty_level: string | null;
+  learning_stage: string | null;
+};
+
+type SessionRow = {
+  fluency_score: number | null;
+  grammar_score: number | null;
+  vocabulary_score: number | null;
+  created_at: string | null;
+};
+
+type MemoryRow = {
+  wrong_sentence: string | null;
+  correct_sentence: string | null;
+  explanation: string | null;
+  created_at: string | null;
+};
+
+type VocabRow = {
+  word: string | null;
+  strength: number | null;
+  last_seen: string | null;
+};
+
 export default async function DashboardPage() {
   const supabase = await createClient();
 
@@ -18,7 +46,7 @@ export default async function DashboardPage() {
       "full_name,native_language,target_language,difficulty_level,learning_stage"
     )
     .eq("id", user.id)
-    .single();
+    .single<ProfileRow>();
 
   const { data: sessions } = await supabase
     .from("speaking_sessions")
@@ -27,62 +55,82 @@ export default async function DashboardPage() {
     )
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(20)
+    .returns<SessionRow[]>();
+
+  const { data: recentMistakes } = await supabase
+    .from("learning_memory")
+    .select("wrong_sentence,correct_sentence,explanation,created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5)
+    .returns<MemoryRow[]>();
+
+  const { data: recentWords } = await supabase
+    .from("vocab_memory")
+    .select("word,strength,last_seen")
+    .eq("user_id", user.id)
+    .order("last_seen", { ascending: false })
+    .limit(8)
+    .returns<VocabRow[]>();
 
   const latestScore = sessions?.[0];
 
   const avgFluency =
-    sessions?.reduce((sum, s) => sum + (s.fluency_score || 0), 0) /
-      (sessions?.length || 1) || 0;
+    sessions?.length
+      ? sessions.reduce((sum, s) => sum + Number(s.fluency_score || 0), 0) /
+        sessions.length
+      : 0;
 
   const avgGrammar =
-    sessions?.reduce((sum, s) => sum + (s.grammar_score || 0), 0) /
-      (sessions?.length || 1) || 0;
+    sessions?.length
+      ? sessions.reduce((sum, s) => sum + Number(s.grammar_score || 0), 0) /
+        sessions.length
+      : 0;
 
   const avgVocab =
-    sessions?.reduce((sum, s) => sum + (s.vocabulary_score || 0), 0) /
-      (sessions?.length || 1) || 0;
+    sessions?.length
+      ? sessions.reduce((sum, s) => sum + Number(s.vocabulary_score || 0), 0) /
+        sessions.length
+      : 0;
 
   return (
     <main className="min-h-screen bg-[#050816] px-6 py-10 text-white">
       <div className="mx-auto max-w-6xl">
+        <h1 className="mb-6 text-3xl font-semibold">Dashboard</h1>
 
-        <h1 className="text-3xl font-semibold mb-6">
-          Dashboard
-        </h1>
-
-        <div className="grid md:grid-cols-2 gap-6">
-
+        <div className="grid gap-6 md:grid-cols-2">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-lg mb-3">Profil</h2>
+            <h2 className="mb-3 text-lg">Profil</h2>
 
-            <p>Ad: {profile?.full_name}</p>
-            <p>Ana dil: {profile?.native_language}</p>
-            <p>Öğrenilen dil: {profile?.target_language}</p>
-            <p>Seviye: {profile?.difficulty_level}</p>
+            <div className="space-y-2 text-slate-200">
+              <p>Ad: {profile?.full_name || "-"}</p>
+              <p>Ana dil: {profile?.native_language || "-"}</p>
+              <p>Öğrenilen dil: {profile?.target_language || "-"}</p>
+              <p>Seviye: {profile?.difficulty_level || "-"}</p>
+              <p>Amaç: {profile?.learning_stage || "-"}</p>
+            </div>
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-lg mb-3">Son Skor</h2>
+            <h2 className="mb-3 text-lg">Son Skor</h2>
 
             {latestScore ? (
-              <div className="space-y-2">
-                <p>Fluency: {latestScore.fluency_score}</p>
-                <p>Grammar: {latestScore.grammar_score}</p>
-                <p>Vocabulary: {latestScore.vocabulary_score}</p>
+              <div className="space-y-2 text-slate-200">
+                <p>Fluency: {latestScore.fluency_score || 0}</p>
+                <p>Grammar: {latestScore.grammar_score || 0}</p>
+                <p>Vocabulary: {latestScore.vocabulary_score || 0}</p>
               </div>
             ) : (
-              <p>Henüz konuşma yapılmadı.</p>
+              <p className="text-slate-400">Henüz konuşma yapılmadı.</p>
             )}
           </div>
-
         </div>
 
         <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
-          <h2 className="text-lg mb-4">Ortalama Skorlar</h2>
+          <h2 className="mb-4 text-lg">Ortalama Skorlar</h2>
 
-          <div className="grid md:grid-cols-3 gap-4">
-
+          <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-2xl border border-white/10 p-4">
               <div className="text-sm text-gray-400">Fluency</div>
               <div className="text-2xl font-semibold">
@@ -103,10 +151,64 @@ export default async function DashboardPage() {
                 {Math.round(avgVocab)}
               </div>
             </div>
-
           </div>
         </div>
 
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h2 className="mb-4 text-lg">Son Hatalar</h2>
+
+            {recentMistakes && recentMistakes.length > 0 ? (
+              <div className="space-y-4">
+                {recentMistakes.map((item, index) => (
+                  <div
+                    key={`${item.wrong_sentence}-${index}`}
+                    className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4"
+                  >
+                    <div className="text-sm text-slate-300">Yanlış</div>
+                    <div className="mt-1 text-white">
+                      {item.wrong_sentence || "-"}
+                    </div>
+
+                    <div className="mt-3 text-sm text-slate-300">Doğru</div>
+                    <div className="mt-1 text-cyan-300">
+                      {item.correct_sentence || "-"}
+                    </div>
+
+                    <div className="mt-3 text-sm text-slate-300">Açıklama</div>
+                    <div className="mt-1 text-slate-100">
+                      {item.explanation || "-"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400">Henüz kayıtlı hata yok.</p>
+            )}
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h2 className="mb-4 text-lg">Öğrenilen Kelimeler</h2>
+
+            {recentWords && recentWords.length > 0 ? (
+              <div className="flex flex-wrap gap-3">
+                {recentWords.map((item, index) => (
+                  <div
+                    key={`${item.word}-${index}`}
+                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                  >
+                    <div className="font-medium text-white">{item.word || "-"}</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Strength: {item.strength || 1}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-slate-400">Henüz kayıtlı kelime yok.</p>
+            )}
+          </div>
+        </div>
       </div>
     </main>
   );
