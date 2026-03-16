@@ -2,15 +2,45 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { buildTeacherPrompt } from "@/lib/ai/teacher-engine";
 import { calculateSpeakingScore } from "@/lib/ai/score-engine";
+import {
+  createFallbackMemoryItem,
+  formatRecentMistakesForPrompt,
+  normalizeVocabularyWords,
+  shouldCreateFallbackMemory,
+} from "@/lib/ai/memory-engine";
 import type {
   ChatRouteResponse,
-  TeacherEngineResponse,
+  ChatMessageRole,
   MemoryItem,
+  TeacherEngineResponse,
 } from "@/lib/ai/types";
 
 type ChatRequestBody = {
   message: string;
   conversationId?: string | null;
+};
+
+type ProfileRow = {
+  native_language: string | null;
+  target_language: string | null;
+  difficulty_level: string | null;
+  learning_stage: string | null;
+  onboarding_completed: boolean | null;
+};
+
+type ConversationRow = {
+  id: string;
+};
+
+type RecentMistakeRow = {
+  wrong_sentence: string | null;
+  correct_sentence: string | null;
+  explanation: string | null;
+};
+
+type ExistingVocabRow = {
+  id: string;
+  strength: number | null;
 };
 
 function safeJsonParse(text: string): Partial<TeacherEngineResponse> | null {
@@ -19,6 +49,7 @@ function safeJsonParse(text: string): Partial<TeacherEngineResponse> | null {
   } catch {
     const firstBrace = text.indexOf("{");
     const lastBrace = text.lastIndexOf("}");
+
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
       try {
         return JSON.parse(text.slice(firstBrace, lastBrace + 1));
@@ -26,6 +57,7 @@ function safeJsonParse(text: string): Partial<TeacherEngineResponse> | null {
         return null;
       }
     }
+
     return null;
   }
 }
@@ -36,6 +68,7 @@ function normalizeMemoryItems(items: unknown): MemoryItem[] {
   return items
     .map((item) => {
       const typed = item as MemoryItem;
+
       if (
         !typed ||
         !typed.errorType ||
@@ -48,9 +81,9 @@ function normalizeMemoryItems(items: unknown): MemoryItem[] {
 
       return {
         errorType: typed.errorType,
-        wrongSentence: typed.wrongSentence,
-        correctSentence: typed.correctSentence,
-        explanation: typed.explanation,
+        wrongSentence: String(typed.wrongSentence).trim(),
+        correctSentence: String(typed.correctSentence).trim(),
+        explanation: String(typed.explanation).trim(),
       } satisfies MemoryItem;
     })
     .filter(Boolean) as MemoryItem[];
@@ -66,7 +99,7 @@ function normalizeTeacherResponse(
       "Güzel. Şimdi devam edelim ve bir sonraki soruya geçelim.",
     correction: parsed?.correction?.toString().trim() || userMessage,
     grammarNotes: Array.isArray(parsed?.grammarNotes)
-      ? parsed!.grammarNotes.map((item) => String(item))
+      ? parsed.grammarNotes.map((item) => String(item))
       : [],
     nextAction:
       parsed?.nextAction?.toString().trim() ||
@@ -80,8 +113,8 @@ function normalizeTeacherResponse(
       parsed?.difficulty === "harder"
         ? parsed.difficulty
         : "same",
-    vocabulary: Array.isArray((parsed as any)?.vocabulary)
-      ? (parsed as any).vocabulary.map((item: unknown) => String(item))
+    vocabulary: Array.isArray((parsed as TeacherEngineResponse | null)?.vocabulary)
+      ? (parsed as TeacherEngineResponse).vocabulary.map((item) => String(item))
       : [],
     memoryItems: normalizeMemoryItems(parsed?.memoryItems),
     speakingScore: parsed?.speakingScore,
@@ -112,24 +145,28 @@ export async function POST(req: Request) {
         "native_language,target_language,difficulty_level,learning_stage,onboarding_completed"
       )
       .eq("id", user.id)
-      .single();
+      .single<ProfileRow>();
 
     if (profileError || !profile) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
+    if (!profile.onboarding_completed) {
+      return NextResponse.json(
+        { error: "Onboarding incomplete" },
+        { status: 403 }
+      );
+    }
+
     const { data: recentMistakes } = await supabase
       .from("learning_memory")
-      .select("wrong_sentence, correct_sentence, explanation")
+      .select("wrong_sentence,correct_sentence,explanation")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(5)
+      .returns<RecentMistakeRow[]>();
 
-    const formattedMistakes =
-      recentMistakes?.map(
-        (item) =>
-          `${item.wrong_sentence} → ${item.correct_sentence} (${item.explanation})`
-      ) || [];
+    const formattedMistakes = formatRecentMistakesForPrompt(recentMistakes);
 
     let conversationId = body.conversationId ?? null;
 
@@ -142,7 +179,7 @@ export async function POST(req: Request) {
           mode: "speaking",
         })
         .select("id")
-        .single();
+        .single<ConversationRow>();
 
       if (conversationError || !conversation) {
         return NextResponse.json(
@@ -157,7 +194,7 @@ export async function POST(req: Request) {
     const prompt = buildTeacherPrompt({
       nativeLanguage: profile.native_language || "Turkish",
       targetLanguage: profile.target_language || "English",
-      level: String(profile.difficulty_level || "beginner"),
+      level: String(profile.difficulty_level || "A1"),
       goal: String(profile.learning_stage || "conversation"),
       message: userMessage,
       recentMistakes: formattedMistakes,
@@ -218,8 +255,30 @@ export async function POST(req: Request) {
     });
 
     normalized.speakingScore = calculatedScore;
+    normalized.vocabulary = normalizeVocabularyWords(normalized.vocabulary);
 
-    await supabase.from("messages").insert([
+    const memoryItems =
+      normalized.memoryItems.length > 0
+        ? normalized.memoryItems
+        : shouldCreateFallbackMemory({
+            userMessage,
+            correction: normalized.correction,
+          })
+        ? [
+            createFallbackMemoryItem({
+              userMessage,
+              correction: normalized.correction,
+              grammarNotes: normalized.grammarNotes,
+            }),
+          ]
+        : [];
+
+    const messageRows: {
+      user_id: string;
+      conversation_id: string;
+      role: ChatMessageRole;
+      content: string;
+    }[] = [
       {
         user_id: user.id,
         conversation_id: conversationId,
@@ -232,15 +291,12 @@ export async function POST(req: Request) {
         role: "assistant",
         content: JSON.stringify(normalized),
       },
-    ]);
+    ];
 
-    const hasMemoryItems = normalized.memoryItems.length > 0;
-    const correctionChanged =
-      normalized.correction.trim().length > 0 &&
-      normalized.correction.trim().toLowerCase() !== userMessage.toLowerCase();
+    await supabase.from("messages").insert(messageRows);
 
-    if (hasMemoryItems) {
-      const memoryRows = normalized.memoryItems.map((item) => ({
+    if (memoryItems.length > 0) {
+      const memoryRows = memoryItems.map((item) => ({
         user_id: user.id,
         language: profile.target_language || "English",
         error_type: item.errorType,
@@ -250,15 +306,6 @@ export async function POST(req: Request) {
       }));
 
       await supabase.from("learning_memory").insert(memoryRows);
-    } else if (correctionChanged) {
-      await supabase.from("learning_memory").insert({
-        user_id: user.id,
-        language: profile.target_language || "English",
-        error_type: "grammar",
-        wrong_sentence: userMessage,
-        correct_sentence: normalized.correction,
-        explanation: normalized.grammarNotes[0] || "Cümle düzeltildi.",
-      });
     }
 
     if (normalized.vocabulary.length > 0) {
@@ -269,7 +316,7 @@ export async function POST(req: Request) {
           .eq("user_id", user.id)
           .eq("language", profile.target_language || "English")
           .eq("word", word)
-          .maybeSingle();
+          .maybeSingle<ExistingVocabRow>();
 
         if (existing) {
           await supabase
@@ -297,10 +344,10 @@ export async function POST(req: Request) {
         user_id: user.id,
         conversation_id: conversationId,
         language: profile.target_language || "English",
-        level: String(profile.difficulty_level || "beginner"),
+        level: String(profile.difficulty_level || "A1"),
         duration_seconds: 0,
         sentences_count: 1,
-        mistakes_count: correctionChanged ? 1 : 0,
+        mistakes_count: memoryItems.length,
         fluency_score: calculatedScore.fluency,
         grammar_score: calculatedScore.grammar,
         vocabulary_score: calculatedScore.vocabulary,
@@ -321,6 +368,7 @@ export async function POST(req: Request) {
     const response: ChatRouteResponse = {
       conversationId,
       ...normalized,
+      memoryItems,
     };
 
     return NextResponse.json(response);
@@ -332,4 +380,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-      }
+        }
