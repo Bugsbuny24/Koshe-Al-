@@ -6,25 +6,26 @@ type VocabBoardProps = {
 
 export default function VocabBoard({ items }: VocabBoardProps) {
   return (
-    <BoardShell title="Vocab Board">
-      <p className="text-lg font-semibold text-white">Useful Words</p>
-
-      <div className="mt-4 flex flex-wrap gap-2">
-        {items.length ? (
-          items.map((item) => (
+    <BoardShell
+      title="Vocabulary"
+      subtitle="Bu konuşmada öne çıkan kelimeler"
+    >
+      {items.length > 0 ? (
+        <div className="flex flex-wrap gap-3">
+          {items.map((item, index) => (
             <span
-              key={item}
-              className="rounded-full border border-cyan-300/15 bg-cyan-400/10 px-3 py-2 text-sm text-cyan-50"
+              key={`${item}-${index}`}
+              className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-slate-100"
             >
               {item}
             </span>
-          ))
-        ) : (
-          <span className="text-sm text-slate-400">
-            Vocabulary will appear here.
-          </span>
-        )}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
+          Henüz kelime önerisi yok.
+        </div>
+      )}
     </BoardShell>
   );
 }
