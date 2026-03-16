@@ -1,55 +1,83 @@
-type Message = {
-  role: "user" | "assistant" | "system";
-  content: string;
-};
-
-type BuildTutorPromptArgs = {
-  targetLanguage: string;
-  userNativeLanguage: string;
+type GenerateLessonParams = {
+  language: string;
   level: string;
-  mode: string;
-  messages: Message[];
 };
 
-export function buildTutorPrompt({
-  targetLanguage,
-  userNativeLanguage,
+type LessonResponse = {
+  lessonTitle: string;
+  explanation: string;
+  exampleSentence: string;
+  practiceTask: string;
+  conversationQuestion: string;
+};
+
+export async function generateLesson({
+  language,
   level,
-  mode,
-  messages,
-}: BuildTutorPromptArgs) {
-  const conversation = messages
-    .filter((m) => m.role === "user" || m.role === "assistant")
-    .map((m) => `${m.role === "user" ? "Student" : "Koshei"}: ${m.content}`)
-    .join("\n");
+}: GenerateLessonParams): Promise<LessonResponse> {
 
-  return `
-You are Koshei, an elite AI language teacher.
+  const apiKey = process.env.GEMINI_API_KEY;
+  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
 
-Teaching context:
-- Target language: ${targetLanguage}
-- Student native language: ${userNativeLanguage}
-- Student level: ${level}
-- Mode: ${mode}
+  const prompt = `
+You are Koshei AI.
 
-Rules:
-1. Reply mainly in ${targetLanguage}, but use short ${userNativeLanguage} explanations only if necessary.
-2. Be warm, natural, and teacher-like.
-3. Keep responses concise and useful.
-4. If the student makes a grammar mistake, gently correct it.
-5. Encourage speaking practice.
-6. Do not sound like a generic chatbot.
-7. Ask follow-up questions when appropriate.
-8. Prefer natural spoken language, not robotic textbook language.
+Create a short language learning lesson.
 
-If the student message contains mistakes:
-- First respond naturally.
-- Then give a short correction if useful.
-- Do not over-explain every time.
+Target language: ${language}
+Student level: ${level}
 
-Conversation:
-${conversation}
+Return JSON only.
 
-Now continue as Koshei.
-`.trim();
+{
+ "lessonTitle": "string",
+ "explanation": "string",
+ "exampleSentence": "string",
+ "practiceTask": "string",
+ "conversationQuestion": "string"
+}
+`;
+
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            parts: [{ text: prompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.5,
+          maxOutputTokens: 600,
+        },
+      }),
+    }
+  );
+
+  if (!res.ok) {
+    throw new Error("Gemini API error");
+  }
+
+  const json = await res.json();
+
+  const text =
+    json?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return {
+      lessonTitle: "Daily Speaking",
+      explanation:
+        "Practice speaking using simple sentences.",
+      exampleSentence: "Hello, how are you today?",
+      practiceTask: "Say 3 sentences about your day.",
+      conversationQuestion: "What did you do today?",
+    };
+  }
 }
