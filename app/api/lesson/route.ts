@@ -1,77 +1,46 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { generateLesson } from "@/lib/ai/tutor";
 
-type LessonRequest = {
-  nativeLanguage?: string;
-  targetLanguage?: string;
-  level?: string;
-  difficulty?: number;
-  topic?: string;
-};
-
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as LessonRequest;
+    const supabase = await createClient();
 
-    const targetLanguage = body.targetLanguage || "English";
-    const nativeLanguage = body.nativeLanguage || "Turkish";
-    const level = body.level || "A1";
-    const difficulty = body.difficulty || 3;
-    const topic = body.topic || "Daily Life";
-    const apiKey = process.env.GEMINI_API_KEY;
-    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!apiKey) {
-      return NextResponse.json({ error: "GEMINI_API_KEY is missing." }, { status: 500 });
+    if (!user) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const prompt = `
-You are Koshei AI lesson generator.
-Create a short speaking lesson.
+    const body = await req.json();
 
-Student native language: ${nativeLanguage}
-Target language: ${targetLanguage}
-Level: ${level}
-Difficulty: ${difficulty}
-Topic: ${topic}
+    const language = body.language;
+    const level = body.level;
 
-Return ONLY valid JSON:
-{
-  "lessonTitle": "string",
-  "exampleSentence": "string",
-  "explanation": "string",
-  "practiceTask": "string",
-  "conversationQuestion": "string"
-}
-`.trim();
+    if (!language) {
+      return NextResponse.json(
+        { error: "Language missing" },
+        { status: 400 }
+      );
+    }
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-        }),
-      }
-    );
+    const lesson = await generateLesson({
+      language,
+      level,
+    });
 
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    return NextResponse.json(lesson);
+  } catch (error) {
+    console.error(error);
 
-    const jsonText = text.match(/\{[\s\S]*\}/)?.[0] || "{}";
-    const parsed = JSON.parse(jsonText);
-
-    return NextResponse.json(parsed);
-  } catch {
     return NextResponse.json(
-      {
-        lessonTitle: "Daily Speaking",
-        exampleSentence: "I wake up early.",
-        explanation: "Use simple present tense for daily routine.",
-        practiceTask: "Say what time you wake up.",
-        conversationQuestion: "What do you usually do in the morning?",
-      },
-      { status: 200 }
+      { error: "Lesson generation failed" },
+      { status: 500 }
     );
   }
 }
