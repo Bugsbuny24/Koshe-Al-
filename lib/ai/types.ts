@@ -1,16 +1,23 @@
-export type KosheiDifficulty = "easier" | "same" | "harder";
+export type Difficulty = "easier" | "same" | "harder";
 
-export type MemoryItem = {
-  errorType: "grammar" | "vocab" | "tense" | "preposition" | "pronunciation";
-  wrongSentence: string;
-  correctSentence: string;
-  explanation: string;
-};
+export type ErrorType =
+  | "grammar"
+  | "vocab"
+  | "tense"
+  | "preposition"
+  | "pronunciation";
 
 export type SpeakingScore = {
   fluency: number;
   grammar: number;
   vocabulary: number;
+};
+
+export type MemoryItem = {
+  errorType: ErrorType;
+  wrongSentence: string;
+  correctSentence: string;
+  explanation: string;
 };
 
 export type TeacherEngineResponse = {
@@ -19,26 +26,12 @@ export type TeacherEngineResponse = {
   grammarNotes: string[];
   nextAction: string;
   nextQuestion: string;
-  difficulty: KosheiDifficulty;
+  difficulty: Difficulty;
+  vocabulary: string[];
   speakingScore?: SpeakingScore;
   memoryItems: MemoryItem[];
 };
-export type SpeakingScore = {
-  fluency: number;
-  grammar: number;
-  vocabulary: number;
-};
 
-export type TeacherEngineResponse = {
-  correction: {
-    wrong: string;
-    correct: string;
-    explanation: string;
-  };
-  grammarNotes: string[];
-  vocabulary: string[];
-  nextQuestion: string;
-  nextAction: string;
-  difficulty: string;
-  speakingScore?: SpeakingScore;
+export type ChatRouteResponse = TeacherEngineResponse & {
+  conversationId: string;
 };
