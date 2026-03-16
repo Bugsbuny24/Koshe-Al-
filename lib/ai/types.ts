@@ -35,3 +35,4 @@ export type TeacherEngineResponse = {
 export type ChatRouteResponse = TeacherEngineResponse & {
   conversationId: string;
 };
+export type ChatMessageRole = "system" | "user" | "assistant";
