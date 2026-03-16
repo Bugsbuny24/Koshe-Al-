@@ -2,6 +2,59 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 
+type ProfileRow = {
+  full_name: string | null;
+  username: string | null;
+  email: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  native_language: string | null;
+  target_language: string | null;
+  difficulty_level: string | null;
+  learning_stage: string | null;
+  onboarding_completed: boolean | null;
+  created_at: string | null;
+};
+
+type QuotaRow = {
+  plan: string | null;
+  tier: string | null;
+  is_active: boolean | null;
+  credits_remaining: number | null;
+  expires_at: string | null;
+};
+
+type SessionRow = {
+  fluency_score: number | null;
+  grammar_score: number | null;
+  vocabulary_score: number | null;
+  created_at: string | null;
+};
+
+type MemoryRow = {
+  wrong_sentence: string | null;
+  correct_sentence: string | null;
+  explanation: string | null;
+  created_at: string | null;
+};
+
+type VocabRow = {
+  word: string | null;
+  strength: number | null;
+  last_seen: string | null;
+};
+
+function formatDate(value: string | null) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+  }).format(date);
+}
+
 export default async function ProfilePage() {
   const supabase = await createClient();
 
@@ -9,257 +62,351 @@ export default async function ProfilePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
- if (!user) {
-  redirect("/");
- }
+  if (!user) {
+    redirect("/login");
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "full_name,native_language,target_language,learning_stage,difficulty_level,onboarding_completed"
+      `
+      full_name,
+      username,
+      email,
+      bio,
+      avatar_url,
+      native_language,
+      target_language,
+      difficulty_level,
+      learning_stage,
+      onboarding_completed,
+      created_at
+    `
     )
     .eq("id", user.id)
-    .maybeSingle();
+    .single<ProfileRow>();
 
   if (!profile?.onboarding_completed) {
     redirect("/onboarding");
   }
 
-  // Premium check via user_quotas (profiles.is_premium kolonu yok)
   const { data: quota } = await supabase
     .from("user_quotas")
-    .select("plan")
+    .select("plan,tier,is_active,credits_remaining,expires_at")
     .eq("user_id", user.id)
-    .maybeSingle();
+    .maybeSingle<QuotaRow>();
 
-  const isPremium = quota?.plan === "premium" || quota?.plan === "pro";
-
-  const { count: messageCount } = await supabase
-    .from("messages")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  const { count: speakingCount } = await supabase
+  const { data: sessions } = await supabase
     .from("speaking_sessions")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  const { count: mistakeCount } = await supabase
-    .from("learning_memory")
-    .select("*", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  const { data: scoreSessions } = await supabase
-    .from("speaking_sessions")
-    .select("fluency_score,grammar_score,vocabulary_score")
+    .select("fluency_score,grammar_score,vocabulary_score,created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
-    .limit(20);
+    .limit(10)
+    .returns<SessionRow[]>();
 
-  let avgFluency = 0;
-  let avgGrammar = 0;
-  let avgVocab = 0;
+  const { data: recentMistakes } = await supabase
+    .from("learning_memory")
+    .select("wrong_sentence,correct_sentence,explanation,created_at")
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false })
+    .limit(5)
+    .returns<MemoryRow[]>();
 
-  if (scoreSessions && scoreSessions.length > 0) {
-    const n = scoreSessions.length;
-    avgFluency = Math.round(scoreSessions.reduce((s, r) => s + (r.fluency_score ?? 0), 0) / n);
-    avgGrammar = Math.round(scoreSessions.reduce((s, r) => s + ((r as any).grammar_score ?? 0), 0) / n);
-    avgVocab = Math.round(scoreSessions.reduce((s, r) => s + ((r as any).vocabulary_score ?? 0), 0) / n);
-  }
+  const { data: recentWords } = await supabase
+    .from("vocab_memory")
+    .select("word,strength,last_seen")
+    .eq("user_id", user.id)
+    .order("last_seen", { ascending: false })
+    .limit(8)
+    .returns<VocabRow[]>();
 
-  const { data: learnedLangs } = await supabase
-    .from("speaking_sessions")
-    .select("language")
-    .eq("user_id", user.id);
+  const latestSession = sessions?.[0];
 
-  const uniqueLanguages = Array.from(
-    new Set((learnedLangs ?? []).map((r: any) => r.language).filter(Boolean))
-  );
+  const avgFluency =
+    sessions && sessions.length > 0
+      ? Math.round(
+          sessions.reduce((sum, item) => sum + Number(item.fluency_score || 0), 0) /
+            sessions.length
+        )
+      : 0;
+
+  const avgGrammar =
+    sessions && sessions.length > 0
+      ? Math.round(
+          sessions.reduce((sum, item) => sum + Number(item.grammar_score || 0), 0) /
+            sessions.length
+        )
+      : 0;
+
+  const avgVocabulary =
+    sessions && sessions.length > 0
+      ? Math.round(
+          sessions.reduce(
+            (sum, item) => sum + Number(item.vocabulary_score || 0),
+            0
+          ) / sessions.length
+        )
+      : 0;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.16),transparent_18%),linear-gradient(180deg,#040816_0%,#06112a_48%,#020617_100%)] text-white">
-      <div className="mx-auto max-w-4xl px-4 py-5 md:px-6 md:py-8">
-        <header className="rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
-          <p className="text-[11px] uppercase tracking-[0.24em] text-cyan-200/70">
-            Koshei V1 • Profil
-          </p>
-          <div className="mt-4 flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-cyan-300/15 bg-cyan-400/10 text-2xl font-bold text-cyan-100">
-              {(profile.full_name || user.email || "K").charAt(0).toUpperCase()}
+    <main className="min-h-screen bg-[#050816] px-6 py-10 text-white">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-8 flex flex-col gap-4 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-blue-500/10 to-cyan-500/10 p-6 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="text-sm uppercase tracking-[0.25em] text-cyan-300">
+              Profile
             </div>
-            <div>
-              <h1 className="text-2xl font-semibold">
-                {profile.full_name || "Öğrenci"}
-              </h1>
-              <p className="mt-1 text-sm text-slate-400">{user.email}</p>
-              {isPremium ? (
-                <span className="mt-2 inline-block rounded-full border border-cyan-300/20 bg-cyan-500/20 px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-cyan-200">
-                  Premium
-                </span>
-              ) : (
-                <span className="mt-2 inline-block rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-400">
-                  Free Plan
-                </span>
-              )}
-            </div>
+            <h1 className="mt-2 text-3xl font-semibold">
+              {profile?.full_name || "Koshei Kullanıcısı"}
+            </h1>
+            <p className="mt-2 text-slate-300">
+              Hesap, öğrenme bilgileri ve gelişim özeti burada.
+            </p>
           </div>
 
-          <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/live"
-              className="rounded-2xl bg-blue-500 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400"
-            >
-              Konuşmaya Başla
-            </Link>
+          <div className="flex flex-col gap-3 sm:flex-row">
             <Link
               href="/dashboard"
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-2.5 text-sm font-medium text-slate-100 transition hover:bg-white/[0.08]"
+              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-medium text-slate-100 transition hover:bg-white/10"
             >
               Dashboard
             </Link>
-            {!isPremium ? (
-              <Link
-                href="/pricing"
-                className="rounded-2xl border border-cyan-300/15 bg-cyan-400/10 px-4 py-2.5 text-sm font-medium text-cyan-100 transition hover:bg-cyan-400/15"
-              >
-                Premium&apos;a Geç
-              </Link>
-            ) : null}
+
+            <a
+              href="/logout"
+              className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-3 font-medium text-white transition hover:opacity-90"
+            >
+              Çıkış Yap
+            </a>
           </div>
-        </header>
+        </div>
 
-        <section className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <InfoCard label="Ana Dil" value={profile.native_language || "Turkish"} />
-          <InfoCard label="Hedef Dil" value={profile.target_language || "English"} />
-          <InfoCard label="Seviye" value={profile.learning_stage || "A1"} />
-          <InfoCard label="Zorluk" value={difficultyLabel(profile.difficulty_level)} />
-        </section>
+        <div className="grid gap-6 lg:grid-cols-2">
+          <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <h2 className="text-lg font-semibold">Hesap Bilgileri</h2>
 
-        <section className="mt-5 grid gap-4 sm:grid-cols-3">
-          <StatCard label="Toplam Mesaj" value={String(messageCount || 0)} />
-          <StatCard label="Speaking Oturumu" value={String(speakingCount || 0)} />
-          <StatCard label="Düzeltilen Hata" value={String(mistakeCount || 0)} />
-        </section>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Ad Soyad</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.full_name || "-"}
+                </div>
+              </div>
 
-        {scoreSessions && scoreSessions.length > 0 ? (
-          <section className="mt-5 rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
-            <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
-              Öğrenme İstatistikleri
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-white">
-              Ortalama Konuşma Puanın
-            </h2>
-            <p className="mt-1 text-xs text-slate-400">
-              Son {scoreSessions.length} oturumun ortalaması
-            </p>
-            <div className="mt-5 grid gap-4 sm:grid-cols-3">
-              <ScoreCard label="Fluency" value={avgFluency} />
-              <ScoreCard label="Grammar" value={avgGrammar} />
-              <ScoreCard label="Vocabulary" value={avgVocab} />
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Kullanıcı Adı</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.username || "-"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4 md:col-span-2">
+                <div className="text-sm text-slate-400">Email</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.email || user.email || "-"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Kayıt Tarihi</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {formatDate(profile?.created_at || null)}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Bio</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.bio || "-"}
+                </div>
+              </div>
             </div>
           </section>
-        ) : null}
 
-        <section className="mt-5 rounded-[28px] border border-cyan-300/12 bg-white/[0.035] p-5 backdrop-blur-xl">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
-            Öğrenilen Diller
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">
-            Pratik yaptığın diller
-          </h2>
-          <div className="mt-5 flex flex-wrap gap-3">
-            {uniqueLanguages.length > 0 ? (
-              uniqueLanguages.map((lang) => (
-                <span
-                  key={String(lang)}
-                  className="rounded-2xl border border-cyan-300/12 bg-cyan-400/[0.08] px-4 py-2 text-sm text-cyan-100"
-                >
-                  {String(lang)}
-                </span>
-              ))
+          <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <h2 className="text-lg font-semibold">Öğrenme Profili</h2>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Ana Dil</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.native_language || "-"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Hedef Dil</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.target_language || "-"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Seviye</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.difficulty_level || "-"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Amaç</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {profile?.learning_stage || "-"}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <h2 className="text-lg font-semibold">Plan ve Kota</h2>
+
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Plan</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {quota?.plan || "free"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Tier</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {quota?.tier || "free"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Aktif mi?</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {quota?.is_active ? "Evet" : "Hayır"}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Kalan Kredi</div>
+                <div className="mt-1 text-base font-medium text-white">
+                  {quota?.credits_remaining ?? 0}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <h2 className="text-lg font-semibold">Son Performans</h2>
+
+            {latestSession ? (
+              <div className="mt-5 grid gap-4 md:grid-cols-3">
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-sm text-slate-400">Fluency</div>
+                  <div className="mt-1 text-2xl font-semibold text-white">
+                    {latestSession.fluency_score || 0}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-sm text-slate-400">Grammar</div>
+                  <div className="mt-1 text-2xl font-semibold text-white">
+                    {latestSession.grammar_score || 0}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="text-sm text-slate-400">Vocabulary</div>
+                  <div className="mt-1 text-2xl font-semibold text-white">
+                    {latestSession.vocabulary_score || 0}
+                  </div>
+                </div>
+              </div>
             ) : (
-              <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <p className="text-sm text-slate-300">
-                  Henüz speaking oturumu yok. Konuşmaya başladıktan sonra
-                  öğrenilen diller burada görünür.
-                </p>
-              </div>
+              <p className="mt-5 text-slate-400">Henüz konuşma oturumu yok.</p>
             )}
-          </div>
-        </section>
 
-        <section className="mt-5 rounded-[28px] border border-white/10 bg-white/[0.035] p-5 backdrop-blur-xl">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-cyan-200/70">
-            Hesap Ayarları
-          </p>
-          <h2 className="mt-2 text-xl font-semibold text-white">Ayarlar</h2>
-          <div className="mt-5 space-y-3">
-            <Link
-              href="/onboarding"
-              className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 transition hover:bg-white/[0.08]"
-            >
-              <div>
-                <p className="text-sm font-medium text-white">Dil Yolunu Değiştir</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Hedef dil veya seviyeni güncelleyelim.
-                </p>
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Ort. Fluency</div>
+                <div className="mt-1 text-2xl font-semibold text-white">
+                  {avgFluency}
+                </div>
               </div>
-              <span className="text-slate-400">→</span>
-            </Link>
-            <Link
-              href="/pricing"
-              className="flex items-center justify-between rounded-2xl border border-cyan-300/12 bg-cyan-400/[0.06] px-5 py-4 transition hover:bg-cyan-400/[0.1]"
-            >
-              <div>
-                <p className="text-sm font-medium text-white">Premium Plan</p>
-                <p className="mt-1 text-xs text-slate-400">
-                  Sınırsız speaking sorusu için premium&apos;a geç.
-                </p>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Ort. Grammar</div>
+                <div className="mt-1 text-2xl font-semibold text-white">
+                  {avgGrammar}
+                </div>
               </div>
-              <span className="text-cyan-400">→</span>
-            </Link>
-          </div>
-        </section>
+
+              <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                <div className="text-sm text-slate-400">Ort. Vocabulary</div>
+                <div className="mt-1 text-2xl font-semibold text-white">
+                  {avgVocabulary}
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <h2 className="text-lg font-semibold">Son Hatalar</h2>
+
+            {recentMistakes && recentMistakes.length > 0 ? (
+              <div className="mt-5 space-y-4">
+                {recentMistakes.map((item, index) => (
+                  <div
+                    key={`${item.wrong_sentence}-${index}`}
+                    className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4"
+                  >
+                    <div className="text-sm text-slate-300">Yanlış</div>
+                    <div className="mt-1 text-white">
+                      {item.wrong_sentence || "-"}
+                    </div>
+
+                    <div className="mt-3 text-sm text-slate-300">Doğru</div>
+                    <div className="mt-1 text-cyan-300">
+                      {item.correct_sentence || "-"}
+                    </div>
+
+                    <div className="mt-3 text-sm text-slate-300">Açıklama</div>
+                    <div className="mt-1 text-slate-100">
+                      {item.explanation || "-"}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 text-slate-400">Henüz kayıtlı hata yok.</p>
+            )}
+          </section>
+
+          <section className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+            <h2 className="text-lg font-semibold">Öğrenilen Kelimeler</h2>
+
+            {recentWords && recentWords.length > 0 ? (
+              <div className="mt-5 flex flex-wrap gap-3">
+                {recentWords.map((item, index) => (
+                  <div
+                    key={`${item.word}-${index}`}
+                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                  >
+                    <div className="font-medium text-white">{item.word || "-"}</div>
+                    <div className="mt-1 text-xs text-slate-400">
+                      Strength: {item.strength || 1}
+                    </div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Son görülme: {formatDate(item.last_seen)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-5 text-slate-400">Henüz kayıtlı kelime yok.</p>
+            )}
+          </section>
+        </div>
       </div>
     </main>
   );
-}
-
-function difficultyLabel(level?: number | null) {
-  if (!level || level <= 1) return "Easy";
-  if (level === 2) return "Balanced";
-  if (level === 3) return "Normal";
-  if (level === 4) return "Strong";
-  return "Advanced";
-}
-
-function InfoCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4">
-      <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">{label}</p>
-      <p className="mt-2 text-sm font-medium text-white">{value}</p>
-    </div>
-  );
-}
-
-function StatCard({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
-function ScoreCard({ label, value }: { label: string; value: number }) {
-  const color =
-    value >= 80 ? "text-emerald-400" :
-    value >= 60 ? "text-cyan-400" :
-    value >= 40 ? "text-amber-400" : "text-red-400";
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-center">
-      <p className="text-[11px] uppercase tracking-[0.16em] text-slate-400">{label}</p>
-      <p className={`mt-2 text-3xl font-bold ${color}`}>{value}</p>
-    </div>
-  );
-}
+    }
