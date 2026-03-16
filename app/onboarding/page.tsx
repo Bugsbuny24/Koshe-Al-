@@ -1,123 +1,130 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { LANGUAGES, STAGES } from "@/lib/constants/languages";
+import { useRouter } from "next/navigation";
 
 export default function OnboardingPage() {
-  const router = useRouter();
+
   const supabase = createClient();
+  const router = useRouter();
 
   const [nativeLanguage, setNativeLanguage] = useState("Turkish");
   const [targetLanguage, setTargetLanguage] = useState("English");
-  const [learningStage, setLearningStage] = useState<(typeof STAGES)[number]>("A1");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [level, setLevel] = useState("beginner");
+  const [goal, setGoal] = useState("conversation");
 
-  async function handleSave() {
-    setLoading(true);
-    setError("");
+  async function finishOnboarding() {
 
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
 
-      if (!user) throw new Error("Oturum bulunamadı.");
+    if (!user) return;
 
-      const { error: updateError } = await supabase
-        .from("profiles")
-        .update({
-          native_language: nativeLanguage,
-          target_language: targetLanguage,
-          learning_stage: learningStage,
-          onboarding_completed: true,
-        })
-        .eq("id", user.id);
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        native_language: nativeLanguage,
+        target_language: targetLanguage,
+        difficulty_level: level,
+        learning_stage: goal,
+        onboarding_completed: true,
+      })
+      .eq("id", user.id);
 
-      if (updateError) throw updateError;
-
-      router.push("/dashboard");
-      router.refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Bir hata oluştu.");
-    } finally {
-      setLoading(false);
+    if (error) {
+      alert(error.message);
+      return;
     }
+
+    router.push("/dashboard");
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 text-white">
-      <div className="mx-auto max-w-4xl px-4 py-8">
-        <div className="rounded-[32px] border border-cyan-300/10 bg-white/[0.03] p-6 backdrop-blur-xl">
-          <h1 className="text-3xl font-semibold">Öğrenme yolunu seç</h1>
+    <div className="flex justify-center items-center h-screen">
 
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Ana dil</label>
-              <select
-                value={nativeLanguage}
-                onChange={(e) => setNativeLanguage(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4"
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.name}>
-                    {lang.nativeName}
-                  </option>
-                ))}
-              </select>
-            </div>
+      <div className="w-96 space-y-6">
 
-            <div>
-              <label className="mb-2 block text-sm text-slate-300">Öğrenmek istediğin dil</label>
-              <select
-                value={targetLanguage}
-                onChange={(e) => setTargetLanguage(e.target.value)}
-                className="h-12 w-full rounded-2xl border border-white/10 bg-slate-950/40 px-4"
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.name}>
-                    {lang.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+        <h1 className="text-2xl font-bold">
+          Koshei AI Seni Tanısın
+        </h1>
 
-          <div className="mt-6">
-            <label className="mb-3 block text-sm text-slate-300">Başlangıç seviyen</label>
-            <div className="flex flex-wrap gap-2">
-              {STAGES.map((stage) => (
-                <button
-                  key={stage}
-                  type="button"
-                  onClick={() => setLearningStage(stage)}
-                  className={[
-                    "rounded-2xl px-4 py-2.5 text-sm transition",
-                    learningStage === stage
-                      ? "bg-blue-500 text-white"
-                      : "border border-white/10 bg-white/[0.03] text-slate-200",
-                  ].join(" ")}
-                >
-                  {stage}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Native language */}
 
-          {error ? <p className="mt-4 text-sm text-red-300">{error}</p> : null}
+        <div>
+          <p>Ana Dilin</p>
 
-          <button
-            type="button"
-            onClick={handleSave}
-            disabled={loading}
-            className="mt-6 h-12 rounded-2xl bg-blue-500 px-6 text-sm font-semibold transition hover:bg-blue-400 disabled:opacity-50"
+          <select
+            className="border p-2 w-full"
+            value={nativeLanguage}
+            onChange={(e) => setNativeLanguage(e.target.value)}
           >
-            {loading ? "Kaydediliyor..." : "Başla"}
-          </button>
+            <option>Turkish</option>
+            <option>English</option>
+            <option>German</option>
+            <option>French</option>
+          </select>
         </div>
+
+        {/* Target language */}
+
+        <div>
+          <p>Öğrenmek istediğin dil</p>
+
+          <select
+            className="border p-2 w-full"
+            value={targetLanguage}
+            onChange={(e) => setTargetLanguage(e.target.value)}
+          >
+            <option>English</option>
+            <option>German</option>
+            <option>French</option>
+            <option>Spanish</option>
+          </select>
+        </div>
+
+        {/* Level */}
+
+        <div>
+          <p>Seviyen</p>
+
+          <select
+            className="border p-2 w-full"
+            value={level}
+            onChange={(e) => setLevel(e.target.value)}
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
+        </div>
+
+        {/* Goal */}
+
+        <div>
+          <p>Amacın</p>
+
+          <select
+            className="border p-2 w-full"
+            value={goal}
+            onChange={(e) => setGoal(e.target.value)}
+          >
+            <option value="conversation">Konuşma</option>
+            <option value="business">İş dili</option>
+            <option value="travel">Seyahat</option>
+            <option value="academic">Akademik</option>
+          </select>
+        </div>
+
+        <button
+          onClick={finishOnboarding}
+          className="bg-black text-white w-full p-3"
+        >
+          Başla
+        </button>
+
       </div>
-    </main>
+    </div>
   );
-            }
+}
