@@ -3,15 +3,31 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+function toSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+}
+
+function toInt(value: FormDataEntryValue | null): number | null {
+  if (value === null || value === "") return null;
+  const n = parseInt(value as string, 10);
+  return isNaN(n) ? null : n;
+}
+
+function toFloat(value: FormDataEntryValue | null): number | null {
+  if (value === null || value === "") return null;
+  const n = parseFloat(value as string);
+  return isNaN(n) ? null : n;
+}
+
 // ─── University actions ────────────────────────────────────────────────────
 
 export async function createUniversityAction(formData: FormData) {
   const supabase = await createClient();
   const name = formData.get("name") as string;
-  const slug = (name || "")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+  const slug = toSlug(name || "");
   const { error } = await supabase.from("universities").insert({
     name,
     slug,
@@ -58,10 +74,7 @@ export async function deleteUniversityAction(id: string) {
 export async function createFacultyAction(formData: FormData) {
   const supabase = await createClient();
   const name = formData.get("name") as string;
-  const slug = (name || "")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+  const slug = toSlug(name || "");
   const { error } = await supabase.from("faculties").insert({
     university_id: formData.get("university_id") as string,
     name,
@@ -108,10 +121,7 @@ export async function deleteFacultyAction(id: string) {
 export async function createProgramAction(formData: FormData) {
   const supabase = await createClient();
   const title = formData.get("title") as string;
-  const slug = (title || "")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+  const slug = toSlug(title || "");
   const { error } = await supabase.from("programs").insert({
     university_id: formData.get("university_id") as string,
     faculty_id: formData.get("faculty_id") as string,
@@ -119,10 +129,10 @@ export async function createProgramAction(formData: FormData) {
     slug,
     code: formData.get("code") as string,
     degree_type: formData.get("degree_type") as string,
-    duration_years: parseInt(formData.get("duration_years") as string) || 4,
-    total_credits: parseInt(formData.get("total_credits") as string) || null,
-    total_courses: parseInt(formData.get("total_courses") as string) || null,
-    min_gpa: parseFloat(formData.get("min_gpa") as string) || null,
+    duration_years: toInt(formData.get("duration_years")) ?? 4,
+    total_credits: toInt(formData.get("total_credits")),
+    total_courses: toInt(formData.get("total_courses")),
+    min_gpa: toFloat(formData.get("min_gpa")),
     language_of_instruction:
       (formData.get("language_of_instruction") as string) || "English",
     has_prep_year: formData.get("has_prep_year") === "true",
@@ -149,10 +159,10 @@ export async function updateProgramAction(id: string, formData: FormData) {
       title,
       code: formData.get("code") as string,
       degree_type: formData.get("degree_type") as string,
-      duration_years: parseInt(formData.get("duration_years") as string) || 4,
-      total_credits: parseInt(formData.get("total_credits") as string) || null,
-      total_courses: parseInt(formData.get("total_courses") as string) || null,
-      min_gpa: parseFloat(formData.get("min_gpa") as string) || null,
+      duration_years: toInt(formData.get("duration_years")) ?? 4,
+      total_credits: toInt(formData.get("total_credits")),
+      total_courses: toInt(formData.get("total_courses")),
+      min_gpa: toFloat(formData.get("min_gpa")),
       language_of_instruction:
         (formData.get("language_of_instruction") as string) || "English",
       has_prep_year: formData.get("has_prep_year") === "true",
@@ -182,10 +192,7 @@ export async function deleteProgramAction(id: string) {
 export async function createCourseAction(formData: FormData) {
   const supabase = await createClient();
   const title = formData.get("title") as string;
-  const slug = (title || "")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
+  const slug = toSlug(title || "");
   const programId = (formData.get("program_id") as string) || null;
   const { error } = await supabase.from("academic_courses").insert({
     university_id: formData.get("university_id") as string,
@@ -194,7 +201,7 @@ export async function createCourseAction(formData: FormData) {
     title,
     slug,
     code: formData.get("code") as string,
-    credits: parseInt(formData.get("credits") as string) || 3,
+    credits: toInt(formData.get("credits")) ?? 3,
     description: (formData.get("description") as string) || null,
     is_core: formData.get("is_core") === "true",
     is_elective: formData.get("is_elective") === "true",
@@ -221,7 +228,7 @@ export async function updateCourseAction(id: string, formData: FormData) {
       program_id: programId || null,
       title,
       code: formData.get("code") as string,
-      credits: parseInt(formData.get("credits") as string) || 3,
+      credits: toInt(formData.get("credits")) ?? 3,
       description: (formData.get("description") as string) || null,
       is_core: formData.get("is_core") === "true",
       is_elective: formData.get("is_elective") === "true",
