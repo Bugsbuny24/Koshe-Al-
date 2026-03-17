@@ -15,8 +15,11 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body>
-        <Navbar />
-        {children}
+        <div className="min-h-screen bg-app text-white">
+          <div className="bg-grid" />
+          <Navbar />
+          <div className="relative z-10">{children}</div>
+        </div>
       </body>
     </html>
   );
