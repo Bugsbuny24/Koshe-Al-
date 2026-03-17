@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
+  { href: "/courses", label: "Courses" },
   { href: "/live", label: "Speak" },
   { href: "/lesson", label: "Lesson" },
   { href: "/pricing", label: "Pricing" },
@@ -28,10 +29,10 @@ export default function Navbar() {
           </div>
           <div className="hidden sm:block">
             <div className="text-sm uppercase tracking-[0.3em] text-cyan-300/80">
-              Koshei
+              Koshei AI
             </div>
             <div className="-mt-1 text-lg font-semibold text-white">
-              AI Language
+              University
             </div>
           </div>
         </Link>
