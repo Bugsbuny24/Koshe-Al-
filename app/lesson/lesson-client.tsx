@@ -5,6 +5,7 @@ import { useState } from "react";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import MentorCard from "@/components/live/MentorCard";
+import { getUsageCreditCost } from "@/lib/credits/credit-helpers";
 
 type Lesson = {
   lessonTitle: string;
@@ -30,6 +31,7 @@ export default function LessonClient({
   const langCode = languageCode ?? targetLanguage.slice(0, 2).toLowerCase();
   const academicCtx = getAcademicContext(langCode, level);
   const mentor = getMentorForLanguage(langCode);
+  const lessonCreditCost = getUsageCreditCost("lesson_generation");
 
   async function loadLesson() {
     setLoading(true);
@@ -94,6 +96,15 @@ export default function LessonClient({
               {mentor.name} sana {targetLanguage} için kişiselleştirilmiş bir
               ders hazırlayacak.
             </p>
+            {/* Credit cost hint */}
+            <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-cyan-400/15 bg-cyan-500/8 px-4 py-2 text-xs text-cyan-300/80">
+              <span>✦</span>
+              <span>
+                Bu ders{" "}
+                <strong className="text-cyan-300">{lessonCreditCost} kredi</strong>{" "}
+                kullanır
+              </span>
+            </div>
             <button
               onClick={loadLesson}
               disabled={loading}

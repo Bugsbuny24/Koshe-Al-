@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { formatCreditBalance, getMockCreditBalance } from "@/lib/credits/credit-helpers";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -19,6 +20,11 @@ function isActive(pathname: string, href: string) {
 
 export default function Navbar() {
   const pathname = usePathname();
+
+  // TODO: Replace with real credit balance from API / context once
+  //       credit_balances table exists in DB.
+  const mockBalance = getMockCreditBalance();
+  const displayBalance = formatCreditBalance(mockBalance.balance);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050816]/70 backdrop-blur-2xl">
@@ -59,6 +65,16 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* Credit balance chip */}
+          <Link
+            href="/profile"
+            className="hidden items-center gap-1.5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-500/15 sm:inline-flex"
+            title="Kredi Bakiyesi"
+          >
+            <span>✦</span>
+            <span>{displayBalance}</span>
+          </Link>
+
           <Link
             href="/profile"
             className="hidden rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/10 sm:inline-flex"
