@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
@@ -50,9 +51,7 @@ export default async function DashboardPage() {
 
   const { data: sessions } = await supabase
     .from("speaking_sessions")
-    .select(
-      "fluency_score,grammar_score,vocabulary_score,created_at"
-    )
+    .select("fluency_score,grammar_score,vocabulary_score,created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false })
     .limit(20)
@@ -76,28 +75,50 @@ export default async function DashboardPage() {
 
   const latestScore = sessions?.[0];
 
-  const avgFluency =
-    sessions?.length
-      ? sessions.reduce((sum, s) => sum + Number(s.fluency_score || 0), 0) /
-        sessions.length
-      : 0;
+  const avgFluency = sessions?.length
+    ? sessions.reduce((sum, s) => sum + Number(s.fluency_score || 0), 0) /
+      sessions.length
+    : 0;
 
-  const avgGrammar =
-    sessions?.length
-      ? sessions.reduce((sum, s) => sum + Number(s.grammar_score || 0), 0) /
-        sessions.length
-      : 0;
+  const avgGrammar = sessions?.length
+    ? sessions.reduce((sum, s) => sum + Number(s.grammar_score || 0), 0) /
+      sessions.length
+    : 0;
 
-  const avgVocab =
-    sessions?.length
-      ? sessions.reduce((sum, s) => sum + Number(s.vocabulary_score || 0), 0) /
-        sessions.length
-      : 0;
+  const avgVocab = sessions?.length
+    ? sessions.reduce((sum, s) => sum + Number(s.vocabulary_score || 0), 0) /
+      sessions.length
+    : 0;
 
   return (
     <main className="min-h-screen bg-[#050816] px-6 py-10 text-white">
       <div className="mx-auto max-w-6xl">
-        <h1 className="mb-6 text-3xl font-semibold">Dashboard</h1>
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <h1 className="text-3xl font-semibold">Dashboard</h1>
+
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/live"
+              className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 font-medium text-white transition hover:opacity-90"
+            >
+              Konuşmaya Başla
+            </Link>
+
+            <Link
+              href="/lesson"
+              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-medium text-slate-200 transition hover:bg-white/10"
+            >
+              Derse Git
+            </Link>
+
+            <Link
+              href="/feedback"
+              className="inline-flex items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-5 py-3 font-medium text-fuchsia-200 transition hover:bg-fuchsia-500/20"
+            >
+              Geri Bildirim Gönder
+            </Link>
+          </div>
+        </div>
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -154,6 +175,21 @@ export default async function DashboardPage() {
           </div>
         </div>
 
+        <div className="mt-8 rounded-3xl border border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-500/10 to-cyan-500/10 p-6">
+          <h2 className="mb-2 text-lg font-semibold">Koshei&apos;yi Birlikte Geliştirelim</h2>
+          <p className="mb-4 text-sm text-slate-300">
+            Hata, eksik yön, performans sorunu veya yeni özellik önerin varsa bize
+            direkt mesaj bırak. Geri dönüşlerin ürünü geliştirmemize yardımcı olur.
+          </p>
+
+          <Link
+            href="/feedback"
+            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-3 font-medium text-white transition hover:opacity-90"
+          >
+            Mesaj Gönder
+          </Link>
+        </div>
+
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <h2 className="mb-4 text-lg">Son Hatalar</h2>
@@ -197,7 +233,9 @@ export default async function DashboardPage() {
                     key={`${item.word}-${index}`}
                     className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
                   >
-                    <div className="font-medium text-white">{item.word || "-"}</div>
+                    <div className="font-medium text-white">
+                      {item.word || "-"}
+                    </div>
                     <div className="mt-1 text-xs text-slate-400">
                       Strength: {item.strength || 1}
                     </div>
