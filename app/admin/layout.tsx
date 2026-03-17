@@ -40,14 +40,15 @@ export default async function AdminLayout({
   }
 
   const navItems = [
-    { href: "/admin", label: "Dashboard", icon: "🏛️" },
+    { href: "/admin",            label: "Dashboard",    icon: "🏛️" },
+    { href: "/admin/overview",   label: "Genel Bakış",  icon: "📋" },
     { href: "/admin/universities", label: "Üniversiteler", icon: "🎓" },
-    { href: "/admin/faculties", label: "Fakülteler", icon: "🏛️" },
-    { href: "/admin/programs", label: "Programlar", icon: "📚" },
-    { href: "/admin/courses", label: "Dersler", icon: "📖" },
-    { href: "/admin/curriculum", label: "Müfredat", icon: "📋" },
-    { href: "/admin/students", label: "Öğrenciler", icon: "👥" },
-    { href: "/admin/rewards", label: "Ödüller", icon: "🏆" },
+    { href: "/admin/faculties",  label: "Fakülteler",   icon: "🏛️" },
+    { href: "/admin/programs",   label: "Programlar",   icon: "📚" },
+    { href: "/admin/courses",    label: "Dersler",      icon: "📖" },
+    { href: "/admin/curriculum", label: "Müfredat",     icon: "🗺️" },
+    { href: "/admin/students",   label: "Öğrenciler",   icon: "👥" },
+    { href: "/admin/rewards",    label: "Ödüller",      icon: "🏆" },
   ];
 
   return (

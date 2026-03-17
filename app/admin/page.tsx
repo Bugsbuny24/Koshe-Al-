@@ -83,6 +83,9 @@ export default async function AdminDashboard() {
               {link.icon} {link.label}
             </Link>
           ))}
+          <Link href="/admin/overview" className="soft-button text-sm py-2 px-4">
+            📋 Genel Bakış
+          </Link>
         </div>
       </div>
 
