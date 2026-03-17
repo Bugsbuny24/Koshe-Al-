@@ -372,7 +372,7 @@ export async function POST(req: Request) {
     };
 
     return NextResponse.json(response);
-  } catch (error) {
+ } catch (error) {
     console.error("chat route error", error);
 
     return NextResponse.json(
@@ -380,4 +380,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-        
+}
