@@ -3,12 +3,24 @@ import { createClient } from "@/lib/supabase/server";
 import { SectionHeader } from "@/components/ui/Surface";
 import { UNIVERSITY_TEMPLATES } from "@/lib/data/university-templates";
 import { createUniversityAction } from "./actions";
+import { LANGUAGE_FACULTY } from "@/lib/data/academic-catalog";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
   let univCount = 0, facultyCount = 0, programCount = 0,
       courseCount = 0, enrollmentCount = 0, awardCount = 0;
+
+  // Language system counts — always available (no DB required)
+  const langProgramCount = LANGUAGE_FACULTY.programs.length;
+  const langCourseCount = LANGUAGE_FACULTY.programs.reduce(
+    (a, p) => a + p.courses.length,
+    0
+  );
+  const langUnitCount = LANGUAGE_FACULTY.programs.reduce(
+    (a, p) => a + p.courses.reduce((b, c) => b + c.units.length, 0),
+    0
+  );
 
   try {
     const [r1, r2, r3, r4, r5, r6] = await Promise.all([
@@ -26,7 +38,7 @@ export default async function AdminDashboard() {
     enrollmentCount = r5.count ?? 0;
     awardCount = r6.count ?? 0;
   } catch {
-    // Tables may not exist yet — show zeros until migration is applied
+    // Academic tables may not exist yet — show zeros until migration is applied
   }
 
   const stats = [
@@ -89,18 +101,74 @@ export default async function AdminDashboard() {
         </div>
       </div>
 
-      {/* University Templates */}
+      {/* ── Language Faculty — Runtime Data ──────────────────────────────────── */}
       <div className="glass-card p-6">
-        <h2 className="text-sm uppercase tracking-[0.2em] text-slate-400 mb-2">
-          Üniversite Şablonları
-        </h2>
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-sm uppercase tracking-[0.2em] text-slate-400">
+            {LANGUAGE_FACULTY.icon} {LANGUAGE_FACULTY.name}
+          </h2>
+          <span className="rounded-full bg-emerald-400/10 px-2 py-0.5 text-xs text-emerald-400">
+            Runtime · Aktif
+          </span>
+        </div>
         <p className="text-slate-400 text-sm mb-5">
-          Hazır üniversite şablonlarını yükleyerek veritabanını hızlıca
-          doldurun.
+          Mevcut dil öğrenme sistemi. Bu veri template değil — gerçek öğrenci
+          deneyiminin kaynağı.
+        </p>
+        <div className="grid grid-cols-3 gap-4 mb-5">
+          {[
+            { label: "Dil Programı", value: langProgramCount },
+            { label: "CEFR Kurs",    value: langCourseCount },
+            { label: "Toplam Ünite", value: langUnitCount },
+          ].map((s) => (
+            <div key={s.label} className="panel-dark p-4 text-center rounded-xl">
+              <p className="text-2xl font-bold text-cyan-300">{s.value}</p>
+              <p className="text-xs text-slate-500 mt-1">{s.label}</p>
+            </div>
+          ))}
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {LANGUAGE_FACULTY.programs.slice(0, 8).map((prog) => (
+            <div key={prog.slug} className="panel-dark p-3 rounded-xl">
+              <p className="text-white text-sm font-medium">{prog.title}</p>
+              <p className="text-xs text-slate-500 mt-1">
+                {prog.courses.length} kurs · {prog.difficultyLabel}
+              </p>
+            </div>
+          ))}
+          {LANGUAGE_FACULTY.programs.length > 8 && (
+            <div className="panel-dark p-3 rounded-xl flex items-center justify-center">
+              <p className="text-xs text-slate-500">
+                +{LANGUAGE_FACULTY.programs.length - 8} dil programı
+              </p>
+            </div>
+          )}
+        </div>
+        <Link
+          href="/admin/curriculum"
+          className="mt-4 inline-block text-xs text-cyan-400 hover:underline"
+        >
+          Tam müfredat görünümü →
+        </Link>
+      </div>
+
+      {/* University Templates — clearly labeled as DEMO/SEED */}
+      <div className="glass-card p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <h2 className="text-sm uppercase tracking-[0.2em] text-slate-400">
+            Üniversite Şablonları
+          </h2>
+          <span className="rounded-full bg-amber-400/10 px-2 py-0.5 text-xs text-amber-400">
+            Demo · Seed Helper
+          </span>
+        </div>
+        <p className="text-slate-400 text-sm mb-2">
+          Bunlar <strong className="text-slate-300">demo/seed şablonlarıdır</strong> — runtime source of truth değil.
+          Şablon yükle butonu sadece bir kez kullan; gerçek veri DB'dedir.
         </p>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {UNIVERSITY_TEMPLATES.map((template) => (
-            <div key={template.code} className="panel-dark p-4 rounded-xl">
+            <div key={template.code} className="panel-dark p-4 rounded-xl border border-amber-400/10">
               <div className="flex items-start justify-between mb-2">
                 <div>
                   <p className="text-white text-sm font-medium">
@@ -131,22 +199,14 @@ export default async function AdminDashboard() {
               <form action={createUniversityAction}>
                 <input type="hidden" name="name" value={template.name} />
                 <input type="hidden" name="code" value={template.code} />
-                <input
-                  type="hidden"
-                  name="country"
-                  value={template.country}
-                />
-                <input
-                  type="hidden"
-                  name="description"
-                  value={template.description}
-                />
+                <input type="hidden" name="country" value={template.country} />
+                <input type="hidden" name="description" value={template.description} />
                 <input type="hidden" name="active" value="true" />
                 <button
                   type="submit"
                   className="soft-button text-xs py-1.5 px-3 w-full"
                 >
-                  Şablon Yükle
+                  Şablon Yükle (Seed)
                 </button>
               </form>
             </div>

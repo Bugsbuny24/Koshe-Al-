@@ -3,6 +3,9 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SectionHeader, Surface } from "@/components/ui/Surface";
+import { getAcademicContext } from "@/lib/data/academic-catalog";
+import { getMentorForLanguage } from "@/lib/data/mentors";
+import { DEPARTMENTS } from "@/lib/data/curriculum";
 
 type ProfileRow = {
   full_name: string | null;
@@ -161,9 +164,21 @@ export default async function DashboardPage() {
     return "from-slate-500 to-slate-400";
   }
 
+  // Derive academic context from most recent enrollment or profile fallback
+  const primaryEnrollment = enrollments?.find((e) => e.status === "active") ?? enrollments?.[0] ?? null;
+  const targetLang = profile?.target_language || "English";
+  const activeLangCode = primaryEnrollment?.language_code
+    ?? DEPARTMENTS.find((d) => d.name.toLowerCase() === targetLang.toLowerCase())?.code
+    ?? targetLang.slice(0, 2).toLowerCase();
+  const activeLevel = primaryEnrollment?.level ?? profile?.difficulty_level ?? "A1";
+  const academicCtx = getAcademicContext(activeLangCode, activeLevel);
+  const mentor = getMentorForLanguage(activeLangCode);
+
   return (
     <main className="px-4 py-8 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-7xl">
+
+        {/* ── Hero header ─────────────────────────────────────────────────── */}
         <Surface className="gradient-border p-6 sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
@@ -173,68 +188,126 @@ export default async function DashboardPage() {
               <h1 className="glow-text mt-2 text-3xl font-bold text-white sm:text-5xl">
                 Hoş geldin, {profile?.full_name || "Öğrenci"}
               </h1>
-              <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
-                AI öğretmeninle konuş, gelişimini takip et, hatalarını gör ve
-                daha akıcı konuşmaya başla.
-              </p>
+
+              {/* Active program breadcrumb */}
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                <span className="text-slate-400">{academicCtx.facultyName}</span>
+                <span>›</span>
+                <span className="text-slate-300 font-medium">{academicCtx.programTitle}</span>
+                {academicCtx.courseTitle ? (
+                  <>
+                    <span>›</span>
+                    <span className="text-cyan-400">{academicCtx.courseTitle}</span>
+                  </>
+                ) : null}
+              </div>
+
+              {/* Mentor hint */}
+              <div className="mt-4 flex items-center gap-3">
+                <div
+                  className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${mentor.gradientFrom} ${mentor.gradientTo} text-xs font-bold text-white`}
+                >
+                  {mentor.avatarInitials}
+                </div>
+                <span className="text-sm text-slate-400">
+                  Mentorın: <span className="text-white font-medium">{mentor.name}</span>
+                  {" "}· {mentor.title}
+                </span>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-3">
               <Link href="/live" className="primary-button">
-                Konuşmaya Başla
-              </Link>
-              <Link href="/courses" className="soft-button">
-                Kurslar
+                🎤 Canlı Pratiğe Geç
               </Link>
               <Link href="/lesson" className="soft-button">
-                Derse Git
+                📖 Derse Git
               </Link>
-              <Link href="/feedback" className="soft-button">
-                Feedback
-              </Link>
+              {primaryEnrollment ? (
+                <Link
+                  href={`/courses/${activeLangCode}`}
+                  className="soft-button"
+                >
+                  🎓 Programına Devam Et
+                </Link>
+              ) : (
+                <Link href="/courses" className="soft-button">
+                  Kurslar
+                </Link>
+              )}
             </div>
           </div>
         </Surface>
 
-        {/* ── University Progress Cards ───────────────────────────────────── */}
-        {(enrollments && enrollments.length > 0) || (latestBadges && latestBadges.length > 0) || (latestCerts && latestCerts.length > 0) ? (
+        {/* ── Active program + rewards row ────────────────────────────────── */}
+        {(enrollments && enrollments.length > 0) ||
+        (latestBadges && latestBadges.length > 0) ||
+        (latestCerts && latestCerts.length > 0) ? (
           <div className="mt-8 grid gap-6 lg:grid-cols-3">
             {/* Active enrollments */}
             <Surface className="lg:col-span-2">
               <SectionHeader
-                eyebrow="Kurs İlerlemesi"
-                title="Aktif Kurslarım"
-                description="Son kayıtlı kursların ve ilerleme durumun"
+                eyebrow="Aktif Program"
+                title="Eğitim İlerlemem"
+                description="Kayıtlı kurslarının ilerleme durumu"
               />
               {enrollments && enrollments.length > 0 ? (
                 <div className="mt-5 space-y-4">
-                  {enrollments.map((e) => (
-                    <div
-                      key={e.course_id}
-                      className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                    >
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="font-medium text-white">
-                          {e.language_code.toUpperCase()} • {e.level}
-                        </span>
-                        <span className="text-slate-400">
-                          {e.completed_units_count || 0}/{e.total_units_count || 0} unit
-                        </span>
-                      </div>
-                      <div className="mt-3">
-                        <div className="mb-1.5 flex justify-between text-xs text-slate-400">
-                          <span>İlerleme</span>
-                          <span>{e.progress_percent || 0}%</span>
+                  {enrollments.map((e) => {
+                    const ctx = getAcademicContext(e.language_code, e.level);
+                    return (
+                      <div
+                        key={e.course_id}
+                        className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <div className="font-medium text-white">
+                              {ctx.programTitle}
+                            </div>
+                            <div className="mt-0.5 text-xs text-slate-500">
+                              {ctx.facultyName} · {e.level}
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-xs text-slate-400">
+                            {e.completed_units_count || 0}/{e.total_units_count || 0} ünite
+                          </span>
                         </div>
-                        <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                          <div
-                            className={`h-full rounded-full bg-gradient-to-r ${progressColor(e.progress_percent || 0)}`}
-                            style={{ width: `${e.progress_percent || 0}%` }}
-                          />
+                        <div className="mt-3">
+                          <div className="mb-1.5 flex justify-between text-xs text-slate-400">
+                            <span>İlerleme</span>
+                            <span>{e.progress_percent || 0}%</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                            <div
+                              className={`h-full rounded-full bg-gradient-to-r ${progressColor(e.progress_percent || 0)}`}
+                              style={{ width: `${e.progress_percent || 0}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Link
+                            href="/live"
+                            className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
+                          >
+                            🎤 Canlı Pratik
+                          </Link>
+                          <Link
+                            href="/lesson"
+                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10"
+                          >
+                            📖 Ders
+                          </Link>
+                          <Link
+                            href={`/courses/${e.language_code}/${e.level}`}
+                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10"
+                          >
+                            Sonraki Ünite →
+                          </Link>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="mt-5">
@@ -249,9 +322,8 @@ export default async function DashboardPage() {
               )}
             </Surface>
 
-            {/* Latest badge + cert + collectible count */}
+            {/* Rewards sidebar */}
             <div className="space-y-5">
-              {/* Latest badge */}
               {latestBadges && latestBadges.length > 0 ? (
                 <Surface>
                   <SectionHeader eyebrow="Son Rozet" title="Kazanılan Badge" />
@@ -276,12 +348,11 @@ export default async function DashboardPage() {
                 </Surface>
               ) : null}
 
-              {/* Latest cert */}
               {latestCerts && latestCerts.length > 0 ? (
                 <Surface>
                   <SectionHeader eyebrow="Son Sertifika" title={latestCerts[0].title} />
                   <div className="mt-3 text-xs text-slate-400">
-                    {latestCerts[0].language_code.toUpperCase()} • {latestCerts[0].level} •{" "}
+                    {latestCerts[0].language_code.toUpperCase()} · {latestCerts[0].level} ·{" "}
                     {latestCerts[0].issued_at
                       ? new Date(latestCerts[0].issued_at).toLocaleDateString("tr-TR")
                       : "-"}
@@ -289,7 +360,6 @@ export default async function DashboardPage() {
                 </Surface>
               ) : null}
 
-              {/* Collectible count */}
               <Surface>
                 <div className="metric-label">NFT Koleksiyonları</div>
                 <div className="metric-value">{collectibleCount?.length || 0}</div>
@@ -297,14 +367,14 @@ export default async function DashboardPage() {
                   href="/profile"
                   className="mt-3 block text-xs text-cyan-300 hover:underline"
                 >
-                  Koleksiyona git →
+                  Sertifika Yolculuğunu Gör →
                 </Link>
               </Surface>
             </div>
           </div>
         ) : null}
 
-        {/* ── Original stats + profile ──────────────────────────────────────── */}
+        {/* ── Stats + profile ──────────────────────────────────────────────── */}
         <div className="mt-8 grid gap-6 xl:grid-cols-4">
           <Surface className="xl:col-span-1">
             <SectionHeader
@@ -312,28 +382,19 @@ export default async function DashboardPage() {
               title="Öğrenci Bilgileri"
               description="Aktif öğrenme profilin"
             />
-
             <div className="mt-6 space-y-3 text-sm text-slate-300">
-              <div className="panel-dark p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Ad</div>
-                <div className="mt-2 text-white">{profile?.full_name || "-"}</div>
-              </div>
-              <div className="panel-dark p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Ana Dil</div>
-                <div className="mt-2 text-white">{profile?.native_language || "-"}</div>
-              </div>
-              <div className="panel-dark p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Hedef Dil</div>
-                <div className="mt-2 text-white">{profile?.target_language || "-"}</div>
-              </div>
-              <div className="panel-dark p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Seviye</div>
-                <div className="mt-2 text-white">{profile?.difficulty_level || "-"}</div>
-              </div>
-              <div className="panel-dark p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">Amaç</div>
-                <div className="mt-2 text-white">{profile?.learning_stage || "-"}</div>
-              </div>
+              {[
+                { label: "Ad", value: profile?.full_name },
+                { label: "Ana Dil", value: profile?.native_language },
+                { label: "Hedef Dil", value: profile?.target_language },
+                { label: "Seviye", value: profile?.difficulty_level },
+                { label: "Amaç", value: profile?.learning_stage },
+              ].map((item) => (
+                <div key={item.label} className="panel-dark p-4">
+                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">{item.label}</div>
+                  <div className="mt-2 text-white">{item.value || "-"}</div>
+                </div>
+              ))}
             </div>
           </Surface>
 
@@ -372,21 +433,29 @@ export default async function DashboardPage() {
               </Surface>
             </div>
 
+            {/* ── Journey CTAs ─────────────────────────────────────────────── */}
             <Surface className="mt-6">
               <SectionHeader
-                eyebrow="Gelişim"
-                title="Koshei'yi birlikte geliştirelim"
-                description="Hata, eksik yön veya yeni özellik önerini bize yaz."
+                eyebrow="Akademik Yolculuk"
+                title="Sertifika Yolculuğun"
+                description="Rozetlerini, sertifikalarını ve kazanımlarını gör."
               />
               <div className="mt-5 flex flex-wrap gap-3">
-                <Link href="/feedback" className="primary-button">Mesaj Gönder</Link>
-                <Link href="/pricing" className="soft-button">Paketleri Gör</Link>
+                <Link href="/profile" className="primary-button">
+                  🏆 Rozetlerimi İncele
+                </Link>
+                <Link href="/courses" className="soft-button">
+                  📚 Tüm Programlar
+                </Link>
+                <Link href="/feedback" className="soft-button">
+                  Feedback
+                </Link>
               </div>
             </Surface>
           </div>
         </div>
 
-        {/* ── Recent mistakes + Vocabulary ───────────────────────────────────── */}
+        {/* ── Recent mistakes + Vocabulary ─────────────────────────────────── */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
           <Surface>
             <SectionHeader
