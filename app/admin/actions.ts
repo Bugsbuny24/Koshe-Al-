@@ -2,33 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-
-const TURKISH_MAP: Record<string, string> = {
-  ç: "c", Ç: "c", ğ: "g", Ğ: "g", ı: "i", İ: "i",
-  ö: "o", Ö: "o", ş: "s", Ş: "s", ü: "u", Ü: "u",
-};
-
-function toSlug(text: string): string {
-  return text
-    .split("")
-    .map((ch) => TURKISH_MAP[ch] ?? ch)
-    .join("")
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "");
-}
-
-function toInt(value: FormDataEntryValue | null): number | null {
-  if (value === null || value === "") return null;
-  const n = parseInt(value as string, 10);
-  return isNaN(n) ? null : n;
-}
-
-function toFloat(value: FormDataEntryValue | null): number | null {
-  if (value === null || value === "") return null;
-  const n = parseFloat(value as string);
-  return isNaN(n) ? null : n;
-}
+import { toSlug, toInt, toFloat } from "@/lib/utils/form-helpers";
 
 // ─── University actions ────────────────────────────────────────────────────
 
@@ -88,6 +62,7 @@ export async function createFacultyAction(formData: FormData) {
     name,
     slug,
     code: formData.get("code") as string,
+    faculty_type: (formData.get("faculty_type") as string) || "generic",
     description: (formData.get("description") as string) || null,
     dean_name: (formData.get("dean_name") as string) || null,
     active: formData.get("active") === "true",
@@ -106,6 +81,7 @@ export async function updateFacultyAction(id: string, formData: FormData) {
       university_id: formData.get("university_id") as string,
       name,
       code: formData.get("code") as string,
+      faculty_type: (formData.get("faculty_type") as string) || "generic",
       description: (formData.get("description") as string) || null,
       dean_name: (formData.get("dean_name") as string) || null,
       active: formData.get("active") === "true",

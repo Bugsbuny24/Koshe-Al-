@@ -7,65 +7,35 @@ import { createUniversityAction } from "./actions";
 export default async function AdminDashboard() {
   const supabase = await createClient();
 
-  const [
-    { count: univCount },
-    { count: facultyCount },
-    { count: programCount },
-    { count: courseCount },
-    { count: enrollmentCount },
-    { count: awardCount },
-  ] = await Promise.all([
-    supabase.from("universities").select("*", { count: "exact", head: true }),
-    supabase.from("faculties").select("*", { count: "exact", head: true }),
-    supabase.from("programs").select("*", { count: "exact", head: true }),
-    supabase
-      .from("academic_courses")
-      .select("*", { count: "exact", head: true }),
-    supabase
-      .from("student_program_enrollments")
-      .select("*", { count: "exact", head: true }),
-    supabase
-      .from("student_awards")
-      .select("*", { count: "exact", head: true }),
-  ]);
+  let univCount = 0, facultyCount = 0, programCount = 0,
+      courseCount = 0, enrollmentCount = 0, awardCount = 0;
+
+  try {
+    const [r1, r2, r3, r4, r5, r6] = await Promise.all([
+      supabase.from("universities").select("*", { count: "exact", head: true }),
+      supabase.from("faculties").select("*", { count: "exact", head: true }),
+      supabase.from("programs").select("*", { count: "exact", head: true }),
+      supabase.from("academic_courses").select("*", { count: "exact", head: true }),
+      supabase.from("student_program_enrollments").select("*", { count: "exact", head: true }),
+      supabase.from("student_awards").select("*", { count: "exact", head: true }),
+    ]);
+    univCount = r1.count ?? 0;
+    facultyCount = r2.count ?? 0;
+    programCount = r3.count ?? 0;
+    courseCount = r4.count ?? 0;
+    enrollmentCount = r5.count ?? 0;
+    awardCount = r6.count ?? 0;
+  } catch {
+    // Tables may not exist yet — show zeros until migration is applied
+  }
 
   const stats = [
-    {
-      label: "Üniversiteler",
-      value: univCount ?? 0,
-      icon: "🎓",
-      href: "/admin/universities",
-    },
-    {
-      label: "Fakülteler",
-      value: facultyCount ?? 0,
-      icon: "🏛️",
-      href: "/admin/faculties",
-    },
-    {
-      label: "Programlar",
-      value: programCount ?? 0,
-      icon: "📚",
-      href: "/admin/programs",
-    },
-    {
-      label: "Dersler",
-      value: courseCount ?? 0,
-      icon: "📖",
-      href: "/admin/courses",
-    },
-    {
-      label: "Kayıtlı Öğrenci",
-      value: enrollmentCount ?? 0,
-      icon: "👥",
-      href: "/admin/students",
-    },
-    {
-      label: "Verilen Ödül",
-      value: awardCount ?? 0,
-      icon: "🏆",
-      href: "/admin/rewards",
-    },
+    { label: "Üniversiteler",   value: univCount,       icon: "🎓", href: "/admin/universities" },
+    { label: "Fakülteler",      value: facultyCount,    icon: "🏛️", href: "/admin/faculties" },
+    { label: "Programlar",      value: programCount,    icon: "📚", href: "/admin/programs" },
+    { label: "Dersler",         value: courseCount,     icon: "📖", href: "/admin/courses" },
+    { label: "Kayıtlı Öğrenci", value: enrollmentCount, icon: "👥", href: "/admin/students" },
+    { label: "Verilen Ödül",    value: awardCount,      icon: "🏆", href: "/admin/rewards" },
   ];
 
   const quickLinks = [

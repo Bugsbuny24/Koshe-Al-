@@ -1,6 +1,45 @@
-// University System Types
+// ─── Generic Academic Core — domain types for the university system ───────────
+//
+// Shared reward/enrollment base types are imported from ./university so that
+// the language-faculty domain and the generic-academic domain share a single
+// source of truth for those concepts.
+//
+// Rule:
+//   types/university.ts   → language-faculty domain (CourseUnit, CourseLevel,
+//                           Department[language], EnrollmentRecord, badges,
+//                           certificates, collectibles)
+//   types/academic.ts     → generic academic core (universities, faculties,
+//                           programs, academic_courses, transcript, awards)
+//   Bridge types below    → explicit glue between the two domains
 
-export type DegreeType = "BA" | "BS" | "MA" | "MSc" | "PhD" | "Certificate" | "Diploma" | "Prep";
+// Re-export shared reward / enrollment types so consumers can import
+// from a single place when working in the academic context.
+export type {
+  EnrollmentRecord,
+  EnrollmentStatus,
+  AchievementRecord,
+  BadgeDefinition,
+  BadgeLevel,
+  CertificateRecord,
+  CollectibleRewardRecord,
+  CollectibleMetadata,
+  MintStatus,
+  MarketplaceStatus,
+} from "./university";
+
+// ─── Degree / program metadata ────────────────────────────────────────────────
+
+export type DegreeType =
+  | "BA"
+  | "BS"
+  | "MA"
+  | "MSc"
+  | "PhD"
+  | "Certificate"
+  | "Diploma"
+  | "Prep";
+
+// ─── Database row types for new academic tables ───────────────────────────────
 
 export type UniversityRow = {
   id: string;
@@ -19,6 +58,9 @@ export type UniversityRow = {
 export type FacultyRow = {
   id: string;
   university_id: string;
+  /** Set to "language" to mark this as the language-faculty that wraps the
+   *  existing language-course system. Allows admin queries to identify it. */
+  faculty_type: "language" | "generic";
   name: string;
   slug: string;
   code: string;
@@ -112,7 +154,8 @@ export type AcademicCourseRow = {
   description: string | null;
   is_core: boolean;
   is_elective: boolean;
-  level: string | null; // 100, 200, 300, 400, 500 etc
+  /** Numeric level: 100, 200, 300, 400, 500 … */
+  level: string | null;
   semester: string | null;
   prerequisite_codes: string[] | null;
   language_of_instruction: string;
@@ -138,7 +181,13 @@ export type ModuleLessonRow = {
   title: string;
   description: string | null;
   order_index: number;
-  content_type: "text" | "video" | "quiz" | "practice" | "speaking" | "project";
+  content_type:
+    | "text"
+    | "video"
+    | "quiz"
+    | "practice"
+    | "speaking"
+    | "project";
   duration_minutes: number | null;
   active: boolean;
   created_at: string;
@@ -152,6 +201,8 @@ export type DegreeRuleRow = {
   value: string | null;
   created_at: string;
 };
+
+// ─── Student progression rows ─────────────────────────────────────────────────
 
 export type StudentProgramEnrollmentRow = {
   id: string;
@@ -167,6 +218,11 @@ export type StudentProgramEnrollmentRow = {
   updated_at: string;
 };
 
+/**
+ * Enrollments in academic_courses (new generic system).
+ * Language-course enrollments stay in course_enrollments (existing table)
+ * and are bridged via program_enrollment_id (nullable FK).
+ */
 export type StudentCourseEnrollmentRow = {
   id: string;
   user_id: string;
@@ -197,6 +253,8 @@ export type StudentTranscriptRow = {
   created_at: string;
 };
 
+// ─── Awards / milestones ──────────────────────────────────────────────────────
+
 export type AcademicMilestoneType =
   | "program_enrollment"
   | "core_requirement_complete"
@@ -212,6 +270,13 @@ export type AcademicMilestoneType =
   | "thesis_submitted"
   | "thesis_approved";
 
+/**
+ * student_awards row.
+ *
+ * certificate_id  → FK to public.certificates.id   (existing language-cert table)
+ * collectible_id  → FK to public.collectible_rewards.id (existing collectibles)
+ * badge_code      → matches achievements.code (no FK; code is not a unique key)
+ */
 export type StudentAwardRow = {
   id: string;
   user_id: string;
@@ -227,7 +292,31 @@ export type StudentAwardRow = {
   awarded_at: string;
 };
 
-// University template type for seed data
+// ─── Bridge: language-faculty ↔ academic-faculty ─────────────────────────────
+
+/**
+ * Describes how the existing language-course system maps into the academic
+ * faculty/program hierarchy. Used only in admin UI / seed data; not a DB row.
+ *
+ * The "Faculty of Languages" row in public.faculties (faculty_type = 'language')
+ * acts as the umbrella. Each language code (e.g. "en", "de") maps to a
+ * DepartmentRow, and each CEFR level (A1…C2) maps to a program.
+ * The actual lesson/unit content is still served by the existing
+ * course_enrollments → curriculum system.
+ */
+export type LanguageFacultyBridge = {
+  /** ID of the FacultyRow with faculty_type = 'language' */
+  faculty_id: string;
+  /** language code, e.g. "en" → matches Department.code in university.ts */
+  language_code: string;
+  /** ID of the DepartmentRow for this language */
+  department_id: string;
+  /** Maps each CEFR level to its program ID */
+  level_program_map: Record<string, string>;
+};
+
+// ─── Seed / template types ────────────────────────────────────────────────────
+
 export type UniversityTemplate = {
   name: string;
   code: string;

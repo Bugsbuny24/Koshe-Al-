@@ -54,6 +54,9 @@ export default async function FacultiesPage() {
               <thead className="border-b border-white/10">
                 <tr>
                   <th className="pb-3 text-left text-xs uppercase tracking-[0.2em] text-slate-400 font-normal">
+                    Tür
+                  </th>
+                  <th className="pb-3 text-left text-xs uppercase tracking-[0.2em] text-slate-400 font-normal">
                     İsim
                   </th>
                   <th className="pb-3 text-left text-xs uppercase tracking-[0.2em] text-slate-400 font-normal">
@@ -79,6 +82,17 @@ export default async function FacultiesPage() {
                     key={faculty.id}
                     className="border-b border-white/5 hover:bg-white/3 transition-colors"
                   >
+                    <td className="py-3 text-slate-400">
+                      {faculty.faculty_type === "language" ? (
+                        <span className="inline-flex items-center rounded-full bg-cyan-400/10 px-2.5 py-0.5 text-xs text-cyan-400">
+                          🌐 Dil
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-purple-400/10 px-2.5 py-0.5 text-xs text-purple-400">
+                          📚 Generic
+                        </span>
+                      )}
+                    </td>
                     <td className="py-3 text-slate-300 font-medium">
                       {faculty.name}
                     </td>

@@ -1,6 +1,15 @@
 -- ============================================================
 -- Koshei AI University — Generic Academic Schema
 -- Migration: 20240320000000_academic_schema.sql
+--
+-- Design principle:
+--   • New generic-academic tables are created here.
+--   • Existing tables (course_enrollments, achievements, certificates,
+--     collectible_rewards) are NOT replaced — they are extended with
+--     nullable bridge columns so the language-faculty continues working
+--     unchanged while the new academic system can reference them.
+--   • The "Faculty of Languages" sits inside the new faculties table
+--     (faculty_type = 'language') and wraps the existing language system.
 -- ============================================================
 
 -- Enable UUID extension if not already enabled
@@ -29,12 +38,15 @@ create index if not exists universities_active_idx on public.universities(active
 -- ──────────────────────────────────────────────
 -- faculties
 -- ──────────────────────────────────────────────
+-- faculty_type = 'language' → wraps the existing language-course system
+-- faculty_type = 'generic'  → all other faculties
 create table if not exists public.faculties (
   id             uuid primary key default uuid_generate_v4(),
   university_id  uuid not null references public.universities(id) on delete cascade,
   name           text not null,
   slug           text not null,
   code           text not null,
+  faculty_type   text not null default 'generic' check (faculty_type in ('language','generic')),
   description    text,
   dean_name      text,
   active         boolean not null default true,
@@ -263,6 +275,11 @@ create index if not exists transcript_program_idx on public.student_transcript(p
 -- ──────────────────────────────────────────────
 -- student_awards
 -- ──────────────────────────────────────────────
+-- student_awards
+-- certificate_id  → FK to public.certificates.id        (existing table)
+-- collectible_id  → FK to public.collectible_rewards.id (existing table)
+-- badge_code      → matches achievements.code (soft ref; code is not a unique key)
+-- ──────────────────────────────────────────────
 create table if not exists public.student_awards (
   id               uuid primary key default uuid_generate_v4(),
   user_id          uuid not null references auth.users(id) on delete cascade,
@@ -273,8 +290,8 @@ create table if not exists public.student_awards (
   course_id        uuid references public.academic_courses(id) on delete set null,
   university_id    uuid references public.universities(id) on delete set null,
   badge_code       text,
-  certificate_id   uuid,
-  collectible_id   uuid,
+  certificate_id   uuid references public.certificates(id) on delete set null,
+  collectible_id   uuid references public.collectible_rewards(id) on delete set null,
   awarded_at       timestamptz not null default now()
 );
 
@@ -293,6 +310,75 @@ begin
       and column_name = 'role'
   ) then
     alter table public.profiles add column role text not null default 'student';
+  end if;
+end $$;
+
+-- ──────────────────────────────────────────────
+-- Bridge columns on EXISTING tables
+--
+-- These columns let the new academic system reference existing
+-- language-faculty data without replacing any existing functionality.
+-- All columns are nullable so existing rows are unaffected.
+-- ──────────────────────────────────────────────
+
+-- course_enrollments → link a language-course enrollment to an academic
+-- program enrollment (e.g. student enrolled in the Languages program)
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'course_enrollments'
+      and column_name = 'program_enrollment_id'
+  ) then
+    alter table public.course_enrollments
+      add column program_enrollment_id uuid
+        references public.student_program_enrollments(id) on delete set null;
+  end if;
+end $$;
+
+-- achievements → optional link to the academic program / milestone that
+-- triggered this badge (does not affect existing language achievements)
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'achievements'
+      and column_name = 'academic_program_id'
+  ) then
+    alter table public.achievements
+      add column academic_program_id uuid
+        references public.programs(id) on delete set null;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'achievements'
+      and column_name = 'academic_milestone_type'
+  ) then
+    alter table public.achievements
+      add column academic_milestone_type text;
+  end if;
+end $$;
+
+-- certificates → optional link to academic program (language certs are
+-- already stored here; academic certs can reuse the same table)
+do $$
+begin
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'certificates'
+      and column_name = 'academic_program_id'
+  ) then
+    alter table public.certificates
+      add column academic_program_id uuid
+        references public.programs(id) on delete set null;
   end if;
 end $$;
 

@@ -78,6 +78,23 @@ export default async function NewFacultyPage() {
 
           <div>
             <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
+              Fakülte Türü
+            </label>
+            <select
+              name="faculty_type"
+              defaultValue="generic"
+              className="w-full rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-white focus:border-cyan-400/50 focus:outline-none focus:ring-1 focus:ring-cyan-400/30 text-sm"
+            >
+              <option value="generic">Generic (Standart Fakülte)</option>
+              <option value="language">Language (Dil Fakültesi — mevcut sistemi sarar)</option>
+            </select>
+            <p className="mt-1.5 text-xs text-slate-500">
+              &quot;Language&quot; seçeneği mevcut dil kurslarını bu fakülte altında gösterir.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">
               Dekan Adı
             </label>
             <input

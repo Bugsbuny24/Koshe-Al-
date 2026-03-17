@@ -7,6 +7,7 @@ const PROTECTED_ROUTES = [
   "/lesson",
   "/profile",
   "/onboarding",
+  "/admin",
 ];
 
 function isProtectedPath(pathname: string) {
@@ -75,6 +76,7 @@ export const config = {
     "/lesson/:path*",
     "/profile/:path*",
     "/onboarding/:path*",
+    "/admin/:path*",
     "/login",
     "/register",
   ],
