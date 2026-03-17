@@ -216,11 +216,11 @@ export default function HomePage() {
             Yabancı Dil Üniversitesi
           </div>
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">
-            Yapılandırılmış müfredat ile öğren
+            Gerçek üniversite müfredatı ile öğren
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-slate-300">
-            A1'den C2'ye uzanan seviyeli kurs sistemi ile dilbilginizi
-            sistematik olarak geliştirin.
+            4 yıllık lisans programı — 8 yarıyıl, zorunlu ve seçmeli dersler;
+            dilbilgisinden edebiyata, çeviriden dilbilime uzanan tam müfredat.
           </p>
         </div>
 
@@ -229,20 +229,23 @@ export default function HomePage() {
             {
               flag: "🇬🇧",
               lang: "English",
+              programTitle: "İngiliz Dili ve Edebiyatı",
               code: "en",
-              levels: ["A1", "A2", "B1", "B2", "C1", "C2"],
+              subjects: ["Okuma & Yazma", "Dinleme & Konuşma", "Dilbilim", "Edebiyat", "Çeviri", "Tez"],
             },
             {
               flag: "🇩🇪",
               lang: "German",
+              programTitle: "Alman Dili ve Edebiyatı",
               code: "de",
-              levels: ["A1", "A2", "B1", "B2"],
+              subjects: ["Okuma & Yazma", "Dilbilgisi", "Çeviri", "Alman Edebiyatı", "Mesleki Almanca", "Tez"],
             },
             {
               flag: "🇫🇷",
               lang: "French",
+              programTitle: "Fransız Dili ve Edebiyatı",
               code: "fr",
-              levels: ["A1", "A2", "B1"],
+              subjects: ["Okuma & Yazma", "Dilbilgisi", "Çeviri", "Fransız Edebiyatı", "Mesleki Fransızca", "Tez"],
             },
           ].map((item) => (
             <Link
@@ -254,20 +257,20 @@ export default function HomePage() {
                 <span className="text-4xl">{item.flag}</span>
                 <div>
                   <div className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
-                    {item.lang}
+                    {item.programTitle}
                   </div>
                   <div className="text-xs text-slate-400">
-                    {item.levels.length} seviye
+                    4 Yıl · 8 Yarıyıl Lisans
                   </div>
                 </div>
               </div>
               <div className="mt-4 flex flex-wrap gap-1.5">
-                {item.levels.map((lv) => (
+                {item.subjects.map((s) => (
                   <span
-                    key={lv}
+                    key={s}
                     className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-xs text-slate-300"
                   >
-                    {lv}
+                    {s}
                   </span>
                 ))}
               </div>
@@ -280,7 +283,7 @@ export default function HomePage() {
             href="/courses"
             className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/10"
           >
-            Tüm Dil Bölümlerini Gör →
+            Fakülteyi İncele →
           </Link>
         </div>
       </section>

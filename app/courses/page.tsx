@@ -1,198 +1,228 @@
 import Link from "next/link";
 import { getAvailableLanguages } from "@/lib/constants/curriculum";
-import { LANGUAGES } from "@/lib/constants/languages";
-
-const LEVEL_COLORS: Record<string, string> = {
-  A1: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  A2: "bg-teal-500/15 text-teal-300 border-teal-500/30",
-  B1: "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  B2: "bg-violet-500/15 text-violet-300 border-violet-500/30",
-  C1: "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  C2: "bg-rose-500/15 text-rose-300 border-rose-500/30",
-};
-
-const LEVEL_LABELS: Record<string, string> = {
-  A1: "Başlangıç",
-  A2: "Temel",
-  B1: "Orta",
-  B2: "Orta-İleri",
-  C1: "İleri",
-  C2: "Ustalık",
-};
 
 export const metadata = {
-  title: "Kurslar | Yabancı Dil Üniversitesi",
-  description: "80'den fazla dil için yapılandırılmış dil kursları",
+  title: "Fakülte | Yabancı Dil Üniversitesi",
+  description: "İngilizce, Almanca ve Fransızca 4 yıllık lisans programları",
 };
 
 export default function CoursesPage() {
-  const availableLanguages = getAvailableLanguages();
-
-  const popularLanguageCodes = LANGUAGES.filter((l) => l.isPopular).map(
-    (l) => l.code
-  );
-
-  const popularCourses = availableLanguages.filter((l) =>
-    popularLanguageCodes.includes(l.code)
-  );
-
-  const otherCourses = availableLanguages.filter(
-    (l) => !popularLanguageCodes.includes(l.code)
-  );
+  const programs = getAvailableLanguages();
 
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-7xl">
-        {/* Header */}
+
+        {/* ── Fakülte Başlığı ─────────────────────────────────────────── */}
         <div className="mb-10 rounded-[28px] border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-fuchsia-500/10 p-6 sm:p-8">
           <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">
             Yabancı Dil Üniversitesi
           </p>
           <h1 className="mt-3 text-3xl font-bold text-white sm:text-4xl">
-            Dil Kursları
+            Yabancı Diller Fakültesi
           </h1>
           <p className="mt-3 max-w-2xl text-slate-300">
-            A1'den C2'ye kadar yapılandırılmış müfredat, AI konuşma pratiği ve
-            gerçek zamanlı geri bildirim ile dil öğren.
+            Gerçek bir üniversite müfredatı — 4 yıl, 8 yarıyıl, zorunlu ve
+            seçmeli dersler; dilbilgisinden edebiyata, çeviriden dilbilime
+            uzanan tam bir lisans programı.
           </p>
 
+          {/* Program özellikleri */}
           <div className="mt-6 flex flex-wrap gap-3">
-            {(["A1", "A2", "B1", "B2", "C1", "C2"] as const).map((level) => (
+            {[
+              { icon: "🎓", label: "4 Yıllık Lisans" },
+              { icon: "📅", label: "8 Yarıyıl" },
+              { icon: "📚", label: "Zorunlu & Seçmeli Dersler" },
+              { icon: "🏛️", label: "AKTS Kredili" },
+              { icon: "🤖", label: "AI Konuşma Pratiği" },
+            ].map((f) => (
               <span
-                key={level}
-                className={`rounded-full border px-3 py-1 text-xs font-medium ${LEVEL_COLORS[level]}`}
+                key={f.label}
+                className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-200"
               >
-                {level} — {LEVEL_LABELS[level]}
+                {f.icon} {f.label}
               </span>
             ))}
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="mb-10 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <div className="text-3xl font-bold text-white">
-              {availableLanguages.length}
-            </div>
-            <div className="mt-1 text-sm text-slate-400">Dil Bölümü</div>
+        {/* ── Fakülte İstatistikleri ─────────────────────────────────── */}
+        <div className="mb-10 grid gap-4 sm:grid-cols-4">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="text-3xl font-bold text-white">{programs.length}</div>
+            <div className="mt-1 text-sm text-slate-400">Bölüm</div>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <div className="text-3xl font-bold text-white">
-              {availableLanguages.reduce((sum, l) => sum + l.courseCount, 0)}
-            </div>
-            <div className="mt-1 text-sm text-slate-400">Toplam Kurs</div>
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="text-3xl font-bold text-white">8</div>
+            <div className="mt-1 text-sm text-slate-400">Yarıyıl / Bölüm</div>
           </div>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl">
-            <div className="text-3xl font-bold text-white">AI</div>
-            <div className="mt-1 text-sm text-slate-400">
-              Kişiselleştirilmiş Öğretmen
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="text-3xl font-bold text-white">
+              {programs.reduce((sum, p) => sum + p.totalSubjects, 0)}+
             </div>
+            <div className="mt-1 text-sm text-slate-400">Toplam Ders</div>
+          </div>
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-5">
+            <div className="text-3xl font-bold text-white">240</div>
+            <div className="mt-1 text-sm text-slate-400">AKTS Kredi (hedef)</div>
           </div>
         </div>
 
-        {/* Popular Languages */}
+        {/* ── Bölüm Kartları ─────────────────────────────────────────── */}
         <section className="mb-12">
-          <div className="mb-6 flex items-center gap-3">
-            <h2 className="text-xl font-semibold text-white">
-              Popüler Dil Bölümleri
-            </h2>
-            <span className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-300">
-              {popularCourses.length} bölüm
-            </span>
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold text-white">Bölümler</h2>
+            <p className="mt-1 text-sm text-slate-400">
+              Bir bölüme tıklayarak 4 yıllık müfredatı inceleyin.
+            </p>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {popularCourses.map((lang) => (
-              <LanguageCard key={lang.code} lang={lang} />
+          <div className="grid gap-6 md:grid-cols-3">
+            {programs.map((prog) => (
+              <Link
+                key={prog.code}
+                href={`/courses/${prog.code}`}
+                className="group flex flex-col rounded-[28px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10"
+              >
+                <div className="flex items-center gap-4">
+                  <span className="text-5xl">{prog.flag}</span>
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                      {prog.name}
+                    </div>
+                    <div className="mt-1 font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                      {prog.programTitle}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-center">
+                    <div className="text-lg font-bold text-white">4</div>
+                    <div className="text-xs text-slate-400">Yıl</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-center">
+                    <div className="text-lg font-bold text-white">{prog.semesterCount}</div>
+                    <div className="text-xs text-slate-400">Yarıyıl</div>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-black/20 p-3 text-center">
+                    <div className="text-lg font-bold text-white">{prog.totalSubjects}</div>
+                    <div className="text-xs text-slate-400">Ders</div>
+                  </div>
+                </div>
+
+                {/* Yıl göstergesi */}
+                <div className="mt-5 flex gap-2">
+                  {[1, 2, 3, 4].map((y) => (
+                    <div
+                      key={y}
+                      className="flex-1 rounded-xl border border-white/10 bg-black/20 py-1 text-center text-xs text-slate-400"
+                    >
+                      {y}. Yıl
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 flex items-center justify-between">
+                  <span className="text-xs text-slate-500">
+                    ~{prog.totalCredits} AKTS
+                  </span>
+                  <span className="text-xs text-cyan-400 group-hover:underline">
+                    Müfredatı İncele →
+                  </span>
+                </div>
+              </Link>
             ))}
           </div>
         </section>
 
-        {/* Other Languages */}
-        {otherCourses.length > 0 && (
-          <section>
-            <div className="mb-6 flex items-center gap-3">
-              <h2 className="text-xl font-semibold text-white">
-                Diğer Dil Bölümleri
-              </h2>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-400">
-                {otherCourses.length} bölüm
-              </span>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {otherCourses.map((lang) => (
-                <LanguageCard key={lang.code} lang={lang} />
+        {/* ── Müfredat Açıklaması ───────────────────────────────────── */}
+        <section className="mb-12">
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 sm:p-8">
+            <h2 className="text-xl font-semibold text-white">
+              Gerçek Üniversite Müfredatı
+            </h2>
+            <p className="mt-3 text-slate-300 text-sm leading-7">
+              Her bölüm, Türkiye'deki yabancı dil fakültelerinin standart
+              müfredatı esas alınarak hazırlanmıştır. Program; dil becerileri,
+              dilbilim, edebiyat, çeviri ve mesleki dil derslerini kapsar.
+            </p>
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {[
+                { title: "Dil Becerileri", desc: "Okuma, Yazma, Dinleme, Konuşma dersleri her yıl", icon: "💬" },
+                { title: "Dilbilim", desc: "Sesbilim, Sözdizimi, Anlambilim, Pragmatik, Biçimbilim", icon: "🔬" },
+                { title: "Edebiyat", desc: "Dönem dönem ilerleme; başlangıçtan çağdaşa", icon: "📖" },
+                { title: "Çeviri", desc: "Temel çeviriden uzmanlık çevirisine; CAT araçları", icon: "🌐" },
+              ].map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                >
+                  <div className="text-2xl">{item.icon}</div>
+                  <div className="mt-2 font-semibold text-white">{item.title}</div>
+                  <p className="mt-1 text-xs leading-5 text-slate-400">{item.desc}</p>
+                </div>
               ))}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
 
-        {/* CTA */}
-        <div className="mt-14 rounded-[32px] border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-fuchsia-500/10 px-6 py-10 text-center backdrop-blur-xl sm:px-12">
+        {/* ── Ortak Zorunlu Dersler ─────────────────────────────────── */}
+        <section className="mb-12">
+          <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 sm:p-8">
+            <h2 className="text-xl font-semibold text-white">
+              Tüm Bölümlerde Ortak Zorunlu Dersler
+            </h2>
+            <p className="mt-2 text-sm text-slate-400">
+              1. Sınıf her yarıyılında yer alan üniversite geneli zorunlu dersler
+            </p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              {[
+                { code: "ATA101/102", title: "Atatürk İlkeleri ve İnkılâp Tarihi I-II", credits: "2+2 AKTS" },
+                { code: "TDL101/102", title: "Türk Dili I-II", credits: "2+2 AKTS" },
+                { code: "YDL101/102", title: "İkinci Yabancı Dil I-II", credits: "2+2 AKTS" },
+                { code: "DIL101", title: "Dilbilime Giriş", credits: "3 AKTS" },
+              ].map((c) => (
+                <div
+                  key={c.code}
+                  className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                >
+                  <span className="rounded-full border border-slate-600/50 bg-slate-700/30 px-2 py-0.5 text-xs font-mono text-slate-300">
+                    {c.code}
+                  </span>
+                  <div className="mt-2 text-sm font-medium text-white">{c.title}</div>
+                  <div className="mt-1 text-xs text-slate-500">{c.credits}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA ─────────────────────────────────────────────────────── */}
+        <div className="rounded-[32px] border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-fuchsia-500/10 px-6 py-10 text-center backdrop-blur-xl sm:px-12">
           <h2 className="text-2xl font-semibold text-white sm:text-3xl">
-            AI Öğretmenle Pratik Yap
+            Öğrendiklerini AI ile Pekiştir
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-slate-300">
-            Kurs materyallerini tamamladıktan sonra AI konuşma pratiği ile
-            öğrendiklerini pekiştir.
+            Ders materyallerini tamamladıktan sonra AI konuşma pratiği ile
+            gerçek hayat iletişimine hazırlan.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link
               href="/live"
               className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-6 py-3 font-medium text-white transition hover:opacity-90"
             >
-              Konuşma Pratiği Başlat
+              🎤 Konuşma Pratiği Başlat
             </Link>
             <Link
               href="/lesson"
               className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/10"
             >
-              Günlük Derse Git
+              📖 Günlük Derse Git
             </Link>
           </div>
         </div>
       </div>
     </main>
-  );
-}
-
-function LanguageCard({
-  lang,
-}: {
-  lang: { code: string; name: string; flag: string; courseCount: number; levels: string[] };
-}) {
-  return (
-    <Link
-      href={`/courses/${lang.code}`}
-      className="group block rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10"
-    >
-      <div className="flex items-center gap-3">
-        <span className="text-4xl">{lang.flag}</span>
-        <div>
-          <div className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
-            {lang.name}
-          </div>
-          <div className="text-xs text-slate-400">
-            {lang.courseCount} kurs seviyesi
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {lang.levels.map((level) => (
-          <span
-            key={level}
-            className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-xs text-slate-300"
-          >
-            {level}
-          </span>
-        ))}
-      </div>
-
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-xs text-slate-400">Bölümü İncele →</span>
-      </div>
-    </Link>
   );
 }

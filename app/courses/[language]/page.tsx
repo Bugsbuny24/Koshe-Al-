@@ -1,26 +1,26 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  getCoursesByLanguage,
-  type Course,
-} from "@/lib/constants/curriculum";
+import { getProgram, type ProgramSemester } from "@/lib/constants/curriculum";
 
-const LEVEL_COLORS: Record<string, string> = {
-  A1: "from-emerald-500/20 to-teal-500/10 border-emerald-500/30",
-  A2: "from-teal-500/20 to-cyan-500/10 border-teal-500/30",
-  B1: "from-blue-500/20 to-indigo-500/10 border-blue-500/30",
-  B2: "from-violet-500/20 to-purple-500/10 border-violet-500/30",
-  C1: "from-orange-500/20 to-amber-500/10 border-orange-500/30",
-  C2: "from-rose-500/20 to-pink-500/10 border-rose-500/30",
+const YEAR_COLORS: Record<number, string> = {
+  1: "from-emerald-500/15 to-teal-500/5 border-emerald-500/25",
+  2: "from-blue-500/15 to-indigo-500/5 border-blue-500/25",
+  3: "from-violet-500/15 to-purple-500/5 border-violet-500/25",
+  4: "from-orange-500/15 to-amber-500/5 border-orange-500/25",
 };
 
-const LEVEL_BADGE: Record<string, string> = {
-  A1: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
-  A2: "bg-teal-500/15 text-teal-300 border-teal-500/30",
-  B1: "bg-blue-500/15 text-blue-300 border-blue-500/30",
-  B2: "bg-violet-500/15 text-violet-300 border-violet-500/30",
-  C1: "bg-orange-500/15 text-orange-300 border-orange-500/30",
-  C2: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+const YEAR_BADGE: Record<number, string> = {
+  1: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  2: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  3: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+  4: "bg-orange-500/15 text-orange-300 border-orange-500/30",
+};
+
+const YEAR_LABELS: Record<number, string> = {
+  1: "Birinci Sınıf",
+  2: "İkinci Sınıf",
+  3: "Üçüncü Sınıf",
+  4: "Dördüncü Sınıf",
 };
 
 export async function generateMetadata({
@@ -29,11 +29,11 @@ export async function generateMetadata({
   params: Promise<{ language: string }>;
 }) {
   const { language } = await params;
-  const courses = getCoursesByLanguage(language);
-  if (!courses.length) return { title: "Bulunamadı" };
+  const program = getProgram(language);
+  if (!program) return { title: "Bulunamadı" };
   return {
-    title: `${courses[0].languageName} Bölümü | Yabancı Dil Üniversitesi`,
-    description: `${courses[0].languageName} dili için A1'den C2'ye yapılandırılmış kurslar`,
+    title: `${program.programTitle} | Yabancı Dil Üniversitesi`,
+    description: program.description,
   };
 }
 
@@ -43,194 +43,195 @@ export default async function LanguageDepartmentPage({
   params: Promise<{ language: string }>;
 }) {
   const { language } = await params;
-  const courses = getCoursesByLanguage(language);
+  const program = getProgram(language);
 
-  if (!courses.length) {
-    notFound();
-  }
+  if (!program) notFound();
 
-  const { languageName, flag } = courses[0];
-  const totalHours = courses.reduce((sum, c) => sum + c.totalHours, 0);
-  const totalUnits = courses.reduce((sum, c) => sum + c.units.length, 0);
+  const years = [1, 2, 3, 4] as const;
+  const totalZorunlu = program.semesters.reduce(
+    (sum, s) => sum + s.subjects.filter((c) => c.type === "zorunlu").length,
+    0
+  );
+  const totalSecmeli = program.semesters.reduce(
+    (sum, s) => sum + s.subjects.filter((c) => c.type === "seçmeli").length,
+    0
+  );
 
   return (
     <main className="min-h-screen px-4 py-10 sm:px-6">
       <div className="mx-auto max-w-7xl">
+
         {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-2 text-sm text-slate-400">
-          <Link href="/courses" className="hover:text-white transition-colors">
-            Kurslar
-          </Link>
+        <nav className="mb-6 flex flex-wrap items-center gap-2 text-sm text-slate-400">
+          <Link href="/courses" className="hover:text-white transition-colors">Fakülte</Link>
           <span>/</span>
-          <span className="text-white">{languageName}</span>
+          <span className="text-white">{program.programTitle}</span>
         </nav>
 
         {/* Department Header */}
         <div className="mb-10 rounded-[28px] border border-white/10 bg-gradient-to-r from-white/5 to-white/[0.02] p-6 sm:p-8">
           <div className="flex items-start gap-5">
-            <span className="text-6xl">{flag}</span>
+            <span className="text-6xl">{program.flag}</span>
             <div className="flex-1">
               <p className="text-xs uppercase tracking-[0.35em] text-cyan-300">
                 Yabancı Dil Üniversitesi
               </p>
               <h1 className="mt-2 text-3xl font-bold text-white sm:text-4xl">
-                {languageName} Bölümü
+                {program.programTitle}
               </h1>
-              <p className="mt-3 max-w-2xl text-slate-300">
-                A1 başlangıç seviyesinden C2 ustalık seviyesine kadar{" "}
-                {courses.length} kurs ile {languageName} dilini sistematik
-                olarak öğren.
-              </p>
+              <p className="mt-1 text-sm text-slate-400">{program.department}</p>
+              <p className="mt-3 max-w-2xl text-slate-300">{program.description}</p>
 
-              <div className="mt-5 flex flex-wrap gap-4 text-sm">
-                <div className="flex items-center gap-2 text-slate-300">
-                  <span className="text-cyan-300">📚</span>
-                  <span>{courses.length} Kurs Seviyesi</span>
+              <div className="mt-5 flex flex-wrap gap-3 text-sm">
+                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-2">
+                  <span>🎓</span>
+                  <span className="text-slate-200">{program.duration}</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <span className="text-fuchsia-300">🎯</span>
-                  <span>{totalUnits} Ünite</span>
+                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-2">
+                  <span>📚</span>
+                  <span className="text-slate-200">{program.semesters.reduce((s, sem) => s + sem.subjects.length, 0)} Ders</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <span className="text-blue-300">⏱️</span>
-                  <span>~{totalHours} Saat İçerik</span>
+                <div className="flex items-center gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2">
+                  <span>✅</span>
+                  <span className="text-emerald-300">{totalZorunlu} Zorunlu</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-300">
-                  <span className="text-emerald-300">🤖</span>
-                  <span>AI Konuşma Pratiği</span>
+                <div className="flex items-center gap-2 rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2">
+                  <span>⭐</span>
+                  <span className="text-fuchsia-300">{totalSecmeli} Seçmeli</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-2">
+                  <span>🏛️</span>
+                  <span className="text-slate-200">~{program.semesters.reduce((s, sem) => s + sem.totalCredits, 0)} AKTS</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Course Grid */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          {courses.map((course, index) => (
-            <CourseCard key={course.id} course={course} index={index} />
-          ))}
+        {/* Year-by-Year Curriculum */}
+        <div className="space-y-10">
+          {years.map((year) => {
+            const yearSemesters = program.semesters.filter((s) => s.year === year);
+            if (!yearSemesters.length) return null;
+            const yearCredits = yearSemesters.reduce((s, sem) => s + sem.totalCredits, 0);
+            const yearSubjects = yearSemesters.reduce((s, sem) => s + sem.subjects.length, 0);
+
+            return (
+              <div key={year}>
+                {/* Year Header */}
+                <div className="mb-4 flex flex-wrap items-center gap-3">
+                  <span className={`inline-flex rounded-full border px-4 py-1 text-sm font-semibold ${YEAR_BADGE[year]}`}>
+                    {year}. Yıl
+                  </span>
+                  <h2 className="text-xl font-semibold text-white">{YEAR_LABELS[year]}</h2>
+                  <span className="text-sm text-slate-400">— {yearSubjects} ders, ~{yearCredits} AKTS</span>
+                </div>
+
+                {/* Two Semesters Side by Side */}
+                <div className="grid gap-6 lg:grid-cols-2">
+                  {yearSemesters.map((sem) => (
+                    <SemesterCard
+                      key={sem.slug}
+                      sem={sem}
+                      language={language}
+                      yearColor={YEAR_COLORS[year]}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
-        {/* CTA Section */}
+        {/* CTA */}
         <div className="mt-12 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 to-violet-500/10 p-6 sm:p-8">
-          <h2 className="text-xl font-semibold text-white">
-            AI Öğretmenle Pratik Yap
-          </h2>
-          <p className="mt-2 text-slate-300">
-            Kurs materyallerini inceleyin, ardından AI konuşma pratiği ile
-            öğrendiklerinizi pekiştirin.
-          </p>
+          <h2 className="text-xl font-semibold text-white">AI Öğretmenle Pratik Yap</h2>
+          <p className="mt-2 text-slate-300">Ders materyallerini inceleyin, ardından AI konuşma pratiği ile öğrendiklerinizi pekiştirin.</p>
           <div className="mt-5 flex flex-wrap gap-3">
-            <Link
-              href="/live"
-              className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90"
-            >
+            <Link href="/live" className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-90">
               🎤 Konuşma Pratiği Başlat
             </Link>
-            <Link
-              href="/lesson"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10"
-            >
+            <Link href="/lesson" className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-white/10">
               📖 Günlük Derse Git
             </Link>
           </div>
         </div>
+
       </div>
     </main>
   );
 }
 
-function CourseCard({
-  course,
-  index,
+function SemesterCard({
+  sem,
+  language,
+  yearColor,
 }: {
-  course: Course;
-  index: number;
+  sem: ProgramSemester;
+  language: string;
+  yearColor: string;
 }) {
+  const zorunlu = sem.subjects.filter((c) => c.type === "zorunlu");
+  const secmeli = sem.subjects.filter((c) => c.type === "seçmeli");
+
   return (
-    <div
-      className={`rounded-[28px] border bg-gradient-to-br ${LEVEL_COLORS[course.level]} p-6 backdrop-blur-xl`}
-    >
-      {/* Course Header */}
-      <div className="flex items-start justify-between gap-4">
+    <div className={`rounded-[24px] border bg-gradient-to-br ${yearColor} p-5 backdrop-blur-xl`}>
+      {/* Semester Header */}
+      <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <span
-            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${LEVEL_BADGE[course.level]}`}
-          >
-            {course.level}
-          </span>
-          <h3 className="mt-3 text-xl font-semibold text-white">
-            {course.title}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-slate-300">
-            {course.description}
-          </p>
+          <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+            {sem.semester}. Yarıyıl
+          </div>
+          <h3 className="mt-0.5 font-semibold text-white">{sem.label}</h3>
         </div>
-        <div className="shrink-0 rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-center">
-          <div className="text-lg font-bold text-white">{index + 1}</div>
-          <div className="text-xs text-slate-400">Seviye</div>
+        <div className="shrink-0 rounded-2xl border border-white/10 bg-black/20 px-3 py-1.5 text-center">
+          <div className="text-base font-bold text-white">{sem.totalCredits}</div>
+          <div className="text-xs text-slate-400">AKTS</div>
         </div>
       </div>
 
-      {/* Prerequisites */}
-      {course.prerequisites && (
-        <div className="mt-4 flex items-center gap-2 rounded-2xl border border-white/10 bg-black/20 px-4 py-2">
-          <span className="text-xs text-slate-400">Ön Koşul:</span>
-          <span className="text-xs text-white">{course.prerequisites}</span>
-        </div>
-      )}
-
-      {/* Units */}
-      <div className="mt-5">
-        <div className="mb-3 text-xs uppercase tracking-[0.2em] text-slate-400">
-          Üniteler ({course.units.length})
-        </div>
-        <div className="space-y-2">
-          {course.units.map((unit, uIndex) => (
-            <div
-              key={unit.id}
-              className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs text-slate-400">
-                    {uIndex + 1}
-                  </span>
-                  <span className="text-sm font-medium text-white">
-                    {unit.title}
-                  </span>
-                </div>
-                <span className="shrink-0 text-xs text-slate-400">
-                  {unit.estimatedHours}s
+      {/* Zorunlu Dersler */}
+      <div className="space-y-2">
+        {zorunlu.map((subj) => (
+          <div key={subj.code} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 shrink-0 rounded border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-xs font-mono text-emerald-300">
+                  {subj.code}
                 </span>
+                <span className="text-sm text-white">{subj.title}</span>
               </div>
-              <div className="mt-2 ml-9 flex flex-wrap gap-1.5">
-                {unit.topics.map((topic) => (
-                  <span
-                    key={topic}
-                    className="rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-xs text-slate-300"
-                  >
-                    {topic}
-                  </span>
-                ))}
+              <span className="shrink-0 text-xs text-slate-400">{subj.credits} AKTS</span>
+            </div>
+          </div>
+        ))}
+
+        {secmeli.map((subj) => (
+          <div key={subj.code} className="rounded-2xl border border-fuchsia-500/20 bg-fuchsia-500/5 px-4 py-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 shrink-0 rounded border border-fuchsia-500/30 bg-fuchsia-500/10 px-1.5 py-0.5 text-xs font-mono text-fuchsia-300">
+                  {subj.code}
+                </span>
+                <span className="text-sm text-white">{subj.title}</span>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-1">
+                <span className="text-xs text-slate-400">{subj.credits} AKTS</span>
+                <span className="rounded-full bg-fuchsia-500/15 px-1.5 py-0.5 text-xs text-fuchsia-300">seçmeli</span>
               </div>
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
 
-      {/* Footer */}
-      <div className="mt-5 flex items-center justify-between">
-        <div className="text-sm text-slate-400">
-          ~{course.totalHours} saat içerik
-        </div>
-        <Link
-          href={`/courses/${course.languageCode}/${course.level}`}
-          className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-        >
-          Kurs Detayı →
-        </Link>
-      </div>
+      {/* Detay Linki */}
+      <Link
+        href={`/courses/${language}/${sem.slug}`}
+        className="mt-4 flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white transition hover:bg-white/10"
+      >
+        <span>Yarıyıl Detayı</span>
+        <span>→</span>
+      </Link>
     </div>
   );
 }

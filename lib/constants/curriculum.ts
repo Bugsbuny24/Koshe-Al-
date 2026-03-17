@@ -1,1223 +1,302 @@
-export type CourseLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
+// ─────────────────────────────────────────────────────────────────────────────
+// Gerçek Üniversite Müfredatı — Yabancı Dil Üniversitesi
+// 4 Yıllık Lisans Programı (8 Yarıyıl)
+// ─────────────────────────────────────────────────────────────────────────────
 
-export interface CourseUnit {
-  id: string;
+export type CourseType = "zorunlu" | "seçmeli";
+
+export interface Subject {
+  code: string;
   title: string;
+  credits: number;
+  weeklyHours: number;
+  type: CourseType;
+  description: string;
   topics: string[];
-  estimatedHours: number;
 }
 
-export interface Course {
-  id: string;
+export interface ProgramSemester {
+  year: 1 | 2 | 3 | 4;
+  semester: 1 | 2;
+  slug: string;
+  label: string;
+  subjects: Subject[];
+  totalCredits: number;
+}
+
+export interface UniversityProgram {
   languageCode: string;
   languageName: string;
   flag: string;
-  level: CourseLevel;
-  title: string;
+  programTitle: string;
+  department: string;
+  duration: string;
   description: string;
-  units: CourseUnit[];
-  totalHours: number;
-  prerequisites: string | null;
+  semesters: ProgramSemester[];
 }
 
-const COURSES: Course[] = [
-  // ─────────────────── ENGLISH ───────────────────
-  {
-    id: "en-a1",
-    languageCode: "en",
-    languageName: "English",
-    flag: "🇬🇧",
-    level: "A1",
-    title: "English Başlangıç",
-    description:
-      "Temel İngilizce kalıpları, sayılar, renkler, günlük selamlaşmalar ve basit cümle yapısı öğren.",
-    prerequisites: null,
-    totalHours: 30,
-    units: [
-      {
-        id: "en-a1-u1",
-        title: "Merhaba Dünya",
-        topics: ["Selamlaşmalar", "Tanışma cümleleri", "Alfabe ve telaffuz"],
-        estimatedHours: 5,
-      },
-      {
-        id: "en-a1-u2",
-        title: "Sayılar ve Renkler",
-        topics: ["1-100 arası sayılar", "Temel renkler", "Yaş ve tarih ifadeleri"],
-        estimatedHours: 5,
-      },
-      {
-        id: "en-a1-u3",
-        title: "Aile ve İnsanlar",
-        topics: ["Aile üyeleri", "Meslek isimleri", "To be fiili"],
-        estimatedHours: 5,
-      },
-      {
-        id: "en-a1-u4",
-        title: "Günlük Nesneler",
-        topics: ["Ev eşyaları", "Giysiler", "Have/has kullanımı"],
-        estimatedHours: 5,
-      },
-      {
-        id: "en-a1-u5",
-        title: "Zaman ve Günler",
-        topics: ["Haftanın günleri", "Aylar", "Saat sorma ve söyleme"],
-        estimatedHours: 5,
-      },
-      {
-        id: "en-a1-u6",
-        title: "Yiyecek ve İçecek",
-        topics: ["Restoranda sipariş", "Besin isimleri", "Beğeni ifadeleri"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-  {
-    id: "en-a2",
-    languageCode: "en",
-    languageName: "English",
-    flag: "🇬🇧",
-    level: "A2",
-    title: "English Temel",
-    description:
-      "Basit geçmiş zaman, alışveriş diyalogları, yön tarifi ve kısa hikâye anlatımı.",
-    prerequisites: "English A1",
-    totalHours: 40,
-    units: [
-      {
-        id: "en-a2-u1",
-        title: "Geçmiş Zamanla Hikâye Anlatma",
-        topics: ["Simple Past", "Düzenli ve düzensiz fiiller", "Zaman zarfları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "en-a2-u2",
-        title: "Alışveriş ve Para",
-        topics: ["Mağazada konuşma", "Fiyat sorma", "Karşılaştırma sıfatları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "en-a2-u3",
-        title: "Yolculuk ve Ulaşım",
-        topics: ["Yön tarifi", "Ulaşım araçları", "Prepositions of place"],
-        estimatedHours: 7,
-      },
-      {
-        id: "en-a2-u4",
-        title: "Sağlık ve Vücut",
-        topics: ["Vücut parçaları", "Hastalık ifadeleri", "Modal: should/must"],
-        estimatedHours: 6,
-      },
-      {
-        id: "en-a2-u5",
-        title: "Hobiler ve Boş Zaman",
-        topics: ["Like/love/hate + -ing", "Frekans zarfları", "Soru kalıpları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "en-a2-u6",
-        title: "Gelecek Planlar",
-        topics: ["Going to", "Present Continuous (gelecek)", "Takvim"],
-        estimatedHours: 6,
-      },
-    ],
-  },
-  {
-    id: "en-b1",
-    languageCode: "en",
-    languageName: "English",
-    flag: "🇬🇧",
-    level: "B1",
-    title: "English Orta Seviye",
-    description:
-      "Present Perfect, koşullu cümleler, görüş bildirme ve iş hayatı İngilizcesi.",
-    prerequisites: "English A2",
-    totalHours: 50,
-    units: [
-      {
-        id: "en-b1-u1",
-        title: "Present Perfect Tense",
-        topics: ["Have/has + past participle", "Since / For", "Deneyim anlatma"],
-        estimatedHours: 8,
-      },
-      {
-        id: "en-b1-u2",
-        title: "Koşullu Cümleler",
-        topics: ["Zero & First Conditional", "If-unless", "Olasılık ifadeleri"],
-        estimatedHours: 9,
-      },
-      {
-        id: "en-b1-u3",
-        title: "Görüş ve Tartışma",
-        topics: ["I think / In my opinion", "Agree & disagree", "Linking words"],
-        estimatedHours: 9,
-      },
-      {
-        id: "en-b1-u4",
-        title: "İş ve Kariyer",
-        topics: ["CV yazımı dili", "İş görüşmesi", "İş e-postası kalıpları"],
-        estimatedHours: 8,
-      },
-      {
-        id: "en-b1-u5",
-        title: "Pasif Yapı",
-        topics: ["Passive voice", "Bilimsel metinler", "Gazete haberleri"],
-        estimatedHours: 8,
-      },
-      {
-        id: "en-b1-u6",
-        title: "Hikâye Anlatımı",
-        topics: ["Reported speech", "Narratives", "Bağlaçlar"],
-        estimatedHours: 8,
-      },
-    ],
-  },
-  {
-    id: "en-b2",
-    languageCode: "en",
-    languageName: "English",
-    flag: "🇬🇧",
-    level: "B2",
-    title: "English Orta-İleri",
-    description:
-      "İleri koşullu yapılar, akademik yazım, tartışma teknikleri ve akıcı konuşma.",
-    prerequisites: "English B1",
-    totalHours: 55,
-    units: [
-      {
-        id: "en-b2-u1",
-        title: "İleri Koşullu Yapılar",
-        topics: ["Second & Third Conditional", "Mixed Conditionals", "Wish / If only"],
-        estimatedHours: 9,
-      },
-      {
-        id: "en-b2-u2",
-        title: "Akademik Dil",
-        topics: ["Akademik kelime bilgisi", "Essay yapısı", "Kaynak gösterme dili"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-b2-u3",
-        title: "Medya ve Haberler",
-        topics: ["Haber dili analizi", "Kritik okuma", "Tartışma ifadeleri"],
-        estimatedHours: 9,
-      },
-      {
-        id: "en-b2-u4",
-        title: "Phrasal Verbs ve Deyimler",
-        topics: ["En yaygın phrasal verbs", "Deyimler (idioms)", "Bağlam içinde kullanım"],
-        estimatedHours: 9,
-      },
-      {
-        id: "en-b2-u5",
-        title: "Sunum ve Konuşma",
-        topics: ["Sunum yapısı", "Ton ve vurgu", "Soru cevaplama"],
-        estimatedHours: 9,
-      },
-      {
-        id: "en-b2-u6",
-        title: "İnce Dilbilgisi",
-        topics: ["Inversion", "Cleft sentences", "Emphasis structures"],
-        estimatedHours: 9,
-      },
-    ],
-  },
-  {
-    id: "en-c1",
-    languageCode: "en",
-    languageName: "English",
-    flag: "🇬🇧",
-    level: "C1",
-    title: "English İleri",
-    description:
-      "Akademik ve profesyonel dil, ileri dilbilgisi yapıları ve akıcı iletişim.",
-    prerequisites: "English B2",
-    totalHours: 60,
-    units: [
-      {
-        id: "en-c1-u1",
-        title: "İleri Pasif Yapılar",
-        topics: ["Passive with modals", "Causative", "Impersonal passive"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c1-u2",
-        title: "Akademik Yazı",
-        topics: ["Argümantatif makale", "Özet yazma", "Cohesion & coherence"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c1-u3",
-        title: "İleri Kelime Hazinesi",
-        topics: ["Kolokasyonlar", "Akademik kelimeler", "Register değişimi"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c1-u4",
-        title: "Medeni Tartışma",
-        topics: ["Diplomatik dil", "Müzakere", "İkna teknikleri"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c1-u5",
-        title: "Edebi Metin Analizi",
-        topics: ["Roman ve hikâye dili", "Şiir analizi", "Eleştirel okuma"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c1-u6",
-        title: "Profesyonel Yazışma",
-        topics: ["Rapor yazımı", "Teklife yanıt", "Hukuki / teknik dil giriş"],
-        estimatedHours: 10,
-      },
-    ],
-  },
-  {
-    id: "en-c2",
-    languageCode: "en",
-    languageName: "English",
-    flag: "🇬🇧",
-    level: "C2",
-    title: "English Ustalık",
-    description:
-      "Anadil seviyesine yakın kullanım, nüans farkları, edebi dil ve ileri iletişim.",
-    prerequisites: "English C1",
-    totalHours: 60,
-    units: [
-      {
-        id: "en-c2-u1",
-        title: "Nüans ve Ton",
-        topics: ["Ironi ve mizah", "Söylem analizi", "Bağlamsal anlam"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c2-u2",
-        title: "Edebi Türler",
-        topics: ["Şiir yazımı", "Kısa hikâye", "Eleştiri yazısı"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c2-u3",
-        title: "Medya ve Söylem",
-        topics: ["Gazetecilik dili", "Propaganda analizi", "Sosyal medya dili"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c2-u4",
-        title: "Hukuki ve Akademik Metin",
-        topics: ["Hukuki dil temelleri", "Akademik makale okuma", "Referans yapısı"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c2-u5",
-        title: "Diyalekt ve Varyasyonlar",
-        topics: ["Amerikan vs İngiliz İngilizcesi", "Argo ve gündelik dil", "Bölgesel farklılıklar"],
-        estimatedHours: 10,
-      },
-      {
-        id: "en-c2-u6",
-        title: "İleri Söz Sanatları",
-        topics: ["Metafor ve mecaz", "Alliteration", "Retorik analizi"],
-        estimatedHours: 10,
-      },
-    ],
-  },
+export function parseSemesterSlug(slug: string): { year: number; sem: number } | null {
+  const m = /^y(\d)s(\d)$/.exec(slug);
+  if (!m) return null;
+  return { year: parseInt(m[1], 10), sem: parseInt(m[2], 10) };
+}
 
-  // ─────────────────── GERMAN ───────────────────
-  {
-    id: "de-a1",
-    languageCode: "de",
-    languageName: "German",
-    flag: "🇩🇪",
-    level: "A1",
-    title: "Deutsch Başlangıç",
-    description:
-      "Temel Almanca selamlaşmalar, sayılar, renkler ve basit cümleler.",
-    prerequisites: null,
-    totalHours: 30,
-    units: [
-      {
-        id: "de-a1-u1",
-        title: "Guten Tag!",
-        topics: ["Selamlaşmalar", "Tanışma", "Alfabe ve özel sesler (ä, ö, ü)"],
-        estimatedHours: 5,
-      },
-      {
-        id: "de-a1-u2",
-        title: "Zahlen und Farben",
-        topics: ["Sayılar 1-100", "Renkler", "Yaş ve tarih"],
-        estimatedHours: 5,
-      },
-      {
-        id: "de-a1-u3",
-        title: "Familie und Berufe",
-        topics: ["Aile üyeleri", "Meslekler", "sein fiili (to be)"],
-        estimatedHours: 5,
-      },
-      {
-        id: "de-a1-u4",
-        title: "Artikel ve İsimler",
-        topics: ["Der/Die/Das", "Çoğul yapılar", "Kein/nicht"],
-        estimatedHours: 5,
-      },
-      {
-        id: "de-a1-u5",
-        title: "Yemek ve İçecek",
-        topics: ["Yiyecek isimleri", "Restoranda sipariş", "Sayılar ve fiyatlar"],
-        estimatedHours: 5,
-      },
-      {
-        id: "de-a1-u6",
-        title: "Günlük Hayat",
-        topics: ["Saatler", "Haftanın günleri", "Basit rutin anlatımı"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-  {
-    id: "de-a2",
-    languageCode: "de",
-    languageName: "German",
-    flag: "🇩🇪",
-    level: "A2",
-    title: "Deutsch Temel",
-    description:
-      "Geçmiş zaman (Perfekt), yönler, alışveriş diyalogları ve modal fiiller.",
-    prerequisites: "German A1",
-    totalHours: 40,
-    units: [
-      {
-        id: "de-a2-u1",
-        title: "Perfekt Zamanı",
-        topics: ["haben / sein ile Perfekt", "Geçmiş deneyimler", "Düzensiz fiiller"],
-        estimatedHours: 7,
-      },
-      {
-        id: "de-a2-u2",
-        title: "Alışveriş",
-        topics: ["Mağazada konuşma", "Fiyat sorma", "Komparativ"],
-        estimatedHours: 7,
-      },
-      {
-        id: "de-a2-u3",
-        title: "Yol Tarifi",
-        topics: ["Yön ifadeleri", "Ulaşım araçları", "Yerel prepositions"],
-        estimatedHours: 7,
-      },
-      {
-        id: "de-a2-u4",
-        title: "Modal Fiiller",
-        topics: ["können/müssen/wollen/dürfen", "İzin ve zorunluluk", "İstek cümleleri"],
-        estimatedHours: 6,
-      },
-      {
-        id: "de-a2-u5",
-        title: "Hava ve Mevsimler",
-        topics: ["Hava ifadeleri", "Mevsim isimleri", "Zaman zarfları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "de-a2-u6",
-        title: "Sağlık",
-        topics: ["Vücut parçaları", "Doktor diyaloğu", "Semptomlar"],
-        estimatedHours: 6,
-      },
-    ],
-  },
-  {
-    id: "de-b1",
-    languageCode: "de",
-    languageName: "German",
-    flag: "🇩🇪",
-    level: "B1",
-    title: "Deutsch Orta Seviye",
-    description:
-      "Konjunktiv II, Dativ ve Akkusativ kuralları, iş hayatı Almancası.",
-    prerequisites: "German A2",
-    totalHours: 50,
-    units: [
-      {
-        id: "de-b1-u1",
-        title: "Konjunktiv II",
-        topics: ["Kibarca talep", "Koşul ifadeleri", "würde + infinitiv"],
-        estimatedHours: 9,
-      },
-      {
-        id: "de-b1-u2",
-        title: "Dativ ve Akkusativ",
-        topics: ["Dativ prepositions", "Akkusativ değişimleri", "Kasus özeti"],
-        estimatedHours: 9,
-      },
-      {
-        id: "de-b1-u3",
-        title: "İş Hayatı",
-        topics: ["İş görüşmesi", "E-posta yazımı", "Mesleki terimler"],
-        estimatedHours: 8,
-      },
-      {
-        id: "de-b1-u4",
-        title: "Pasif Yapı",
-        topics: ["werden + Partizip II", "Pasif cümle dönüşümü", "Teknik metinler"],
-        estimatedHours: 8,
-      },
-      {
-        id: "de-b1-u5",
-        title: "Bağlaçlar ve Cümle Yapısı",
-        topics: ["Nebensatz", "weil/obwohl/dass", "Sözcük dizisi kuralları"],
-        estimatedHours: 8,
-      },
-      {
-        id: "de-b1-u6",
-        title: "Kültür ve Toplum",
-        topics: ["Alman kültürü", "Bayramlar", "Görüş bildirme"],
-        estimatedHours: 8,
-      },
-    ],
-  },
-  {
-    id: "de-b2",
-    languageCode: "de",
-    languageName: "German",
-    flag: "🇩🇪",
-    level: "B2",
-    title: "Deutsch Orta-İleri",
-    description:
-      "İleri dilbilgisi, akademik okuma ve Almanca iletişimde akıcılık.",
-    prerequisites: "German B1",
-    totalHours: 55,
-    units: [
-      {
-        id: "de-b2-u1",
-        title: "Genitiv",
-        topics: ["Genitiv yapısı", "İyelik ifadeleri", "Formal yazı dili"],
-        estimatedHours: 9,
-      },
-      {
-        id: "de-b2-u2",
-        title: "Partizipialkonstruktionen",
-        topics: ["Partizip I ve II", "Katılım cümleleri", "Akademik dil"],
-        estimatedHours: 10,
-      },
-      {
-        id: "de-b2-u3",
-        title: "Medya ve Haberler",
-        topics: ["Gazete okuma", "Haber dili", "Kelime analizi"],
-        estimatedHours: 9,
-      },
-      {
-        id: "de-b2-u4",
-        title: "İnce Kelime Farklılıkları",
-        topics: ["Synonyme", "Konnotationen", "Nuance"],
-        estimatedHours: 9,
-      },
-      {
-        id: "de-b2-u5",
-        title: "Tartışma ve Sunum",
-        topics: ["Argüman yapısı", "Sunum dili", "Görüş karşılaştırma"],
-        estimatedHours: 9,
-      },
-      {
-        id: "de-b2-u6",
-        title: "Edebiyat Giriş",
-        topics: ["Kısa hikâye okuma", "Analiz ifadeleri", "Yazar dili"],
-        estimatedHours: 9,
-      },
-    ],
-  },
+function makeSemester(
+  year: 1 | 2 | 3 | 4,
+  semester: 1 | 2,
+  subjects: Subject[]
+): ProgramSemester {
+  const totalCredits = subjects.reduce((s, c) => s + c.credits, 0);
+  return { year, semester, slug: `y${year}s${semester}`, label: `${year}. Sınıf / ${semester}. Yarıyıl`, subjects, totalCredits };
+}
 
-  // ─────────────────── FRENCH ───────────────────
+// ─── ORTAK ZORUNLU DERSLER ────────────────────────────────────────────────────
+const COMMON_Y1_S1: Subject[] = [
+  { code: "ATA101", title: "Atatürk İlkeleri ve İnkılâp Tarihi I", credits: 2, weeklyHours: 2, type: "zorunlu", description: "Türk inkılâbının temel ilkeleri ve tarihsel süreci.", topics: ["Osmanlı'dan Cumhuriyet'e", "İnkılâp hareketleri", "Atatürk ilkeleri"] },
+  { code: "TDL101", title: "Türk Dili I", credits: 2, weeklyHours: 2, type: "zorunlu", description: "Türkçe yazılı ve sözlü anlatım becerileri.", topics: ["Yazı dili kuralları", "Paragraf yapısı", "Sözlü sunum"] },
+  { code: "YDL101", title: "İkinci Yabancı Dil I", credits: 2, weeklyHours: 2, type: "zorunlu", description: "İkinci yabancı dil olarak temel iletişim.", topics: ["Temel iletişim kalıpları", "Kelime hazinesi", "Dinleme"] },
+];
+
+const COMMON_Y1_S2: Subject[] = [
+  { code: "ATA102", title: "Atatürk İlkeleri ve İnkılâp Tarihi II", credits: 2, weeklyHours: 2, type: "zorunlu", description: "Çok partili sisteme geçiş ve cumhuriyetin gelişimi.", topics: ["Çok partili dönem", "Dış politika", "Cumhuriyet değerleri"] },
+  { code: "TDL102", title: "Türk Dili II", credits: 2, weeklyHours: 2, type: "zorunlu", description: "İleri Türkçe yazım ve akademik yazarlık.", topics: ["Akademik metin yazımı", "Öz eleştiri", "Araştırma raporu"] },
+  { code: "YDL102", title: "İkinci Yabancı Dil II", credits: 2, weeklyHours: 2, type: "zorunlu", description: "İkinci yabancı dil temel seviye devamı.", topics: ["Temel dilbilgisi", "Okuma becerileri", "Yazma alıştırmaları"] },
+];
+
+// ─── İNGİLİZ DİLİ VE EDEBİYATI ──────────────────────────────────────────────
+const englishSemesters: ProgramSemester[] = [
+  makeSemester(1, 1, [
+    { code: "ING101", title: "İngilizce Okuma ve Yazma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Temel okuma stratejileri ve paragraf yazımı.", topics: ["Metin anlama stratejileri", "Paragraf yazımı", "Topic sentence", "Skimming & scanning", "Kelime bilgisi"] },
+    { code: "ING102", title: "İngilizce Dinleme ve Konuşma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Günlük iletişim kalıpları ve dinleme becerileri.", topics: ["Günlük diyaloglar", "Dinleme stratejileri", "Telaffuz ve vurgu", "Rol yapma", "Kısa sunum"] },
+    { code: "ING103", title: "İngilizce Dilbilgisi I", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Temel İngilizce dilbilgisi yapılarının sistematik incelenmesi.", topics: ["Present Tenses", "Past Tenses", "Future forms", "Modal verbs", "Passive voice giriş"] },
+    { code: "DIL101", title: "Dilbilime Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dilbilimin temel kavramları ve alt dalları.", topics: ["Dil nedir?", "Dilbilimin alt dalları", "Sesbilim", "Biçimbilim giriş", "Sözdizim giriş"] },
+    ...COMMON_Y1_S1,
+  ]),
+  makeSemester(1, 2, [
+    { code: "ING104", title: "İngilizce Okuma ve Yazma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Orta düzey okuma metinleri ve kısa deneme yazımı.", topics: ["Deneme yazımı", "Özet çıkarma", "Karşılaştırmalı metinler", "Kaynak kullanımı", "Giriş-gövde-sonuç"] },
+    { code: "ING105", title: "İngilizce Dinleme ve Konuşma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Otantik materyallerle dinleme ve grup tartışmaları.", topics: ["Otantik dinleme", "Grup tartışması", "Resmi ve gayri resmi dil", "Soru sorma ve yanıt verme", "Tartışma yapıları"] },
+    { code: "ING106", title: "İngilizce Dilbilgisi II", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dilbilgisi yapılarının derinleştirilmesi.", topics: ["Conditionals (0,1,2,3)", "Passive voice ileri", "Reported speech", "Relative clauses", "Phrasal verbs"] },
+    { code: "ING107", title: "İngiliz Edebiyatına Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "İngiliz edebiyatının tarihsel gelişimine genel bakış.", topics: ["Edebiyat nedir?", "Orta Çağ İngiliz Edebiyatı", "Rönesans ve Shakespeare", "18. yy Aydınlanma", "Romantizm"] },
+    ...COMMON_Y1_S2,
+  ]),
+  makeSemester(2, 1, [
+    { code: "ING201", title: "İleri Okuma ve Yazma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik metin türleri ve argümantatif yazı.", topics: ["Argümantatif deneme", "Kaynak gösterme (APA/MLA)", "Eleştirel okuma", "Akademik kelime listeleri", "Dipnot ve atıf"] },
+    { code: "ING202", title: "İleri Dinleme ve Konuşma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik sunum hazırlama ve sunma.", topics: ["Akademik sunum yapısı", "Beden dili", "Görüş bildirme", "Soru-cevap yönetme", "Panel tartışması"] },
+    { code: "ING203", title: "Sözdizimi (Syntax)", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Cümle yapısının dilbilimsel incelenmesi.", topics: ["Cümle ögeleri", "Öbekler (NP, VP, PP)", "Ağaç diyagramları", "Dönüşümsel dilbilgisi", "Karmaşık cümle yapıları"] },
+    { code: "ING204", title: "Çeviriye Giriş I", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Çeviri kuramları ve İngilizce-Türkçe pratik çeviri.", topics: ["Çeviri nedir?", "Çeviri kuram yaklaşımları", "Sözcük düzeyinde sorunlar", "İng→Türkçe pratikler", "Eşdeğerlik kavramı"] },
+    { code: "ING205", title: "19. Yüzyıl İngiliz Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Viktorya dönemi romanları ve şiiri.", topics: ["Viktorya dönemi bağlamı", "Gerçekçilik akımı", "Dickens ve toplumsal eleştiri", "Viktorya şiiri", "Brontëler ve Eliot"] },
+    { code: "ING206", title: "Seçmeli: Fonetik ve Fonoloji", credits: 3, weeklyHours: 3, type: "seçmeli", description: "İngilizce seslerin üretimi ve fonetik transkripsiyon.", topics: ["IPA", "Sesli ve sessiz harfler", "Vurgu ve tonlama", "Zayıf biçimler", "Bağlı konuşmada ses değişimleri"] },
+  ]),
+  makeSemester(2, 2, [
+    { code: "ING207", title: "İleri Okuma ve Yazma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Araştırma önerisi ve akademik makale yazımı.", topics: ["Araştırma sorusu", "Literatür taraması", "Makale yapısı", "Revizyon süreci", "Akademik dürüstlük"] },
+    { code: "ING208", title: "İleri Dinleme ve Konuşma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Medya içerikleriyle çalışma ve müzakere becerileri.", topics: ["Haber ve belgesel analizi", "Müzakere dili", "Panel yönetme", "Söylem analizi giriş", "Diksiyon"] },
+    { code: "ING209", title: "Anlambilim (Semantics)", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Sözcük ve cümle düzeyinde anlam.", topics: ["Anlambilim nedir?", "Sözcüksel anlam", "Kompozisyonel anlam", "Gönderim ve anlam", "Anlam değişimleri"] },
+    { code: "ING210", title: "Çeviriye Giriş II", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Metin türlerine göre çeviri stratejileri.", topics: ["Metin türleri ve çeviri", "Türkçe→İngilizce çeviri", "Deyim ve atasözü çevirisi", "Gazete haberi çevirisi", "Çeviri değerlendirme"] },
+    { code: "ING211", title: "Modernizm ve İngiliz Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "20. yüzyıl başı İngiliz ve İrlanda modernist edebiyatı.", topics: ["Modernizm nedir?", "Virginia Woolf", "James Joyce: bilinç akışı", "T.S. Eliot: modernist şiir", "Savaş edebiyatı"] },
+    { code: "ING212", title: "Seçmeli: Sosyolinguistik", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Dil ve toplum ilişkisi.", topics: ["Dil ve kimlik", "Lehçe farklılıkları", "Dil değişimi", "Çok dillililik", "Cinsiyet ve dil"] },
+  ]),
+  makeSemester(3, 1, [
+    { code: "ING301", title: "Akademik Yazma", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik makale ve rapor yazımı; bilimsel standartlar.", topics: ["Araştırma makalesi", "Literatür eleştirisi", "Akademik ton", "Biçimlendirme", "Akran değerlendirmesi"] },
+    { code: "ING302", title: "Yazılı Çeviri I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Bilgi metinleri ve gazete çevirileri.", topics: ["Haber çevirisi", "Bilgilendirici metin çevirisi", "Çeviri araçları", "Terminoloji yönetimi", "Kalite kontrolü"] },
+    { code: "ING303", title: "Biçimbilim (Morphology)", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Sözcük yapısı ve sözcük oluşturma süreçleri.", topics: ["Morfem kavramı", "Serbest ve bağımlı morfemler", "Türetim ve çekim ekleri", "Sözcük oluşturma", "Dillerarası karşılaştırmalar"] },
+    { code: "ING304", title: "Mesleki İngilizce I — İş İngilizcesi", credits: 3, weeklyHours: 3, type: "zorunlu", description: "İş hayatında İngilizce; görüşme, toplantı, yazışma.", topics: ["CV ve motivasyon mektubu", "İş görüşmesi", "Toplantı ve müzakere", "İş e-postası", "Sunum ve raporlama"] },
+    { code: "ING305", title: "Amerikan Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Amerikan edebiyatının gelişimi; Puritanizm'den modernizme.", topics: ["Erken Amerikan edebiyatı", "Whitman ve Thoreau", "Realizm: Twain, Henry James", "Modernizm: Faulkner, Hemingway", "Harlem Rönesansı"] },
+    { code: "ING306", title: "Seçmeli: Kültürlerarası İletişim", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Farklı kültürler arasında iletişim.", topics: ["Kültür kavramı", "Yüksek/düşük bağlam kültürleri", "Kültürel şok", "Kültürlerarası iş iletişimi", "Medya ve kültür"] },
+  ]),
+  makeSemester(3, 2, [
+    { code: "ING307", title: "Akademik Sunum Becerileri", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Konferans sunumu ve akademik konuşma becerileri.", topics: ["Sunum yapısı", "Görsel materyal", "Konuşma hızı ve vurgu", "Soru-cevap", "Sanal sunum"] },
+    { code: "ING308", title: "Yazılı Çeviri II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Hukuki, tıbbi ve teknik metin çevirisi.", topics: ["Hukuki metin çevirisi", "Tıbbi metin çevirisi", "Teknik kılavuz", "Terminoloji veri tabanı", "Yerelleştirme giriş"] },
+    { code: "ING309", title: "Edebiyat Kuramı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Yapısalcılık, post-yapısalcılık, feminizm ve postkolonyal eleştiri.", topics: ["Neden edebiyat kuramı?", "Yapısalcılık ve göstergebilim", "Post-yapısalcılık", "Feminist eleştiri", "Postkolonyal kuram"] },
+    { code: "ING310", title: "Pragmatik (Pragmatics)", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dil kullanımı ve bağlam; söz eylem kuramı.", topics: ["Pragmatik nedir?", "Söz edimi kuramı", "İşbirliği ilkesi (Grice)", "Kibarlık kuramı", "Diyalog analizi"] },
+    { code: "ING311", title: "Mesleki İngilizce II — Akademik İngilizce", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Akademik bağlamda İngilizce kullanımı.", topics: ["Akademik konferans dili", "Makale gönderme süreci", "Akademik e-posta", "Tez yazımına hazırlık", "Öz değerlendirme"] },
+    { code: "ING312", title: "Seçmeli: Yazınsal Çeviri", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Şiir, roman ve kısa hikâye gibi edebi türlerin çevirisi.", topics: ["Edebi çeviri kuramı", "Şiir çevirisi", "Hikâye çevirisi", "Tiyatro metni çevirisi", "Çevirmenin görünürlüğü"] },
+  ]),
+  makeSemester(4, 1, [
+    { code: "ING401", title: "Bitirme Tezi / Araştırma Projesi I", credits: 6, weeklyHours: 4, type: "zorunlu", description: "Bağımsız akademik araştırma; metodoloji ve veri toplama.", topics: ["Araştırma sorusu", "Literatür taraması", "Metodoloji", "Veri toplama", "Danışmanla çalışma"] },
+    { code: "ING402", title: "Özel Amaçlı İngilizce (ESP)", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Hukuk, tıp, finans, mühendislik için İngilizce.", topics: ["ESP nedir?", "Hukuki İngilizce", "Tıbbi İngilizce", "Akademik İngilizce (EAP)", "ESP materyal tasarımı"] },
+    { code: "ING403", title: "Çağdaş İngiliz ve Amerikan Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Postmodern ve çağdaş edebiyat; Nobel ödüllü yazarlar.", topics: ["Postmodernizm", "Çok kültürlü edebiyat", "Seamus Heaney, Salman Rushdie", "Güncel romanlar", "Distopik edebiyat"] },
+    { code: "ING404", title: "Uygulamalı Dilbilim", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dilbilim kuramlarının öğretime ve iletişime uygulanması.", topics: ["Dil edinimi kuramları", "Dil öğretim yöntemleri", "Hata analizi", "Söylem analizi uygulamaları", "Sosyodilbilimsel araştırma"] },
+    { code: "ING405", title: "Seçmeli: Söylem Çözümlemesi", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Yazılı ve sözlü metinlerin yapısal ve ideolojik analizi.", topics: ["Söylem nedir?", "Eleştirel söylem analizi", "Medya söylemi", "Siyasi söylem", "Kurumsal söylem"] },
+  ]),
+  makeSemester(4, 2, [
+    { code: "ING406", title: "Bitirme Tezi / Araştırma Projesi II", credits: 6, weeklyHours: 4, type: "zorunlu", description: "Tezin tamamlanması, savunma hazırlığı ve jüri sunumu.", topics: ["Veri analizi", "Tez yazımı", "Savunma hazırlığı", "Jüri sorularına yanıt", "Yayına hazırlama"] },
+    { code: "ING407", title: "Uzmanlık Çevirisi", credits: 4, weeklyHours: 4, type: "zorunlu", description: "İleri uzmanlık çevirisi; CAT araçları ve çeviri belleği.", topics: ["CAT araçları (SDL Trados, memoQ)", "Çeviri belleği", "Terminoloji yazılımları", "Makineli çeviri + insan", "Yerelleştirme projesi"] },
+    { code: "ING408", title: "Çağdaş Dünya Edebiyatı (İngilizce'de)", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Nobel ödüllü yazarlar ve küresel edebiyat.", topics: ["Postkolonyal dünya edebiyatı", "Asya edebiyatı", "Latin Amerika edebiyatı", "Afrika edebiyatı", "Diaspora edebiyatı"] },
+    { code: "ING409", title: "Dil Politikası ve Planlaması", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Devletlerin dil politikaları ve küreselleşme bağlamında dil.", topics: ["Dil politikası", "Resmî dil ve azınlık hakları", "AB dil politikaları", "İngilizce'nin küreselleşmesi (ELF)", "Dil ölümü ve koruma"] },
+    { code: "ING410", title: "Seçmeli: Psikodilbilim", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Dil ve zihin ilişkisi; dil işleme ve edinimi.", topics: ["Dil ve beyin", "Dil edinimi: Chomsky vs Piaget", "İki dilli dil işleme", "Afazi ve dil bozuklukları", "Okuma ve anlama süreçleri"] },
+  ]),
+];
+
+// ─── ALMAN DİLİ VE EDEBİYATI ──────────────────────────────────────────────────
+const germanSemesters: ProgramSemester[] = [
+  makeSemester(1, 1, [
+    { code: "ALM101", title: "Almanca Okuma ve Yazma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Temel Almanca metin anlama ve paragraf yazımı.", topics: ["Metin anlama", "Paragraf yapısı", "Temel dilbilgisi", "Kelime öğrenme"] },
+    { code: "ALM102", title: "Almanca Dinleme ve Konuşma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Günlük Almanca iletişim ve dinleme.", topics: ["Günlük diyaloglar", "Telaffuz ve vurgu", "Dinleme stratejileri", "Rol yapma"] },
+    { code: "ALM103", title: "Almanca Dilbilgisi I", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Artikel, isim çekimi ve temel zaman yapıları.", topics: ["Der/Die/Das", "Kasus (Nom./Akk./Dat.)", "Perfekt zamanı", "Modal fiiller"] },
+    { code: "DIL101", title: "Dilbilime Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dilbilimin temel kavramları.", topics: ["Dilbilim nedir?", "Sesbilim", "Biçimbilim", "Sözdizim", "Anlambilim"] },
+    ...COMMON_Y1_S1,
+  ]),
+  makeSemester(1, 2, [
+    { code: "ALM104", title: "Almanca Okuma ve Yazma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Orta düzey Almanca metinler ve kısa deneme yazımı.", topics: ["Özet yazımı", "Karşılaştırma metni", "Alman yazı dili standartları", "Akademik kelimeler"] },
+    { code: "ALM105", title: "Almanca Dinleme ve Konuşma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Otantik Almanca materyallerle dinleme.", topics: ["Radyo haberleri", "Tartışma teknikleri", "Görüş bildirme", "Kısa sunum"] },
+    { code: "ALM106", title: "Almanca Dilbilgisi II", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Almanca dilbilgisinin derinleştirilmesi.", topics: ["Konjunktiv II", "Genitif", "Pasif yapı", "Bağlaçlar ve cümle dizimi"] },
+    { code: "ALM107", title: "Alman Edebiyatına Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Alman edebiyatının tarihsel gelişimine genel bakış.", topics: ["Orta Çağ edebiyatı", "Sturm und Drang", "Weimar Klasisizmi", "Romantizm: Goethe, Schiller"] },
+    ...COMMON_Y1_S2,
+  ]),
+  makeSemester(2, 1, [
+    { code: "ALM201", title: "İleri Almanca Okuma ve Yazma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik Almanca metin türleri.", topics: ["Akademik metin analizi", "Erörterung (tartışma yazısı)", "Kaynak gösterme", "Alman akademik dili"] },
+    { code: "ALM202", title: "İleri Almanca Dinleme ve Konuşma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik sunum, tartışma ve medya Almancası.", topics: ["Referat (sözlü sunum)", "Podiumsdiskussion", "Deutsche Welle", "Resmi Almanca"] },
+    { code: "ALM203", title: "Sözdizimi ve Biçimbilim", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Almanca cümle yapısı ve sözcük oluşturma.", topics: ["V2 kuralı", "Nebensatz yapıları", "Bileşik sözcükler", "Morfem analizi"] },
+    { code: "ALM204", title: "Çeviriye Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Almanca-Türkçe temel çeviri ilkeleri.", topics: ["Çeviri kuram temelleri", "Alm→Türkçe pratikler", "Eşdeğerlik", "Sözlük kullanımı"] },
+    { code: "ALM205", title: "19. Yüzyıl Alman Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Biedermeier, Poetik Realizm ve fin-de-siècle.", topics: ["Heine ve şiiri", "Theodor Storm: Novelle", "Fontane: gerçekçi roman", "Nietzsche'nin etkisi"] },
+    { code: "ALM206", title: "Seçmeli: Almanca Fonetik", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Almanca seslerin üretimi ve transkripsiyon.", topics: ["Almanca sesli harfler (Umlaut)", "Sesli çiftleri", "Vurgu ve tonlama", "Standart Almanca telaffuzu"] },
+  ]),
+  makeSemester(2, 2, [
+    { code: "ALM207", title: "İleri Almanca Okuma ve Yazma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Araştırma temelli yazı ve dönem ödevi hazırlama.", topics: ["Hausarbeit yazımı", "Literatür taraması", "Akademik atıf", "Revizyon süreci"] },
+    { code: "ALM208", title: "Anlambilim ve Pragmatik", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Almancada anlam yapıları ve dil kullanım bağlamı.", topics: ["Sözcüksel anlam", "Söz edimi kuramı", "Kibarlık ifadeleri Almancada", "Pragmatik analiz"] },
+    { code: "ALM209", title: "Yazılı Çeviri", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Çeşitli metin türlerinde Almanca-Türkçe çeviri.", topics: ["Gazete haberi çevirisi", "Edebi metin çevirisi", "Resmi yazışma çevirisi", "Çeviri değerlendirme"] },
+    { code: "ALM210", title: "Modernizm ve Alman Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Expresyonizm ve sürgün edebiyatı.", topics: ["Expresyonist şiir", "Brecht ve epik tiyatro", "Kafka: absürt ve anlam", "Sürgün yazarları"] },
+    { code: "ALM211", title: "Mesleki Almanca", credits: 3, weeklyHours: 3, type: "zorunlu", description: "İş hayatında Almanca; yazışma ve müzakere.", topics: ["Geschäftsbrief", "Telefonkonferenz", "Bewerbungsschreiben", "Bericht yazımı"] },
+    { code: "ALM212", title: "Seçmeli: Sosyolinguistik", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Alman konuşan ülkelerde dil çeşitliliği.", topics: ["Alman lehçeleri", "Almanya-Avusturya-İsviçre farkları", "Dil ve kimlik", "Göçmen dili"] },
+  ]),
+  makeSemester(3, 1, [
+    { code: "ALM301", title: "Akademik Almanca Yazımı", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Seminararbeit ve Hausarbeit standartlarında yazım.", topics: ["Seminararbeit yapısı", "Akademik ton", "Atıf sistemleri", "Editöryal süreç"] },
+    { code: "ALM302", title: "Uzmanlık Çevirisi I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Hukuki, teknik ve ekonomik metin çevirileri.", topics: ["Hukuki Almanca çevirisi", "AB belgeleri", "Teknik talimat", "Terminoloji veri tabanı"] },
+    { code: "ALM303", title: "Alman Edebiyat Kuramı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Hermeneutik ve Rezeptionsästhetik.", topics: ["Dilthey ve yorumlama", "Jauss ve Iser", "Alımlama kuramı", "Frankfurt Okulu"] },
+    { code: "ALM304", title: "Günümüz Alman Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "II. Dünya Savaşı sonrası Alman edebiyatı.", topics: ["Grup 47 (Böll, Grass)", "Doğu Alman edebiyatı", "Birleşme sonrası edebiyat", "Göçmen yazarlar"] },
+    { code: "ALM305", title: "Seçmeli: Kültürlerarası İletişim", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Alman kültürü ve Türk-Alman etkileşimi.", topics: ["Alman iş kültürü", "Türk-Alman ilişkileri", "Kültürel stereotipler", "Medyada Türk imgesi"] },
+  ]),
+  makeSemester(3, 2, [
+    { code: "ALM306", title: "Sunum ve Tartışma Becerileri", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Almanca akademik sunum ve müzakere.", topics: ["Vortrag hazırlama", "Handout tasarımı", "Podiumsdiskussion", "Argumentation"] },
+    { code: "ALM307", title: "Uzmanlık Çevirisi II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "İleri uzmanlık çevirisi; CAT araçları.", topics: ["SDL Trados", "Çeviri belleği", "Proje yönetimi", "Kalite güvencesi"] },
+    { code: "ALM308", title: "Uygulamalı Dilbilim", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dilbilim kuramlarının Almanca öğretimine uygulanması.", topics: ["Almanca öğretim yöntemleri", "Hata analizi", "Dil edinimi araştırmaları", "Ders materyali"] },
+    { code: "ALM309", title: "Seçmeli: Alman Sineması ve Medyası", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Alman sinemasının tarihsel gelişimi.", topics: ["Weimar sineması", "Yeni Alman Sineması", "Güncel filmler", "Medya metni okuma"] },
+  ]),
+  makeSemester(4, 1, [
+    { code: "ALM401", title: "Bitirme Tezi I", credits: 6, weeklyHours: 4, type: "zorunlu", description: "Almanca odaklı bağımsız araştırma projesi.", topics: ["Araştırma konusu belirleme", "Literatür taraması", "Metodoloji", "Danışmanla çalışma"] },
+    { code: "ALM402", title: "Özel Amaçlı Almanca", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Hukuk, tıp, mühendislik için Almanca.", topics: ["Hukuki Almanca", "Teknik Almanca", "Ekonomi Almancası", "DSH/TestDaF hazırlık"] },
+    { code: "ALM403", title: "Seçmeli: Psikodilbilim", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Almanca dil edinimi ve iki dilli işleme.", topics: ["L1/L2 edinimi", "Transfer", "Almanca-Türkçe ikidillilik", "Dil bozuklukları"] },
+  ]),
+  makeSemester(4, 2, [
+    { code: "ALM404", title: "Bitirme Tezi II", credits: 6, weeklyHours: 4, type: "zorunlu", description: "Tezin tamamlanması ve savunma.", topics: ["Veri analizi", "Tez yazımı", "Savunma sunumu", "Jüri sorularına yanıt"] },
+    { code: "ALM405", title: "Almanca Dil Tarihi", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Eski Almancadan günümüze dilin tarihsel gelişimi.", topics: ["Hint-Avrupa dil ailesi", "Althochdeutsch", "Ortaçağ Almancası", "Yeni Yüksek Almanca standardı"] },
+    { code: "ALM406", title: "Seçmeli: Söylem Çözümlemesi", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Alman siyasi ve medya söylemi analizi.", topics: ["Eleştirel söylem analizi", "Siyasi söylem", "Reklam dili", "Kurumsal söylem"] },
+  ]),
+];
+
+// ─── FRANSIZ DİLİ VE EDEBİYATI ──────────────────────────────────────────────
+const frenchSemesters: ProgramSemester[] = [
+  makeSemester(1, 1, [
+    { code: "FRA101", title: "Fransızca Okuma ve Yazma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Temel Fransızca metin anlama ve paragraf yazımı.", topics: ["Metin anlama", "Paragraf yapısı", "Cinsiyet uyumu", "Temel artikeller"] },
+    { code: "FRA102", title: "Fransızca Dinleme ve Konuşma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Günlük Fransızca iletişim ve dinleme.", topics: ["Günlük diyaloglar", "Fransız telaffuzu", "Nazal sesler", "Kafe ve restoranda konuşma"] },
+    { code: "FRA103", title: "Fransızca Dilbilgisi I", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Fransızca artikeller ve temel zamanlar.", topics: ["le/la/les ve un/une/des", "Présent fiil çekimi", "Passé composé", "Frekans zarfları"] },
+    { code: "DIL101", title: "Dilbilime Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Dilbilimin temel kavramları.", topics: ["Dilbilim nedir?", "Sesbilim", "Biçimbilim", "Sözdizim", "Anlambilim"] },
+    ...COMMON_Y1_S1,
+  ]),
+  makeSemester(1, 2, [
+    { code: "FRA104", title: "Fransızca Okuma ve Yazma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Orta düzey Fransızca metinler.", topics: ["Özet çıkarma", "Deneme yazımı", "Edebî metin okuma", "Fransız gazete dili"] },
+    { code: "FRA105", title: "Fransızca Dinleme ve Konuşma II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Otantik materyallerle dinleme ve sunum.", topics: ["RFI materyalleri", "Mini sunum", "Görüş bildirme", "Tartışma"] },
+    { code: "FRA106", title: "Fransızca Dilbilgisi II", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Fransızca dilbilgisinin derinleştirilmesi.", topics: ["Subjonctif", "Conditionnel", "Pronoms relatifs", "Pasif yapı"] },
+    { code: "FRA107", title: "Fransız Edebiyatına Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Fransız edebiyatının tarihsel gelişimine genel bakış.", topics: ["Orta Çağ", "Rönesans: Rabelais, Montaigne", "Klasik dönem: Racine, Molière", "Aydınlanma: Voltaire, Rousseau"] },
+    ...COMMON_Y1_S2,
+  ]),
+  makeSemester(2, 1, [
+    { code: "FRA201", title: "İleri Fransızca Okuma ve Yazma I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik Fransızca metin türleri.", topics: ["Akademik Fransızca", "Dissertation", "Kaynak gösterme", "Akademik kelimeler"] },
+    { code: "FRA202", title: "İleri Fransızca Konuşma ve Sunum", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Akademik sunum, tartışma ve Fransız medyası.", topics: ["Exposé hazırlığı", "Le grand oral", "Débat yapısı", "Fransız medyası"] },
+    { code: "FRA203", title: "Fransız Dilbilimi", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Fransızca sözdizimi, anlambilim ve pragmatik.", topics: ["Fransızcada cümle yapısı", "Anlambilim", "Söz edim kuramı", "Kibarlık"] },
+    { code: "FRA204", title: "Çeviriye Giriş", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Fransızca-Türkçe temel çeviri ilkeleri.", topics: ["Çeviri kuram temelleri", "Fra→Türkçe pratikler", "Eşdeğerlik", "Metin analizi"] },
+    { code: "FRA205", title: "19. Yüzyıl Fransız Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Romantizm, realizm ve sembolizm.", topics: ["Hugo: romantizm", "Balzac ve Stendhal", "Flaubert: natüralizm giriş", "Baudelaire: sembolizm"] },
+    { code: "FRA206", title: "Seçmeli: Fransız Kültürü ve Medeniyeti", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Fransız kültürü, sanatı ve toplumu.", topics: ["Fransız mutfağı ve yaşam", "Fransız sineması", "Sanat ve müzeler", "Francophonie"] },
+  ]),
+  makeSemester(2, 2, [
+    { code: "FRA207", title: "Yazılı Çeviri", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Çeşitli metin türlerinde Fransızca-Türkçe çeviri.", topics: ["Gazete çevirisi", "Edebi metin", "Resmi yazışma", "Çeviri değerlendirme"] },
+    { code: "FRA208", title: "Modernizm ve Fransız Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Empresyonizm, sürrealizm ve varoluşçuluk.", topics: ["Proust: bilinç akışı", "Sürrealizm: Breton", "Camus ve varoluşçuluk", "Beckett ve absürt"] },
+    { code: "FRA209", title: "Mesleki Fransızca", credits: 3, weeklyHours: 3, type: "zorunlu", description: "İş hayatında Fransızca.", topics: ["Lettre commerciale", "Réunion dili", "CV Européen", "Économie français"] },
+    { code: "FRA210", title: "Seçmeli: Francophonie Edebiyatı", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Fransa dışında Fransızca yazan yazarlar.", topics: ["Kuzey Afrika (Camus, Djebar)", "Québec edebiyatı", "Fransızca Karibler", "Fransız Afrika"] },
+  ]),
+  makeSemester(3, 1, [
+    { code: "FRA301", title: "Akademik Fransızca Yazımı", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Dissertation ve mémoire standartlarında yazım.", topics: ["Dissertation kuralları", "Mémoire yapısı", "Akademik ton", "Fransız kaynakça"] },
+    { code: "FRA302", title: "Uzmanlık Çevirisi I", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Hukuki, ekonomik ve teknik metin çevirileri.", topics: ["AB Fransızcası", "Hukuki metin", "Teknik kılavuz", "CAT araçlarına giriş"] },
+    { code: "FRA303", title: "Fransız Edebiyat Kuramı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Barthes, Derrida ve Kristeva.", topics: ["Yapısalcılık: Saussure", "Post-yapısalcılık: Derrida", "Barthes: metnin ölümü", "Kristeva: metinlerarasılık"] },
+    { code: "FRA304", title: "Çağdaş Fransız Edebiyatı", credits: 3, weeklyHours: 3, type: "zorunlu", description: "1970'lerden günümüze Fransız romanı.", topics: ["Nouveau Roman", "Patrick Modiano", "Güncel Fransız romanı", "Prix Goncourt eserleri"] },
+  ]),
+  makeSemester(3, 2, [
+    { code: "FRA305", title: "Uzmanlık Çevirisi II", credits: 4, weeklyHours: 4, type: "zorunlu", description: "İleri uzmanlık çevirisi ve çeviri teknolojileri.", topics: ["SDL Trados / memoQ", "Çeviri belleği", "Yerelleştirme", "Çeviri projesi yönetimi"] },
+    { code: "FRA306", title: "Uygulamalı Dilbilim", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Fransızca öğretim yöntemleri.", topics: ["FLE yöntemleri", "DELF/DALF hazırlık", "Hata analizi", "Ders materyali tasarımı"] },
+    { code: "FRA307", title: "Seçmeli: Kültürlerarası İletişim", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Fransız-Türk kültürel etkileşimi.", topics: ["Fransız-Türk tarihi ilişkiler", "Kültürel stereotipler", "Diplomatik dil", "Uluslararası kurumlarda Fransızca"] },
+  ]),
+  makeSemester(4, 1, [
+    { code: "FRA401", title: "Bitirme Tezi I", credits: 6, weeklyHours: 4, type: "zorunlu", description: "Fransız dili veya çeviribilimi araştırma projesi.", topics: ["Araştırma sorusu", "Literatür taraması", "Metodoloji", "Danışmanla çalışma"] },
+    { code: "FRA402", title: "Özel Amaçlı Fransızca", credits: 4, weeklyHours: 4, type: "zorunlu", description: "Hukuk, tıp, ekonomi için Fransızca.", topics: ["Hukuki Fransızca", "AB kurumları dili", "TCF/DALF hazırlık", "Diplomatik Fransızca"] },
+  ]),
+  makeSemester(4, 2, [
+    { code: "FRA403", title: "Bitirme Tezi II", credits: 6, weeklyHours: 4, type: "zorunlu", description: "Tezin tamamlanması ve savunma.", topics: ["Veri analizi", "Tez yazımı", "Soutenance hazırlığı", "Jüri sorularına yanıt"] },
+    { code: "FRA404", title: "Fransız Dil Tarihi", credits: 3, weeklyHours: 3, type: "zorunlu", description: "Latince'den günümüze Fransızcanın evrimi.", topics: ["Vulgar Latince", "Eski Fransızca", "Orta Fransızca", "Modern Fransızcanın standardı"] },
+    { code: "FRA405", title: "Seçmeli: Psikodilbilim", credits: 3, weeklyHours: 3, type: "seçmeli", description: "Fransızca dil edinimi ve iki dilli işleme.", topics: ["L1/L2 edinimi", "Transfer", "Fransızca-Türkçe ikidillilik", "Dil bozuklukları"] },
+  ]),
+];
+
+// ─── PROGRAMS REGISTRY ───────────────────────────────────────────────────────
+const PROGRAMS: UniversityProgram[] = [
   {
-    id: "fr-a1",
+    languageCode: "en",
+    languageName: "English",
+    flag: "🇬🇧",
+    programTitle: "İngiliz Dili ve Edebiyatı",
+    department: "İngiliz Dili ve Edebiyatı Bölümü",
+    duration: "4 Yıl / 8 Yarıyıl",
+    description: "Dil becerileri, dilbilim, edebiyat ve çeviri konularında kapsamlı lisans programı. Dilbilgisi ve konuşmadan akademik yazıma, edebiyat kuramından uzmanlık çevirisine uzanan tam bir müfredat.",
+    semesters: englishSemesters,
+  },
+  {
+    languageCode: "de",
+    languageName: "German",
+    flag: "🇩🇪",
+    programTitle: "Alman Dili ve Edebiyatı",
+    department: "Alman Dili ve Edebiyatı Bölümü",
+    duration: "4 Yıl / 8 Yarıyıl",
+    description: "Almanca dil becerileri, Alman edebiyatı ve kültürü ile çeviribilimi üzerine kapsamlı lisans programı.",
+    semesters: germanSemesters,
+  },
+  {
     languageCode: "fr",
     languageName: "French",
     flag: "🇫🇷",
-    level: "A1",
-    title: "Français Başlangıç",
-    description:
-      "Temel Fransızca selamlaşmalar, cinsiyet kuralı ve basit diyaloglar.",
-    prerequisites: null,
-    totalHours: 30,
-    units: [
-      {
-        id: "fr-a1-u1",
-        title: "Bonjour!",
-        topics: ["Selamlaşmalar", "Tanışma", "Nazal sesler"],
-        estimatedHours: 5,
-      },
-      {
-        id: "fr-a1-u2",
-        title: "Chiffres et Couleurs",
-        topics: ["Sayılar", "Renkler", "Tarih ve ay isimleri"],
-        estimatedHours: 5,
-      },
-      {
-        id: "fr-a1-u3",
-        title: "La Famille",
-        topics: ["Aile üyeleri", "Sahiplik sıfatları", "Être fiili"],
-        estimatedHours: 5,
-      },
-      {
-        id: "fr-a1-u4",
-        title: "Les Articles",
-        topics: ["le/la/les", "un/une/des", "Cinsiyet kuralı"],
-        estimatedHours: 5,
-      },
-      {
-        id: "fr-a1-u5",
-        title: "Yiyecek ve Kafe",
-        topics: ["Kafede sipariş", "Yiyecek isimleri", "Partitif artikeller"],
-        estimatedHours: 5,
-      },
-      {
-        id: "fr-a1-u6",
-        title: "Günlük Rutinler",
-        topics: ["Saatler", "Günlük aktiviteler", "-er fiil çekimi"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-  {
-    id: "fr-a2",
-    languageCode: "fr",
-    languageName: "French",
-    flag: "🇫🇷",
-    level: "A2",
-    title: "Français Temel",
-    description: "Geçmiş zaman (Passé composé), seyahat ve yön tarifi.",
-    prerequisites: "French A1",
-    totalHours: 40,
-    units: [
-      {
-        id: "fr-a2-u1",
-        title: "Passé Composé",
-        topics: ["avoir / être ile geçmiş", "Düzensiz fiiller", "Zaman ifadeleri"],
-        estimatedHours: 7,
-      },
-      {
-        id: "fr-a2-u2",
-        title: "Seyahat",
-        topics: ["Havalimanında", "Otel rezervasyonu", "Ulaşım"],
-        estimatedHours: 7,
-      },
-      {
-        id: "fr-a2-u3",
-        title: "Yönler",
-        topics: ["Yol tarifi", "Şehir isimleri", "Prepositions of place"],
-        estimatedHours: 7,
-      },
-      {
-        id: "fr-a2-u4",
-        title: "Alışveriş",
-        topics: ["Giyim isimleri", "Fiyat sorma", "Karşılaştırmalar"],
-        estimatedHours: 6,
-      },
-      {
-        id: "fr-a2-u5",
-        title: "Imparfait",
-        topics: ["Geçmişteki durumlar", "Alışkanlıklar", "Passé vs Imparfait"],
-        estimatedHours: 7,
-      },
-      {
-        id: "fr-a2-u6",
-        title: "Futur Proche",
-        topics: ["aller + infinitif", "Yakın gelecek", "Plan yapma"],
-        estimatedHours: 6,
-      },
-    ],
-  },
-  {
-    id: "fr-b1",
-    languageCode: "fr",
-    languageName: "French",
-    flag: "🇫🇷",
-    level: "B1",
-    title: "Français Orta Seviye",
-    description: "Subjonctif, conditionnel ve iş hayatı Fransızcası.",
-    prerequisites: "French A2",
-    totalHours: 50,
-    units: [
-      {
-        id: "fr-b1-u1",
-        title: "Subjonctif",
-        topics: ["Subjonctif présent", "Duygu ve zorunluluk ifadeleri", "que + subjonctif"],
-        estimatedHours: 9,
-      },
-      {
-        id: "fr-b1-u2",
-        title: "Conditionnel",
-        topics: ["Conditionnel présent", "Nazik talepler", "Varsayım"],
-        estimatedHours: 8,
-      },
-      {
-        id: "fr-b1-u3",
-        title: "İş Hayatı",
-        topics: ["CV ve motivasyon mektubu", "Toplantı dili", "Mesleki yazışma"],
-        estimatedHours: 9,
-      },
-      {
-        id: "fr-b1-u4",
-        title: "Medya",
-        topics: ["Haber anlama", "Gazete dili", "Görüş bildirme"],
-        estimatedHours: 8,
-      },
-      {
-        id: "fr-b1-u5",
-        title: "Pronoms relatifs",
-        topics: ["qui/que/dont/où", "Bağlaçlı cümleler", "Metin akıcılığı"],
-        estimatedHours: 8,
-      },
-      {
-        id: "fr-b1-u6",
-        title: "Fransız Kültürü",
-        topics: ["Fransız mutfağı", "Bayramlar", "Sanat ve sinema"],
-        estimatedHours: 8,
-      },
-    ],
-  },
-
-  // ─────────────────── SPANISH ───────────────────
-  {
-    id: "es-a1",
-    languageCode: "es",
-    languageName: "Spanish",
-    flag: "🇪🇸",
-    level: "A1",
-    title: "Español Başlangıç",
-    description:
-      "Temel İspanyolca selamlaşmalar, ser/estar farkı ve basit diyaloglar.",
-    prerequisites: null,
-    totalHours: 30,
-    units: [
-      {
-        id: "es-a1-u1",
-        title: "¡Hola!",
-        topics: ["Selamlaşmalar", "Tanışma", "İspanyolca telaffuz"],
-        estimatedHours: 5,
-      },
-      {
-        id: "es-a1-u2",
-        title: "Números y Colores",
-        topics: ["Sayılar", "Renkler", "Günler ve aylar"],
-        estimatedHours: 5,
-      },
-      {
-        id: "es-a1-u3",
-        title: "Ser y Estar",
-        topics: ["ser vs estar farkı", "Kimlik ve durum", "Basit tanımlama"],
-        estimatedHours: 5,
-      },
-      {
-        id: "es-a1-u4",
-        title: "La Familia",
-        topics: ["Aile üyeleri", "Sahiplik sıfatları", "Cinsiyet"],
-        estimatedHours: 5,
-      },
-      {
-        id: "es-a1-u5",
-        title: "Comida y Bebida",
-        topics: ["Yiyecek isimleri", "Restoran", "Beğeni ifadeleri"],
-        estimatedHours: 5,
-      },
-      {
-        id: "es-a1-u6",
-        title: "Rutina Diaria",
-        topics: ["Günlük rutinler", "Saatler", "Refleksif fiiller giriş"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-  {
-    id: "es-a2",
-    languageCode: "es",
-    languageName: "Spanish",
-    flag: "🇪🇸",
-    level: "A2",
-    title: "Español Temel",
-    description: "Geçmiş zaman (Pretérito), alışveriş ve yön tarifi.",
-    prerequisites: "Spanish A1",
-    totalHours: 40,
-    units: [
-      {
-        id: "es-a2-u1",
-        title: "Pretérito Indefinido",
-        topics: ["Düzenli geçmiş zaman", "Düzensiz fiiller", "Geçmiş zaman ifadeleri"],
-        estimatedHours: 8,
-      },
-      {
-        id: "es-a2-u2",
-        title: "Pretérito Imperfecto",
-        topics: ["Geçmişteki alışkanlıklar", "Tanımlama", "Karşılaştırma"],
-        estimatedHours: 7,
-      },
-      {
-        id: "es-a2-u3",
-        title: "De Compras",
-        topics: ["Alışveriş diyalogları", "Fiyat ve renk", "Karşılaştırma sıfatları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "es-a2-u4",
-        title: "Viaje",
-        topics: ["Seyahat", "Yön tarifi", "Ulaşım"],
-        estimatedHours: 7,
-      },
-      {
-        id: "es-a2-u5",
-        title: "Gustos y Opiniones",
-        topics: ["Gustar yapısı", "Görüş bildirme", "Tercihler"],
-        estimatedHours: 6,
-      },
-      {
-        id: "es-a2-u6",
-        title: "Futuro Inmediato",
-        topics: ["ir a + infinitivo", "Yakın gelecek", "Plan yapma"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-  {
-    id: "es-b1",
-    languageCode: "es",
-    languageName: "Spanish",
-    flag: "🇪🇸",
-    level: "B1",
-    title: "Español Orta Seviye",
-    description: "Subjuntivo, koşullu yapılar ve iş hayatı İspanyolcası.",
-    prerequisites: "Spanish A2",
-    totalHours: 50,
-    units: [
-      {
-        id: "es-b1-u1",
-        title: "Subjuntivo Presente",
-        topics: ["Subjuntivo çekimi", "İstek ve duygu ifadeleri", "que + subjuntivo"],
-        estimatedHours: 9,
-      },
-      {
-        id: "es-b1-u2",
-        title: "Condicional",
-        topics: ["Condicional simple", "Varsayım", "Nazik talepler"],
-        estimatedHours: 8,
-      },
-      {
-        id: "es-b1-u3",
-        title: "Negocios",
-        topics: ["İş toplantısı", "E-posta", "Pazarlama dili"],
-        estimatedHours: 9,
-      },
-      {
-        id: "es-b1-u4",
-        title: "Ser/Estar İleri",
-        topics: ["Nüans farkları", "İleri kullanım", "Yaygın hatalar"],
-        estimatedHours: 8,
-      },
-      {
-        id: "es-b1-u5",
-        title: "Medios de Comunicación",
-        topics: ["Haber anlama", "Görüş bildirme", "Tartışma"],
-        estimatedHours: 8,
-      },
-      {
-        id: "es-b1-u6",
-        title: "Cultura Hispana",
-        topics: ["Latin Amerika kültürü", "İspanya kültürü", "Festival ve gelenekler"],
-        estimatedHours: 8,
-      },
-    ],
-  },
-
-  // ─────────────────── ITALIAN ───────────────────
-  {
-    id: "it-a1",
-    languageCode: "it",
-    languageName: "Italian",
-    flag: "🇮🇹",
-    level: "A1",
-    title: "Italiano Başlangıç",
-    description:
-      "Temel İtalyanca selamlaşmalar, artikeller ve basit günlük diyaloglar.",
-    prerequisites: null,
-    totalHours: 30,
-    units: [
-      {
-        id: "it-a1-u1",
-        title: "Ciao!",
-        topics: ["Selamlaşmalar", "Tanışma", "İtalyanca telaffuz"],
-        estimatedHours: 5,
-      },
-      {
-        id: "it-a1-u2",
-        title: "Numeri e Colori",
-        topics: ["Sayılar 1-100", "Renkler", "Tarih söyleme"],
-        estimatedHours: 5,
-      },
-      {
-        id: "it-a1-u3",
-        title: "Gli Articoli",
-        topics: ["il/la/lo/gli/le", "Belirli ve belirsiz", "Cinsiyet kuralı"],
-        estimatedHours: 5,
-      },
-      {
-        id: "it-a1-u4",
-        title: "La Famiglia",
-        topics: ["Aile üyeleri", "Avere ve essere", "Sahiplik"],
-        estimatedHours: 5,
-      },
-      {
-        id: "it-a1-u5",
-        title: "Al Bar",
-        topics: ["Kafede sipariş", "Yiyecek ve içecek", "Teşekkür ifadeleri"],
-        estimatedHours: 5,
-      },
-      {
-        id: "it-a1-u6",
-        title: "La Città",
-        topics: ["Şehirde yerler", "Yön tarifi giriş", "Prepositions"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-  {
-    id: "it-a2",
-    languageCode: "it",
-    languageName: "Italian",
-    flag: "🇮🇹",
-    level: "A2",
-    title: "Italiano Temel",
-    description: "Passato prossimo, seyahat ve alışveriş diyalogları.",
-    prerequisites: "Italian A1",
-    totalHours: 40,
-    units: [
-      {
-        id: "it-a2-u1",
-        title: "Passato Prossimo",
-        topics: ["avere/essere ile geçmiş", "Düzensiz fiiller", "Geçmiş zaman"],
-        estimatedHours: 8,
-      },
-      {
-        id: "it-a2-u2",
-        title: "In Viaggio",
-        topics: ["Seyahat", "Bilet alma", "Ulaşım araçları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "it-a2-u3",
-        title: "Fare la Spesa",
-        topics: ["Alışveriş", "Fiyatlar", "Besin grupları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "it-a2-u4",
-        title: "Imperfetto",
-        topics: ["Geçmişteki alışkanlıklar", "Tanımlama", "Hikâye anlatımı"],
-        estimatedHours: 7,
-      },
-      {
-        id: "it-a2-u5",
-        title: "Futuro Semplice",
-        topics: ["Gelecek zaman", "Tahminler", "Plan yapma"],
-        estimatedHours: 6,
-      },
-      {
-        id: "it-a2-u6",
-        title: "La Salute",
-        topics: ["Vücut parçaları", "Doktorda", "Semptomlar"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-
-  // ─────────────────── ARABIC ───────────────────
-  {
-    id: "ar-a1",
-    languageCode: "ar",
-    languageName: "Arabic",
-    flag: "🇸🇦",
-    level: "A1",
-    title: "عربي Başlangıç",
-    description:
-      "Arapça alfabesi, hareke sistemi ve temel selamlaşma kalıpları.",
-    prerequisites: null,
-    totalHours: 35,
-    units: [
-      {
-        id: "ar-a1-u1",
-        title: "Arap Alfabesi",
-        topics: ["Harfler ve telaffuz", "Hareke (ünlü işaretleri)", "Yazı yönü"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ar-a1-u2",
-        title: "Merhaba!",
-        topics: ["Selamlaşmalar", "الاسم والدين ifadeleri", "Temel diyaloglar"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ar-a1-u3",
-        title: "Sayılar ve Renkler",
-        topics: ["Sayılar 1-20", "Renkler", "Cinsiyet uyumu"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ar-a1-u4",
-        title: "Aile",
-        topics: ["Aile kelimeleri", "Tanımlama cümleleri", "Zamir sistemi"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ar-a1-u5",
-        title: "Yiyecekler",
-        topics: ["Yiyecek isimleri", "Beğeni ifadeleri", "Basit cümleler"],
-        estimatedHours: 5,
-      },
-      {
-        id: "ar-a1-u6",
-        title: "Günlük Hayat",
-        topics: ["Günlük aktiviteler", "Saat sorma", "Gün ve aylar"],
-        estimatedHours: 6,
-      },
-    ],
-  },
-
-  // ─────────────────── RUSSIAN ───────────────────
-  {
-    id: "ru-a1",
-    languageCode: "ru",
-    languageName: "Russian",
-    flag: "🇷🇺",
-    level: "A1",
-    title: "Русский Başlangıç",
-    description:
-      "Kiril alfabesi, temel selamlaşmalar ve basit Rusça cümle kurma.",
-    prerequisites: null,
-    totalHours: 35,
-    units: [
-      {
-        id: "ru-a1-u1",
-        title: "Kiril Alfabesi",
-        topics: ["33 harf", "Sesli/sessiz harfler", "Telaffuz kuralları"],
-        estimatedHours: 7,
-      },
-      {
-        id: "ru-a1-u2",
-        title: "Привет!",
-        topics: ["Selamlaşmalar", "Tanışma", "Teşekkür"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ru-a1-u3",
-        title: "Числа и Цвета",
-        topics: ["Sayılar 1-20", "Renkler", "Temel sıfatlar"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ru-a1-u4",
-        title: "Семья",
-        topics: ["Aile üyeleri", "Sahiplik", "Basit cümleler"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ru-a1-u5",
-        title: "Eда",
-        topics: ["Yiyecek isimleri", "Kafede sipariş", "Sayı ve miktar"],
-        estimatedHours: 5,
-      },
-      {
-        id: "ru-a1-u6",
-        title: "Günlük Hayat",
-        topics: ["Günlük rutinler", "Saatler", "Temel fiil çekimi"],
-        estimatedHours: 5,
-      },
-    ],
-  },
-
-  // ─────────────────── JAPANESE ───────────────────
-  {
-    id: "ja-a1",
-    languageCode: "ja",
-    languageName: "Japanese",
-    flag: "🇯🇵",
-    level: "A1",
-    title: "日本語 Başlangıç",
-    description:
-      "Hiragana, Katakana, temel selamlaşmalar ve basit cümle yapısı.",
-    prerequisites: null,
-    totalHours: 40,
-    units: [
-      {
-        id: "ja-a1-u1",
-        title: "Hiragana",
-        topics: ["46 hece", "Yazı pratiği", "Temel okuma"],
-        estimatedHours: 8,
-      },
-      {
-        id: "ja-a1-u2",
-        title: "Katakana",
-        topics: ["46 hece", "Yabancı kelimeler", "Katakana okuma"],
-        estimatedHours: 7,
-      },
-      {
-        id: "ja-a1-u3",
-        title: "こんにちは!",
-        topics: ["Selamlaşmalar", "Tanışma", "Nazik ifadeler"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ja-a1-u4",
-        title: "Sayılar ve Tarih",
-        topics: ["Sayılar 1-100", "Tarih", "Saat"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ja-a1-u5",
-        title: "Aile ve İnsanlar",
-        topics: ["Aile kelimeleri", "Meslekler", "です/は yapısı"],
-        estimatedHours: 7,
-      },
-      {
-        id: "ja-a1-u6",
-        title: "Yiyecek ve Alışveriş",
-        topics: ["Yiyecek isimleri", "Fiyat sorma", "Temel alışveriş"],
-        estimatedHours: 6,
-      },
-    ],
-  },
-
-  // ─────────────────── CHINESE ───────────────────
-  {
-    id: "zh-a1",
-    languageCode: "zh",
-    languageName: "Chinese",
-    flag: "🇨🇳",
-    level: "A1",
-    title: "中文 Başlangıç",
-    description: "Pinyin sistemi, tonlar, temel selamlaşmalar ve basit cümleler.",
-    prerequisites: null,
-    totalHours: 40,
-    units: [
-      {
-        id: "zh-a1-u1",
-        title: "Pinyin ve Tonlar",
-        topics: ["4 ton sistemi", "Pinyin alfabesi", "Telaffuz pratiği"],
-        estimatedHours: 8,
-      },
-      {
-        id: "zh-a1-u2",
-        title: "你好!",
-        topics: ["Selamlaşmalar", "Tanışma", "Teşekkür"],
-        estimatedHours: 6,
-      },
-      {
-        id: "zh-a1-u3",
-        title: "Sayılar",
-        topics: ["1-100", "Tarih ve saat", "Fiyatlar"],
-        estimatedHours: 7,
-      },
-      {
-        id: "zh-a1-u4",
-        title: "Aile",
-        topics: ["Aile üyeleri", "Basit cümleler", "是 yapısı"],
-        estimatedHours: 6,
-      },
-      {
-        id: "zh-a1-u5",
-        title: "Temel Karakterler",
-        topics: ["En yaygın 50 karakter", "Radikal sistemi", "Yazı pratiği"],
-        estimatedHours: 7,
-      },
-      {
-        id: "zh-a1-u6",
-        title: "Yiyecek ve Restoran",
-        topics: ["Yiyecek isimleri", "Sipariş verme", "量词 (ölçü kelimeleri)"],
-        estimatedHours: 6,
-      },
-    ],
-  },
-
-  // ─────────────────── KOREAN ───────────────────
-  {
-    id: "ko-a1",
-    languageCode: "ko",
-    languageName: "Korean",
-    flag: "🇰🇷",
-    level: "A1",
-    title: "한국어 Başlangıç",
-    description: "Hangul alfabesi, temel selamlaşmalar ve basit Korece cümleler.",
-    prerequisites: null,
-    totalHours: 35,
-    units: [
-      {
-        id: "ko-a1-u1",
-        title: "한글 (Hangul)",
-        topics: ["Sesli harfler", "Sessiz harfler", "Hece yapısı"],
-        estimatedHours: 7,
-      },
-      {
-        id: "ko-a1-u2",
-        title: "안녕하세요!",
-        topics: ["Selamlaşmalar", "Tanışma", "Resmi ve gayri resmi"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ko-a1-u3",
-        title: "Sayılar",
-        topics: ["Sino-Korece sayılar", "Saf Korece sayılar", "Kullanım farkı"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ko-a1-u4",
-        title: "Aile",
-        topics: ["Aile kelimeleri", "이다 yapısı", "Temel cümleler"],
-        estimatedHours: 6,
-      },
-      {
-        id: "ko-a1-u5",
-        title: "Yiyecek ve Kafe",
-        topics: ["Yiyecek isimleri", "Kafede sipariş", "Fiyat"],
-        estimatedHours: 5,
-      },
-      {
-        id: "ko-a1-u6",
-        title: "Günlük Rutinler",
-        topics: ["Günlük aktiviteler", "Saatler", "Temel fiil"],
-        estimatedHours: 5,
-      },
-    ],
+    programTitle: "Fransız Dili ve Edebiyatı",
+    department: "Fransız Dili ve Edebiyatı Bölümü",
+    duration: "4 Yıl / 8 Yarıyıl",
+    description: "Fransız dil becerileri, edebiyat ve francophonie kültürü üzerine kapsamlı lisans programı.",
+    semesters: frenchSemesters,
   },
 ];
 
-export default COURSES;
+export default PROGRAMS;
 
-export function getCoursesByLanguage(languageCode: string): Course[] {
-  return COURSES.filter((c) => c.languageCode === languageCode);
+export function getProgram(languageCode: string): UniversityProgram | undefined {
+  return PROGRAMS.find((p) => p.languageCode === languageCode);
 }
 
-export function getCourse(languageCode: string, level: string): Course | undefined {
-  return COURSES.find(
-    (c) => c.languageCode === languageCode && c.level === level
-  );
+export function getSemester(languageCode: string, slug: string): ProgramSemester | undefined {
+  const program = getProgram(languageCode);
+  return program?.semesters.find((s) => s.slug === slug);
 }
 
 export function getAvailableLanguages(): {
   code: string;
   name: string;
   flag: string;
-  courseCount: number;
-  levels: string[];
+  programTitle: string;
+  semesterCount: number;
+  totalSubjects: number;
+  totalCredits: number;
 }[] {
-  const map = new Map<string, { code: string; name: string; flag: string; courseCount: number; levels: string[] }>();
-  for (const course of COURSES) {
-    if (!map.has(course.languageCode)) {
-      map.set(course.languageCode, {
-        code: course.languageCode,
-        name: course.languageName,
-        flag: course.flag,
-        courseCount: 0,
-        levels: [],
-      });
-    }
-    const entry = map.get(course.languageCode)!;
-    entry.courseCount += 1;
-    entry.levels.push(course.level);
-  }
-  return Array.from(map.values());
+  return PROGRAMS.map((p) => ({
+    code: p.languageCode,
+    name: p.languageName,
+    flag: p.flag,
+    programTitle: p.programTitle,
+    semesterCount: p.semesters.length,
+    totalSubjects: p.semesters.reduce((sum, s) => sum + s.subjects.length, 0),
+    totalCredits: p.semesters.reduce((sum, s) => sum + s.totalCredits, 0),
+  }));
 }
