@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AnswerBoard from "@/components/board/AnswerBoard";
 import MainBoard from "@/components/board/MainBoard";
@@ -7,6 +8,7 @@ import CorrectionBoard from "@/components/board/CorrectionBoard";
 import GrammarBoard from "@/components/board/GrammarBoard";
 import VocabBoard from "@/components/board/VocabBoard";
 import NextActionBoard from "@/components/board/NextActionBoard";
+import MentorCard from "@/components/live/MentorCard";
 import type { ChatRouteResponse } from "@/lib/ai/types";
 import {
   browserSupportsSpeechRecognition,
@@ -16,11 +18,16 @@ import {
   stopSpeaking,
 } from "@/lib/live/speech";
 import { getSpeechLocaleByLanguageName } from "@/lib/constants/languages";
+import { getMentorForLanguage } from "@/lib/data/mentors";
+import type { MentorState } from "@/lib/data/mentors";
+import { getAcademicContext } from "@/lib/data/academic-catalog";
 
 type LiveClientProps = {
   nativeLanguage: string;
   targetLanguage: string;
   stage: string;
+  /** Optional: language code (e.g. "en") for academic context & mentor lookup */
+  languageCode?: string;
 };
 
 type ConversationTurn = {
@@ -32,7 +39,17 @@ export default function LiveClient({
   nativeLanguage,
   targetLanguage,
   stage,
+  languageCode,
 }: LiveClientProps) {
+  // ── Derive mentor + academic context ────────────────────────────────────────
+  const mentor = useMemo(
+    () => getMentorForLanguage(languageCode ?? targetLanguage.slice(0, 2).toLowerCase()),
+    [languageCode, targetLanguage]
+  );
+  const academicCtx = useMemo(
+    () => getAcademicContext(languageCode ?? targetLanguage.slice(0, 2).toLowerCase(), stage),
+    [languageCode, targetLanguage, stage]
+  );
   const [answer, setAnswer] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -63,6 +80,15 @@ export default function LiveClient({
       text: `Hello! I'm ready to help you practice ${targetLanguage}. Tell me about yourself.`,
     },
   ]);
+
+  // ── Derive mentor state from recording / loading flags ──────────────────────
+  const mentorState: MentorState = isLoading
+    ? "thinking"
+    : isRecording
+    ? "listening"
+    : teacherReply
+    ? "idle"
+    : "idle";
 
   const recognitionRef = useRef<ReturnType<typeof createRecognition> | null>(
     null
@@ -238,38 +264,63 @@ Vocabulary: ${speakingScore.vocabulary}`;
   return (
     <main className="min-h-screen bg-[#050816] px-4 py-8 text-white md:px-6">
       <div className="mx-auto max-w-7xl">
+        {/* ── Mentor + Academic Context Header ────────────────────────────── */}
         <div className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-blue-500/10 to-cyan-500/10 p-6">
+          {/* Academic breadcrumb */}
+          <div className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+            <span>{academicCtx.facultyName}</span>
+            <span>›</span>
+            <span className="text-slate-400">{academicCtx.programTitle}</span>
+            {academicCtx.courseTitle ? (
+              <>
+                <span>›</span>
+                <span className="text-cyan-400">{academicCtx.courseTitle}</span>
+              </>
+            ) : null}
+          </div>
+
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="text-sm uppercase tracking-[0.25em] text-cyan-300">
-                Real Time Conversation
+            <div className="flex items-center gap-5">
+              {/* Mentor card */}
+              <MentorCard mentor={mentor} state={mentorState} />
+
+              <div className="border-l border-white/10 pl-5">
+                <div className="text-xs uppercase tracking-[0.25em] text-cyan-300">
+                  Canlı Konuşma Pratiği
+                </div>
+                <h1 className="mt-1.5 text-2xl font-semibold">
+                  {targetLanguage} · {stage}
+                </h1>
+                <p className="mt-1 text-sm text-slate-400">
+                  Ana dil: {nativeLanguage}
+                </p>
               </div>
-              <h1 className="mt-2 text-3xl font-semibold">
-                {targetLanguage} konuşma pratiği
-              </h1>
-              <p className="mt-2 text-slate-300">
-                Ana dil: {nativeLanguage} • Seviye: {stage} • Speech locale:{" "}
-                {speechLocale}
-              </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
+              <Link
+                href="/dashboard"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+              >
+                ← Dashboard
+              </Link>
+
               <button
                 type="button"
                 onClick={() => setAutoSpeak((prev) => !prev)}
-                className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
                   autoSpeak
                     ? "bg-emerald-500/15 text-emerald-300 border border-emerald-400/20"
                     : "bg-white/5 text-slate-300 border border-white/10"
                 }`}
               >
-                {autoSpeak ? "🔊 Auto Voice Açık" : "🔇 Auto Voice Kapalı"}
+                {autoSpeak ? "🔊 Ses Açık" : "🔇 Ses Kapalı"}
               </button>
 
               <button
                 type="button"
                 onClick={() => setMicEnabled((prev) => !prev)}
-                className={`rounded-2xl px-4 py-3 text-sm font-medium transition ${
+                className={`rounded-2xl px-4 py-2.5 text-sm font-medium transition ${
                   micEnabled
                     ? "bg-cyan-500/15 text-cyan-300 border border-cyan-400/20"
                     : "bg-white/5 text-slate-300 border border-white/10"
@@ -281,7 +332,7 @@ Vocabulary: ${speakingScore.vocabulary}`;
               <button
                 type="button"
                 onClick={handleReplayTeacher}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/10"
+                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
               >
                 Öğretmeni Tekrar Dinle
               </button>
@@ -413,9 +464,39 @@ Vocabulary: ${speakingScore.vocabulary}`;
                 provider bağlarız.
               </p>
             </div>
+
+            {/* ── Navigation CTAs ────────────────────────────────────────── */}
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
+              <p className="mb-3 text-xs uppercase tracking-[0.2em] text-slate-500">
+                Sonraki Adım
+              </p>
+              <div className="flex flex-col gap-2">
+                <Link
+                  href="/lesson"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10"
+                >
+                  <span>📖 Derse Git</span>
+                  <span className="text-slate-500">→</span>
+                </Link>
+                <Link
+                  href="/courses"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10"
+                >
+                  <span>🎓 Programa Dön</span>
+                  <span className="text-slate-500">→</span>
+                </Link>
+                <Link
+                  href="/profile"
+                  className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-300 transition hover:bg-white/10"
+                >
+                  <span>🏆 Rozetlerimi Gör</span>
+                  <span className="text-slate-500">→</span>
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </main>
   );
-            }
+}

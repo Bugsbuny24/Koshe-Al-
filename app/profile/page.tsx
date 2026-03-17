@@ -3,6 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { CollectibleRewardRecord } from "@/types/university";
+import { getAcademicContext } from "@/lib/data/academic-catalog";
+import { getMentorForLanguage } from "@/lib/data/mentors";
+import { DEPARTMENTS } from "@/lib/data/curriculum";
 
 type ProfileRow = {
   full_name: string | null;
@@ -198,6 +201,26 @@ export default async function ProfilePage() {
                 {activeEnrollment ? (
                   <div className="mt-6">
                     <div className="rounded-2xl border border-white/10 bg-black/20 p-5">
+                      {/* Academic breadcrumb */}
+                      {(() => {
+                        const ctx = getAcademicContext(
+                          activeEnrollment.language_code,
+                          activeEnrollment.level
+                        );
+                        return (
+                          <div className="mb-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                            <span>{ctx.facultyName}</span>
+                            <span>›</span>
+                            <span className="text-slate-400">{ctx.programTitle}</span>
+                            {ctx.courseTitle ? (
+                              <>
+                                <span>›</span>
+                                <span className="text-cyan-400">{ctx.courseTitle}</span>
+                              </>
+                            ) : null}
+                          </div>
+                        );
+                      })()}
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div>
                           <div className="text-lg font-semibold">
@@ -466,6 +489,111 @@ export default async function ProfilePage() {
               </Link>
             </div>
           )}
+        </section>
+
+        {/* ── Academic Journey ──────────────────────────────────────────────── */}
+        <section className="mt-8 rounded-3xl border border-cyan-400/20 bg-gradient-to-r from-cyan-500/5 to-blue-600/5 p-6">
+          <div className="text-xs uppercase tracking-[0.3em] text-cyan-300">
+            Akademik Yolculuk
+          </div>
+          <h2 className="mt-2 text-2xl font-semibold">Program Geçmişim</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Kayıtlı olduğun tüm programlar, tamamlanan üniteler ve ilerleme durumun.
+          </p>
+
+          {enrollments && enrollments.length > 0 ? (
+            <div className="mt-6 space-y-3">
+              {enrollments.map((e) => {
+                const ctx = getAcademicContext(e.language_code, e.level);
+                const mentor = getMentorForLanguage(e.language_code);
+                const progress = e.progress_percent || 0;
+                return (
+                  <div
+                    key={e.course_id}
+                    className="rounded-2xl border border-white/10 bg-black/20 p-4"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${mentor.gradientFrom} ${mentor.gradientTo} text-xs font-bold text-white`}
+                        >
+                          {mentor.avatarInitials}
+                        </div>
+                        <div>
+                          <div className="font-medium text-white">{ctx.programTitle}</div>
+                          <div className="text-xs text-slate-500">
+                            {ctx.facultyName} · {e.level} · {e.completed_units_count || 0}/{e.total_units_count || 0} ünite
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-white">{progress}%</div>
+                          <div className={`text-xs capitalize ${e.status === "completed" ? "text-emerald-400" : "text-slate-500"}`}>
+                            {e.status === "completed" ? "Tamamlandı" : e.status === "active" ? "Aktif" : e.status || "aktif"}
+                          </div>
+                        </div>
+                        <Link
+                          href={`/courses/${e.language_code}`}
+                          className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10"
+                        >
+                          Devam Et →
+                        </Link>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${
+                            progress >= 100
+                              ? "from-amber-400 to-yellow-500"
+                              : progress >= 80
+                              ? "from-fuchsia-500 to-violet-500"
+                              : progress >= 50
+                              ? "from-cyan-400 to-blue-500"
+                              : "from-slate-500 to-slate-400"
+                          }`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-6">
+              <p className="text-slate-400">Henüz program kaydın yok.</p>
+              <Link
+                href="/courses"
+                className="mt-4 inline-block rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+              >
+                Programlara Göz At →
+              </Link>
+            </div>
+          )}
+
+          {/* Journey CTAs */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/live"
+              className="rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.2)] transition hover:opacity-90"
+            >
+              🎤 Canlı Pratiğe Geç
+            </Link>
+            <Link
+              href="/lesson"
+              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+            >
+              📖 Günlük Ders
+            </Link>
+            <Link
+              href="/courses"
+              className="rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+            >
+              📚 Tüm Programlar
+            </Link>
+          </div>
         </section>
 
         {/* ── Journey Map ───────────────────────────────────────────────────── */}
