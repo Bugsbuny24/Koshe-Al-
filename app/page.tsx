@@ -206,7 +206,89 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="features" className="mx-auto max-w-7xl px-4 py-20 md:px-6">
+      {/* University Section */}
+      <section
+        id="university"
+        className="mx-auto max-w-7xl px-4 py-20 md:px-6"
+      >
+        <div className="mb-10 text-center">
+          <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">
+            Yabancı Dil Üniversitesi
+          </div>
+          <h2 className="mt-4 text-3xl font-semibold md:text-4xl">
+            Gerçek üniversite müfredatı ile öğren
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+            4 yıllık lisans programı — 8 yarıyıl, zorunlu ve seçmeli dersler;
+            dilbilgisinden edebiyata, çeviriden dilbilime uzanan tam müfredat.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {[
+            {
+              flag: "🇬🇧",
+              lang: "English",
+              programTitle: "İngiliz Dili ve Edebiyatı",
+              code: "en",
+              subjects: ["Okuma & Yazma", "Dinleme & Konuşma", "Dilbilim", "Edebiyat", "Çeviri", "Tez"],
+            },
+            {
+              flag: "🇩🇪",
+              lang: "German",
+              programTitle: "Alman Dili ve Edebiyatı",
+              code: "de",
+              subjects: ["Okuma & Yazma", "Dilbilgisi", "Çeviri", "Alman Edebiyatı", "Mesleki Almanca", "Tez"],
+            },
+            {
+              flag: "🇫🇷",
+              lang: "French",
+              programTitle: "Fransız Dili ve Edebiyatı",
+              code: "fr",
+              subjects: ["Okuma & Yazma", "Dilbilgisi", "Çeviri", "Fransız Edebiyatı", "Mesleki Fransızca", "Tez"],
+            },
+          ].map((item) => (
+            <Link
+              key={item.code}
+              href={`/courses/${item.code}`}
+              className="group rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{item.flag}</span>
+                <div>
+                  <div className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                    {item.programTitle}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    4 Yıl · 8 Yarıyıl Lisans
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {item.subjects.map((s) => (
+                  <span
+                    key={s}
+                    className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-xs text-slate-300"
+                  >
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link
+            href="/courses"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/10"
+          >
+            Fakülteyi İncele →
+          </Link>
+        </div>
+      </section>
+
+      <section id="features" className="mx-auto max-w-7xl border-t border-white/5 px-4 py-20 md:px-6">
         <div className="mb-10 text-center">
           <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">
             Özellikler
