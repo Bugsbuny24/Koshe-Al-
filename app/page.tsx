@@ -206,7 +206,86 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section id="features" className="mx-auto max-w-7xl px-4 py-20 md:px-6">
+      {/* University Section */}
+      <section
+        id="university"
+        className="mx-auto max-w-7xl px-4 py-20 md:px-6"
+      >
+        <div className="mb-10 text-center">
+          <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">
+            Yabancı Dil Üniversitesi
+          </div>
+          <h2 className="mt-4 text-3xl font-semibold md:text-4xl">
+            Yapılandırılmış müfredat ile öğren
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-slate-300">
+            A1'den C2'ye uzanan seviyeli kurs sistemi ile dilbilginizi
+            sistematik olarak geliştirin.
+          </p>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          {[
+            {
+              flag: "🇬🇧",
+              lang: "English",
+              code: "en",
+              levels: ["A1", "A2", "B1", "B2", "C1", "C2"],
+            },
+            {
+              flag: "🇩🇪",
+              lang: "German",
+              code: "de",
+              levels: ["A1", "A2", "B1", "B2"],
+            },
+            {
+              flag: "🇫🇷",
+              lang: "French",
+              code: "fr",
+              levels: ["A1", "A2", "B1"],
+            },
+          ].map((item) => (
+            <Link
+              key={item.code}
+              href={`/courses/${item.code}`}
+              className="group rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl transition-all hover:border-white/20 hover:bg-white/10"
+            >
+              <div className="flex items-center gap-3">
+                <span className="text-4xl">{item.flag}</span>
+                <div>
+                  <div className="font-semibold text-white group-hover:text-cyan-300 transition-colors">
+                    {item.lang}
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    {item.levels.length} seviye
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 flex flex-wrap gap-1.5">
+                {item.levels.map((lv) => (
+                  <span
+                    key={lv}
+                    className="rounded-full border border-white/10 bg-black/20 px-2 py-0.5 text-xs text-slate-300"
+                  >
+                    {lv}
+                  </span>
+                ))}
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <div className="mt-8 text-center">
+          <Link
+            href="/courses"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-6 py-3 font-medium text-slate-100 transition hover:border-white/20 hover:bg-white/10"
+          >
+            Tüm Dil Bölümlerini Gör →
+          </Link>
+        </div>
+      </section>
+
+      <section id="features" className="mx-auto max-w-7xl border-t border-white/5 px-4 py-20 md:px-6">
         <div className="mb-10 text-center">
           <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">
             Özellikler
