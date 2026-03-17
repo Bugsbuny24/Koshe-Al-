@@ -85,3 +85,99 @@ body {
 .metric-value {
   @apply mt-2 text-3xl font-bold text-white;
 }
+.wave-bar {
+  animation: waveBounce 1s ease-in-out infinite;
+  transform-origin: bottom;
+}
+
+.wave-delay-1 {
+  animation-delay: 0.1s;
+}
+.wave-delay-2 {
+  animation-delay: 0.2s;
+}
+.wave-delay-3 {
+  animation-delay: 0.3s;
+}
+.wave-delay-4 {
+  animation-delay: 0.4s;
+}
+
+@keyframes waveBounce {
+  0%, 100% {
+    transform: scaleY(0.55);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scaleY(1.15);
+    opacity: 1;
+  }
+}
+
+.float-orb {
+  animation: floatOrb 6s ease-in-out infinite;
+}
+
+.float-orb-delay {
+  animation: floatOrb 7.5s ease-in-out infinite;
+  animation-delay: 0.8s;
+}
+
+@keyframes floatOrb {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  50% {
+    transform: translateY(-12px) translateX(8px);
+  }
+}
+
+.shine-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.shine-card::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  background: linear-gradient(
+    120deg,
+    transparent 35%,
+    rgba(255, 255, 255, 0.08) 50%,
+    transparent 65%
+  );
+  transform: translateX(-120%);
+  animation: shineMove 5s linear infinite;
+}
+
+@keyframes shineMove {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+.score-fill {
+  position: relative;
+  overflow: hidden;
+}
+
+.score-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.25),
+    transparent
+  );
+  transform: translateX(-100%);
+  animation: scoreShine 2.8s linear infinite;
+}
+
+@keyframes scoreShine {
+  to {
+    transform: translateX(100%);
+  }
+}
