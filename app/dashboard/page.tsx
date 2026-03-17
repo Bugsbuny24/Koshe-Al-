@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SectionHeader, Surface } from "@/components/ui/Surface";
 
 type ProfileRow = {
   full_name: string | null;
@@ -91,161 +92,229 @@ export default async function DashboardPage() {
     : 0;
 
   return (
-    <main className="min-h-screen bg-[#050816] px-6 py-10 text-white">
-      <div className="mx-auto max-w-6xl">
-        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <h1 className="text-3xl font-semibold">Dashboard</h1>
-
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/live"
-              className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-3 font-medium text-white transition hover:opacity-90"
-            >
-              Konuşmaya Başla
-            </Link>
-
-            <Link
-              href="/lesson"
-              className="inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-5 py-3 font-medium text-slate-200 transition hover:bg-white/10"
-            >
-              Derse Git
-            </Link>
-
-            <Link
-              href="/feedback"
-              className="inline-flex items-center justify-center rounded-2xl border border-fuchsia-500/30 bg-fuchsia-500/10 px-5 py-3 font-medium text-fuchsia-200 transition hover:bg-fuchsia-500/20"
-            >
-              Geri Bildirim Gönder
-            </Link>
-          </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="mb-3 text-lg">Profil</h2>
-
-            <div className="space-y-2 text-slate-200">
-              <p>Ad: {profile?.full_name || "-"}</p>
-              <p>Ana dil: {profile?.native_language || "-"}</p>
-              <p>Öğrenilen dil: {profile?.target_language || "-"}</p>
-              <p>Seviye: {profile?.difficulty_level || "-"}</p>
-              <p>Amaç: {profile?.learning_stage || "-"}</p>
-            </div>
-          </div>
-
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="mb-3 text-lg">Son Skor</h2>
-
-            {latestScore ? (
-              <div className="space-y-2 text-slate-200">
-                <p>Fluency: {latestScore.fluency_score || 0}</p>
-                <p>Grammar: {latestScore.grammar_score || 0}</p>
-                <p>Vocabulary: {latestScore.vocabulary_score || 0}</p>
-              </div>
-            ) : (
-              <p className="text-slate-400">Henüz konuşma yapılmadı.</p>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
-          <h2 className="mb-4 text-lg">Ortalama Skorlar</h2>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl border border-white/10 p-4">
-              <div className="text-sm text-gray-400">Fluency</div>
-              <div className="text-2xl font-semibold">
-                {Math.round(avgFluency)}
-              </div>
+    <main className="px-4 py-8 sm:px-6 sm:py-10">
+      <div className="mx-auto max-w-7xl">
+        <Surface className="gradient-border p-6 sm:p-8">
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">
+                Koshei Dashboard
+              </p>
+              <h1 className="glow-text mt-2 text-3xl font-bold text-white sm:text-5xl">
+                Hoş geldin, {profile?.full_name || "Öğrenci"}
+              </h1>
+              <p className="mt-3 max-w-2xl text-sm text-slate-300 sm:text-base">
+                AI öğretmeninle konuş, gelişimini takip et, hatalarını gör ve
+                daha akıcı konuşmaya başla.
+              </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 p-4">
-              <div className="text-sm text-gray-400">Grammar</div>
-              <div className="text-2xl font-semibold">
-                {Math.round(avgGrammar)}
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-white/10 p-4">
-              <div className="text-sm text-gray-400">Vocabulary</div>
-              <div className="text-2xl font-semibold">
-                {Math.round(avgVocab)}
-              </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href="/live" className="primary-button">
+                Konuşmaya Başla
+              </Link>
+              <Link href="/lesson" className="soft-button">
+                Derse Git
+              </Link>
+              <Link href="/feedback" className="soft-button">
+                Feedback
+              </Link>
             </div>
           </div>
-        </div>
+        </Surface>
 
-        <div className="mt-8 rounded-3xl border border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-500/10 to-cyan-500/10 p-6">
-          <h2 className="mb-2 text-lg font-semibold">Koshei&apos;yi Birlikte Geliştirelim</h2>
-          <p className="mb-4 text-sm text-slate-300">
-            Hata, eksik yön, performans sorunu veya yeni özellik önerin varsa bize
-            direkt mesaj bırak. Geri dönüşlerin ürünü geliştirmemize yardımcı olur.
-          </p>
+        <div className="mt-8 grid gap-6 xl:grid-cols-4">
+          <Surface className="xl:col-span-1">
+            <SectionHeader
+              eyebrow="Profil"
+              title="Öğrenci Bilgileri"
+              description="Aktif öğrenme profilin"
+            />
 
-          <Link
-            href="/feedback"
-            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-5 py-3 font-medium text-white transition hover:opacity-90"
-          >
-            Mesaj Gönder
-          </Link>
+            <div className="mt-6 space-y-3 text-sm text-slate-300">
+              <div className="panel-dark p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Ad
+                </div>
+                <div className="mt-2 text-white">{profile?.full_name || "-"}</div>
+              </div>
+
+              <div className="panel-dark p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Ana Dil
+                </div>
+                <div className="mt-2 text-white">
+                  {profile?.native_language || "-"}
+                </div>
+              </div>
+
+              <div className="panel-dark p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Hedef Dil
+                </div>
+                <div className="mt-2 text-white">
+                  {profile?.target_language || "-"}
+                </div>
+              </div>
+
+              <div className="panel-dark p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Seviye
+                </div>
+                <div className="mt-2 text-white">
+                  {profile?.difficulty_level || "-"}
+                </div>
+              </div>
+
+              <div className="panel-dark p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Amaç
+                </div>
+                <div className="mt-2 text-white">
+                  {profile?.learning_stage || "-"}
+                </div>
+              </div>
+            </div>
+          </Surface>
+
+          <div className="xl:col-span-3">
+            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+              <Surface>
+                <div className="metric-label">Son Fluency</div>
+                <div className="metric-value">
+                  {latestScore?.fluency_score || 0}
+                </div>
+              </Surface>
+
+              <Surface>
+                <div className="metric-label">Son Grammar</div>
+                <div className="metric-value">
+                  {latestScore?.grammar_score || 0}
+                </div>
+              </Surface>
+
+              <Surface>
+                <div className="metric-label">Son Vocabulary</div>
+                <div className="metric-value">
+                  {latestScore?.vocabulary_score || 0}
+                </div>
+              </Surface>
+
+              <Surface>
+                <div className="metric-label">Toplam Session</div>
+                <div className="metric-value">{sessions?.length || 0}</div>
+              </Surface>
+            </div>
+
+            <div className="mt-6 grid gap-6 lg:grid-cols-3">
+              <Surface>
+                <div className="metric-label">Ortalama Fluency</div>
+                <div className="metric-value">{Math.round(avgFluency)}</div>
+              </Surface>
+
+              <Surface>
+                <div className="metric-label">Ortalama Grammar</div>
+                <div className="metric-value">{Math.round(avgGrammar)}</div>
+              </Surface>
+
+              <Surface>
+                <div className="metric-label">Ortalama Vocabulary</div>
+                <div className="metric-value">{Math.round(avgVocab)}</div>
+              </Surface>
+            </div>
+
+            <Surface className="mt-6">
+              <SectionHeader
+                eyebrow="Gelişim"
+                title="Koshei'yi birlikte geliştirelim"
+                description="Hata, eksik yön veya yeni özellik önerini bize yaz."
+              />
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                <Link href="/feedback" className="primary-button">
+                  Mesaj Gönder
+                </Link>
+                <Link href="/pricing" className="soft-button">
+                  Paketleri Gör
+                </Link>
+              </div>
+            </Surface>
+          </div>
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="mb-4 text-lg">Son Hatalar</h2>
+          <Surface>
+            <SectionHeader
+              eyebrow="Son Hatalar"
+              title="En son düzeltmelerin"
+              description="Koshei'nin hafızaya aldığı son hatalar"
+            />
 
             {recentMistakes && recentMistakes.length > 0 ? (
-              <div className="space-y-4">
+              <div className="mt-6 space-y-4">
                 {recentMistakes.map((item, index) => (
                   <div
                     key={`${item.wrong_sentence}-${index}`}
-                    className="rounded-2xl border border-cyan-400/20 bg-cyan-400/10 p-4"
+                    className="rounded-2xl border border-cyan-400/15 bg-cyan-400/8 p-4"
                   >
-                    <div className="text-sm text-slate-300">Yanlış</div>
-                    <div className="mt-1 text-white">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">
+                      Yanlış
+                    </div>
+                    <div className="mt-2 text-white">
                       {item.wrong_sentence || "-"}
                     </div>
 
-                    <div className="mt-3 text-sm text-slate-300">Doğru</div>
-                    <div className="mt-1 text-cyan-300">
+                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">
+                      Doğru
+                    </div>
+                    <div className="mt-2 text-cyan-300">
                       {item.correct_sentence || "-"}
                     </div>
 
-                    <div className="mt-3 text-sm text-slate-300">Açıklama</div>
-                    <div className="mt-1 text-slate-100">
+                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">
+                      Açıklama
+                    </div>
+                    <div className="mt-2 text-slate-200">
                       {item.explanation || "-"}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-400">Henüz kayıtlı hata yok.</p>
+              <p className="mt-6 text-slate-400">Henüz kayıtlı hata yok.</p>
             )}
-          </div>
+          </Surface>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="mb-4 text-lg">Öğrenilen Kelimeler</h2>
+          <Surface>
+            <SectionHeader
+              eyebrow="Vocabulary"
+              title="Son öğrenilen kelimeler"
+              description="Güç seviyeleriyle birlikte son kelimeler"
+            />
 
             {recentWords && recentWords.length > 0 ? (
-              <div className="flex flex-wrap gap-3">
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
                 {recentWords.map((item, index) => (
                   <div
                     key={`${item.word}-${index}`}
-                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3"
+                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
                   >
-                    <div className="font-medium text-white">
+                    <div className="text-base font-semibold text-white">
                       {item.word || "-"}
                     </div>
-                    <div className="mt-1 text-xs text-slate-400">
-                      Strength: {item.strength || 1}
+                    <div className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">
+                      Strength
+                    </div>
+                    <div className="mt-1 text-slate-300">
+                      {item.strength || 1}
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-400">Henüz kayıtlı kelime yok.</p>
+              <p className="mt-6 text-slate-400">Henüz kayıtlı kelime yok.</p>
             )}
-          </div>
+          </Surface>
         </div>
       </div>
     </main>
