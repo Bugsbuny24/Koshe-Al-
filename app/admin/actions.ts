@@ -3,8 +3,16 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
+const TURKISH_MAP: Record<string, string> = {
+  ç: "c", Ç: "c", ğ: "g", Ğ: "g", ı: "i", İ: "i",
+  ö: "o", Ö: "o", ş: "s", Ş: "s", ü: "u", Ü: "u",
+};
+
 function toSlug(text: string): string {
   return text
+    .split("")
+    .map((ch) => TURKISH_MAP[ch] ?? ch)
+    .join("")
     .toLowerCase()
     .replace(/\s+/g, "-")
     .replace(/[^a-z0-9-]/g, "");
@@ -37,7 +45,7 @@ export async function createUniversityAction(formData: FormData) {
     website: (formData.get("website") as string) || null,
     active: formData.get("active") === "true",
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to create university: " + error.message);
   revalidatePath("/admin/universities");
   redirect("/admin/universities");
 }
@@ -57,7 +65,7 @@ export async function updateUniversityAction(id: string, formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to update university: " + error.message);
   revalidatePath("/admin/universities");
   redirect("/admin/universities");
 }
@@ -65,7 +73,7 @@ export async function updateUniversityAction(id: string, formData: FormData) {
 export async function deleteUniversityAction(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("universities").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to delete university: " + error.message);
   revalidatePath("/admin/universities");
 }
 
@@ -84,7 +92,7 @@ export async function createFacultyAction(formData: FormData) {
     dean_name: (formData.get("dean_name") as string) || null,
     active: formData.get("active") === "true",
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to create faculty: " + error.message);
   revalidatePath("/admin/faculties");
   redirect("/admin/faculties");
 }
@@ -104,7 +112,7 @@ export async function updateFacultyAction(id: string, formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to update faculty: " + error.message);
   revalidatePath("/admin/faculties");
   redirect("/admin/faculties");
 }
@@ -112,7 +120,7 @@ export async function updateFacultyAction(id: string, formData: FormData) {
 export async function deleteFacultyAction(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("faculties").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to delete faculty: " + error.message);
   revalidatePath("/admin/faculties");
 }
 
@@ -143,7 +151,7 @@ export async function createProgramAction(formData: FormData) {
     description: (formData.get("description") as string) || null,
     active: formData.get("active") === "true",
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to create program: " + error.message);
   revalidatePath("/admin/programs");
   redirect("/admin/programs");
 }
@@ -175,7 +183,7 @@ export async function updateProgramAction(id: string, formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to update program: " + error.message);
   revalidatePath("/admin/programs");
   redirect("/admin/programs");
 }
@@ -183,7 +191,7 @@ export async function updateProgramAction(id: string, formData: FormData) {
 export async function deleteProgramAction(id: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("programs").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to delete program: " + error.message);
   revalidatePath("/admin/programs");
 }
 
@@ -211,7 +219,7 @@ export async function createCourseAction(formData: FormData) {
       (formData.get("language_of_instruction") as string) || "English",
     active: formData.get("active") === "true",
   });
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to create course: " + error.message);
   revalidatePath("/admin/courses");
   redirect("/admin/courses");
 }
@@ -240,7 +248,7 @@ export async function updateCourseAction(id: string, formData: FormData) {
       updated_at: new Date().toISOString(),
     })
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to update course: " + error.message);
   revalidatePath("/admin/courses");
   redirect("/admin/courses");
 }
@@ -251,6 +259,6 @@ export async function deleteCourseAction(id: string) {
     .from("academic_courses")
     .delete()
     .eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throw new Error("Failed to delete course: " + error.message);
   revalidatePath("/admin/courses");
 }
