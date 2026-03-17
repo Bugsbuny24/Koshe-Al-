@@ -23,7 +23,6 @@ declare global {
   interface Window {
     SpeechRecognition?: SpeechRecognitionConstructor;
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
-    speechSynthesis?: SpeechSynthesis;
   }
 }
 
@@ -32,11 +31,7 @@ export function getSpeechRecognitionConstructor():
   | null {
   if (typeof window === "undefined") return null;
 
-  return (
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition ||
-    null
-  );
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null;
 }
 
 export function browserSupportsSpeechRecognition() {
@@ -155,4 +150,4 @@ export function createRecognition(params: {
   };
 
   return recognition;
-    }
+                                 }
