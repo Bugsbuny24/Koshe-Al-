@@ -71,8 +71,11 @@ export async function deductCredits(
     const current = Number(quota.credits_remaining ?? 0);
     if (current < cost) return false;
 
-    // Step 2: conditional update — only succeeds when credits_remaining >= cost
-    // (guards against concurrent requests draining credits between steps 1 and 2)
+    // Step 2: conditional update — optimistic lock on the exact current value.
+    // If another request modified credits_remaining between steps 1 and 2,
+    // the .eq("credits_remaining", current) clause will find no matching row
+    // and the update returns null, causing us to fail safely.
+    // The .gte(..., cost) clause additionally prevents any path to negative balances.
     const { data: updated, error: updateError } = await supabase
       .from("user_quotas")
       .update({
@@ -80,6 +83,7 @@ export async function deductCredits(
         updated_at: new Date().toISOString(),
       })
       .eq("user_id", userId)
+      .eq("credits_remaining", current)
       .gte("credits_remaining", cost)
       .select("credits_remaining")
       .maybeSingle();

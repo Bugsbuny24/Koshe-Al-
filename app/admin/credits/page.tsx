@@ -100,7 +100,7 @@ export default function AdminCreditsPage() {
       {/* ── Form ───────────────────────────────────────────────────────────── */}
       <form
         onSubmit={handleSubmit}
-        className="rounded-[28px] border border-white/10 bg-white/5 p-6 space-y-5"
+        className="rounded-[28px] border border-white/10 bg-white/5 p-6 space-y-5 backdrop-blur-xl"
       >
         <div>
           <label
@@ -178,7 +178,7 @@ export default function AdminCreditsPage() {
 
       {/* ── Recent loads ───────────────────────────────────────────────────── */}
       {recentLoads.length > 0 && (
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
           <h2 className="mb-4 text-lg font-semibold text-white">
             Son Yüklenen Krediler
           </h2>

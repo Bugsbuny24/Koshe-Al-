@@ -211,7 +211,7 @@ export default function LiveClient({
     }
     const now = Date.now();
     if (now - lastSubmitRef.current < SUBMIT_COOLDOWN_MS) {
-      setSpeechError("Lütfen bir saniye bekleyin...");
+      setSpeechError("Lütfen iki saniye bekleyin...");
       return;
     }
     const trimmed = answer.trim();
