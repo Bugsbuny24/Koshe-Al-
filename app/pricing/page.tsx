@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { CREDIT_PACKAGES, CREDIT_COST_RULES } from "@/lib/data/credit-rules";
 
+// Shopier payment links per credit package.
+// Replace each value with the real Shopier product URL for that package.
 const SHOPIER_LINKS: Record<string, string> = {
   starter: "https://www.shopier.com/TradeVisual/45264454",
   growth: "https://www.shopier.com/TradeVisual/45264598",
-  power: "https://www.shopier.com/TradeVisual/45264598",
+  power: "https://www.shopier.com/TradeVisual/45264598", // TODO: replace with dedicated Power package Shopier URL
 };
 
 export default function PricingPage() {

@@ -54,8 +54,9 @@ export default function LessonClient({
     });
 
     if (res.status === 402) {
-      const data = await res.json() as { error?: string };
-      setLessonError(data.error ?? "Yeterli krediniz yok.");
+      const json = await res.json() as Record<string, unknown>;
+      const msg = typeof json.error === "string" ? json.error : "Yeterli krediniz yok.";
+      setLessonError(msg);
       setLoading(false);
       return;
     }

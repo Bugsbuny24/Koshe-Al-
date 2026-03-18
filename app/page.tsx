@@ -72,6 +72,7 @@ const creditPackages = [
     name: "Power",
     credits: 1000,
     price: "₺1.299",
+    // TODO: replace with dedicated Power package Shopier URL
     shopier: "https://www.shopier.com/TradeVisual/45264598",
     popular: false,
   },

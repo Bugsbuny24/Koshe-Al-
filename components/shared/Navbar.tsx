@@ -33,10 +33,19 @@ function CreditChip() {
     fetch("/api/credits")
       .then((res) => {
         if (!res.ok) return null;
-        return res.json() as Promise<CreditApiResponse>;
+        return res.json() as Promise<unknown>;
       })
       .then((json) => {
-        if (!cancelled) setData(json);
+        if (!cancelled && json !== null && typeof json === "object") {
+          const obj = json as Record<string, unknown>;
+          if (
+            typeof obj.credits === "number" &&
+            typeof obj.isActive === "boolean" &&
+            typeof obj.exists === "boolean"
+          ) {
+            setData(obj as CreditApiResponse);
+          }
+        }
       })
       .catch(() => {});
     return () => {
