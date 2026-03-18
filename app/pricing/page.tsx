@@ -1,13 +1,6 @@
 import Link from "next/link";
-import { CREDIT_PACKAGES, CREDIT_COST_RULES } from "@/lib/data/credit-rules";
-
-// Shopier payment links per credit package.
-// Replace each value with the real Shopier product URL for that package.
-const SHOPIER_LINKS: Record<string, string> = {
-  starter: "https://www.shopier.com/TradeVisual/45264454",
-  growth: "https://www.shopier.com/TradeVisual/45264598",
-  power: "https://www.shopier.com/TradeVisual/45264598", // TODO: replace with dedicated Power package Shopier URL
-};
+import { CREDIT_COST_RULES } from "@/lib/data/credit-rules";
+import { CREDIT_PACKAGES_DEF } from "@/lib/data/credit-packages";
 
 export default function PricingPage() {
   return (
@@ -28,7 +21,7 @@ export default function PricingPage() {
 
         {/* ── Credit packages ──────────────────────────────────────────────── */}
         <div className="grid gap-6 sm:grid-cols-3">
-          {CREDIT_PACKAGES.map((pkg) => (
+          {CREDIT_PACKAGES_DEF.map((pkg) => (
             <div
               key={pkg.id}
               className={[
@@ -46,44 +39,42 @@ export default function PricingPage() {
                 </div>
               )}
 
-              <div className="text-3xl">{pkg.badge}</div>
-
               <div className="mt-3 text-sm uppercase tracking-[0.2em] text-slate-400">
                 {pkg.name}
               </div>
 
               <div className="mt-4 text-4xl font-bold text-white">
-                {pkg.priceDisplay}
+                {pkg.priceTRY}
               </div>
-              <div className="mt-1 text-xs text-slate-500">{pkg.description}</div>
 
               <div className="mt-4 text-2xl font-semibold text-cyan-300">
                 {pkg.credits.toLocaleString("tr-TR")}
                 <span className="ml-1.5 text-sm font-normal text-slate-400">kredi</span>
               </div>
 
-              <ul className="mt-6 space-y-2">
-                {pkg.features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
-                    <span className="text-cyan-400">✓</span>
-                    {f}
-                  </li>
-                ))}
-              </ul>
-
-              <a
-                href={SHOPIER_LINKS[pkg.id] ?? SHOPIER_LINKS.starter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={[
-                  "mt-8 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
-                  pkg.isPopular
-                    ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
-                    : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
-                ].join(" ")}
-              >
-                {pkg.name} Paketi Al
-              </a>
+              {pkg.shopierUrl ? (
+                <a
+                  href={pkg.shopierUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={[
+                    "mt-8 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
+                    pkg.isPopular
+                      ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
+                      : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
+                  ].join(" ")}
+                >
+                  {pkg.name} Paketi Al
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  className="mt-8 block w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-slate-500"
+                >
+                  Yakında
+                </button>
+              )}
             </div>
           ))}
         </div>

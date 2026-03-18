@@ -2,6 +2,10 @@ import "./globals.css";
 import type { Metadata } from "next";
 import Navbar from "@/components/shared/Navbar";
 
+// Force all pages to be dynamically rendered so Supabase auth is evaluated
+// at request time (not at build time when env vars may not be available).
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Koshei AI University",
   description:

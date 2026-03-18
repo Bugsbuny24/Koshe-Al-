@@ -49,6 +49,7 @@ export default async function AdminLayout({
     { href: "/admin/curriculum", label: "Müfredat",     icon: "🗺️" },
     { href: "/admin/students",   label: "Öğrenciler",   icon: "👥" },
     { href: "/admin/rewards",    label: "Ödüller",      icon: "🏆" },
+    { href: "/admin/credits",    label: "Credits",      icon: "💳" },
   ];
 
   return (

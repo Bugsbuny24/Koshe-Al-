@@ -1,5 +1,4 @@
 // Credit system type definitions
-// TODO: Sync these types with real DB schema when credit tables are created
 
 export type CreditUsageType =
   | "text_chat_message"

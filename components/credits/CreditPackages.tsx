@@ -57,7 +57,6 @@ export default function CreditPackages() {
               ))}
             </ul>
 
-            {/* TODO: Connect to payment backend (Shopier / Stripe) */}
             <Link
               href="/pricing"
               className={[

@@ -1,82 +1,23 @@
 import Link from "next/link";
+import { MENTORS } from "@/lib/data/mentors";
+import { FACULTIES } from "@/lib/data/academic-catalog";
+import { CREDIT_PACKAGES_DEF } from "@/lib/data/credit-packages";
 
-const mentors = [
-  {
-    id: "elena",
-    name: "Elena",
-    title: "English Speaking Mentor",
-    specialization: "Akıcılık, Konuşma & Telaffuz",
-    initials: "EL",
-    gradient: "from-cyan-400 to-blue-500",
-  },
-  {
-    id: "atlas",
-    name: "Atlas",
-    title: "AI & Technology Mentor",
-    specialization: "Teknik İngilizce, AI Kavramları & İnovasyon",
-    initials: "AT",
-    gradient: "from-violet-400 to-fuchsia-500",
-  },
-  {
-    id: "mira",
-    name: "Mira",
-    title: "Communication Mentor",
-    specialization: "İş İngilizcesi, Sunum & Liderlik",
-    initials: "MI",
-    gradient: "from-amber-400 to-orange-500",
-  },
-];
-
-const faculties = [
-  { icon: "🌐", name: "Languages", desc: "İngilizce, Almanca, Fransızca ve daha fazlası" },
-  { icon: "🤖", name: "AI & Technology", desc: "Teknik dil, AI kavramları ve inovasyon" },
-  { icon: "💼", name: "Business & Communication", desc: "İş dünyası, sunum ve liderlik" },
-  { icon: "🎨", name: "Creative Arts", desc: "Yaratıcı yazarlık ve anlatım sanatı" },
-];
-
-const howItWorks = [
+const HOW_IT_WORKS = [
   { step: "01", title: "Programını Seç", desc: "Fakülten ve seviyene göre akademik programını belirle." },
   { step: "02", title: "Mentorla Çalış", desc: "AI mentorın sana özel ders ve speaking practice yap." },
   { step: "03", title: "Rozet & Sertifika Kazan", desc: "Her ilerleme adımında rozet kazan, bitirince sertifikanı al." },
   { step: "04", title: "İlerlemeni Kanıtla", desc: "Speaking score, hafıza ve istatistiklerle gelişimini izle." },
-];
+] as const;
 
-const features = [
+const FEATURES = [
   { icon: "🎤", title: "Live Speaking Practice", desc: "AI mentorla gerçek zamanlı konuşma pratiği" },
   { icon: "🧠", title: "Error Memory", desc: "Hatalarını hatırlar, tekrar yapmamanı sağlar" },
   { icon: "🏅", title: "Badges", desc: "Her ilerlemende özel rozetler kazanırsın" },
   { icon: "📜", title: "Certificates", desc: "Tamamladığın programlar için sertifika" },
   { icon: "📊", title: "Speaking Score", desc: "Fluency, grammar ve vocabulary puanları" },
   { icon: "✨", title: "NFT Collection", desc: "Nadir koleksiyon ödülleri" },
-];
-
-const creditPackages = [
-  {
-    badge: "🌱",
-    name: "Starter",
-    credits: 100,
-    price: "₺199",
-    shopier: "https://www.shopier.com/TradeVisual/45264454",
-    popular: false,
-  },
-  {
-    badge: "🚀",
-    name: "Growth",
-    credits: 300,
-    price: "₺499",
-    shopier: "https://www.shopier.com/TradeVisual/45264598",
-    popular: true,
-  },
-  {
-    badge: "⚡",
-    name: "Power",
-    credits: 1000,
-    price: "₺1.299",
-    // TODO: replace with dedicated Power package Shopier URL
-    shopier: "https://www.shopier.com/TradeVisual/45264598",
-    popular: false,
-  },
-];
+] as const;
 
 export default function HomePage() {
   return (
@@ -123,7 +64,7 @@ export default function HomePage() {
 
             <div className="mt-10 grid gap-4 sm:grid-cols-3">
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
-                <div className="text-2xl font-semibold">4</div>
+                <div className="text-2xl font-semibold">{FACULTIES.length}</div>
                 <div className="mt-1 text-sm text-slate-400">Fakülte</div>
               </div>
               <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-xl">
@@ -137,18 +78,18 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Mock UI panel */}
+          {/* Mentor preview panel */}
           <div className="relative z-10">
             <div className="mx-auto max-w-xl rounded-[28px] border border-white/10 bg-gradient-to-b from-white/10 to-white/5 p-4 shadow-[0_0_60px_rgba(59,130,246,0.08)] backdrop-blur-xl">
               <div className="rounded-[24px] border border-white/10 bg-[#081122] p-4">
                 <div className="flex items-center justify-between border-b border-white/10 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 text-sm font-bold">
-                      EL
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r ${MENTORS[0].gradientFrom} ${MENTORS[0].gradientTo} text-sm font-bold`}>
+                      {MENTORS[0].avatarInitials}
                     </div>
                     <div>
-                      <div className="font-semibold">Elena</div>
-                      <div className="text-xs text-slate-400">English Mentor</div>
+                      <div className="font-semibold">{MENTORS[0].name}</div>
+                      <div className="text-xs text-slate-400">{MENTORS[0].title}</div>
                     </div>
                   </div>
                   <div className="rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-300">
@@ -159,7 +100,7 @@ export default function HomePage() {
                 <div className="space-y-4 py-5">
                   <div className="flex justify-start">
                     <div className="max-w-[85%] rounded-2xl rounded-tl-md bg-white/5 px-4 py-3 text-sm text-slate-200">
-                      Hello! Today we'll practice a real conversation. Tell me about your goals.
+                      Hello! Today we&apos;ll practice a real conversation. Tell me about your goals.
                     </div>
                   </div>
 
@@ -207,7 +148,7 @@ export default function HomePage() {
             <h2 className="mt-4 text-3xl font-semibold md:text-4xl">4 Adımda Ustalaş</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-4">
-            {howItWorks.map((item) => (
+            {HOW_IT_WORKS.map((item) => (
               <div
                 key={item.step}
                 className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
@@ -228,14 +169,14 @@ export default function HomePage() {
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">Akademik Programlar</h2>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
-          {faculties.map((f) => (
+          {FACULTIES.map((f) => (
             <div
-              key={f.name}
+              key={f.code}
               className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
             >
               <div className="text-3xl">{f.icon}</div>
               <div className="mt-3 text-lg font-semibold">{f.name}</div>
-              <p className="mt-2 text-sm text-slate-400">{f.desc}</p>
+              <p className="mt-2 text-sm text-slate-400">{f.description}</p>
             </div>
           ))}
         </div>
@@ -257,13 +198,13 @@ export default function HomePage() {
             <h2 className="mt-4 text-3xl font-semibold md:text-4xl">AI Mentor Kadrosu</h2>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
-            {mentors.map((m) => (
+            {MENTORS.map((m) => (
               <div
                 key={m.id}
                 className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
               >
-                <div className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r ${m.gradient} text-lg font-bold`}>
-                  {m.initials}
+                <div className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r ${m.gradientFrom} ${m.gradientTo} text-lg font-bold`}>
+                  {m.avatarInitials}
                 </div>
                 <div className="mt-4 text-xl font-semibold">{m.name}</div>
                 <div className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">{m.title}</div>
@@ -281,7 +222,7 @@ export default function HomePage() {
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">Neler Sunuyoruz</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
+          {FEATURES.map((f) => (
             <div
               key={f.title}
               className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
@@ -310,43 +251,52 @@ export default function HomePage() {
           </div>
 
           <div className="grid gap-6 sm:grid-cols-3">
-            {creditPackages.map((pkg) => (
+            {CREDIT_PACKAGES_DEF.map((pkg) => (
               <div
-                key={pkg.name}
+                key={pkg.id}
                 className={[
                   "relative rounded-3xl border p-8 transition",
-                  pkg.popular
+                  pkg.isPopular
                     ? "border-fuchsia-500/40 bg-gradient-to-b from-fuchsia-500/10 to-violet-500/10"
                     : "border-white/10 bg-white/5",
                 ].join(" ")}
               >
-                {pkg.popular && (
+                {pkg.isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="rounded-full bg-fuchsia-500 px-3 py-1 text-xs font-semibold text-white">
                       En Popüler
                     </span>
                   </div>
                 )}
-                <div className="text-3xl">{pkg.badge}</div>
                 <div className="mt-3 text-sm uppercase tracking-[0.2em] text-slate-400">{pkg.name}</div>
-                <div className="mt-4 text-4xl font-bold">{pkg.price}</div>
+                <div className="mt-4 text-4xl font-bold">{pkg.priceTRY}</div>
                 <div className="mt-3 text-2xl font-semibold text-cyan-300">
                   {pkg.credits.toLocaleString("tr-TR")}
                   <span className="ml-1.5 text-sm font-normal text-slate-400">kredi</span>
                 </div>
-                <a
-                  href={pkg.shopier}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={[
-                    "mt-8 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
-                    pkg.popular
-                      ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
-                      : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
-                  ].join(" ")}
-                >
-                  {pkg.name} Paketi Al
-                </a>
+                {pkg.shopierUrl ? (
+                  <a
+                    href={pkg.shopierUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={[
+                      "mt-8 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
+                      pkg.isPopular
+                        ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
+                        : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
+                    ].join(" ")}
+                  >
+                    {pkg.name} Paketi Al
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="mt-8 block w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-slate-500"
+                  >
+                    Yakında
+                  </button>
+                )}
               </div>
             ))}
           </div>

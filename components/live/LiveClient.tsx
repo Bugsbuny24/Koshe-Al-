@@ -68,6 +68,15 @@ export default function LiveClient({
   const [autoSpeak, setAutoSpeak] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [speechError, setSpeechError] = useState("");
+
+  // ── Rate limit: 2-second cooldown between submissions ───────────────────────
+  const lastSubmitRef = useRef<number>(0);
+  const SUBMIT_COOLDOWN_MS = 2000;
+
+  // ── Session limit: 10-minute maximum ────────────────────────────────────────
+  const SESSION_LIMIT_MS = 10 * 60 * 1000;
+  const sessionStartRef = useRef<number>(Date.now());
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [teacherReply, setTeacherReply] = useState(
     `Hello! I'm ready to help you practice ${targetLanguage}. Tell me about yourself.`
   );
@@ -144,6 +153,15 @@ export default function LiveClient({
 
   function startRecording() {
     if (!canStart) return;
+    if (sessionExpired) {
+      setSpeechError("Oturum süresi doldu (10 dk). Yeni oturum başlatın.");
+      return;
+    }
+    if (Date.now() - sessionStartRef.current > SESSION_LIMIT_MS) {
+      setSessionExpired(true);
+      setSpeechError("Oturum süresi doldu (10 dk). Yeni oturum başlatın.");
+      return;
+    }
     if (!recognitionSupported) {
       setSpeechError("Bu tarayıcı mikrofon konuşma tanımayı desteklemiyor.");
       return;
@@ -169,7 +187,7 @@ export default function LiveClient({
 
       recognitionRef.current = recognition;
       recognition.start();
-    } catch (error) {
+    } catch {
       setIsRecording(false);
       setSpeechError("Mikrofon başlatılamadı.");
     }
@@ -182,11 +200,26 @@ export default function LiveClient({
 
   async function submitAnswer() {
     if (!canStart) return;
+    if (sessionExpired) {
+      setSpeechError("Oturum süresi doldu (10 dk). Yeni oturum başlatın.");
+      return;
+    }
+    if (Date.now() - sessionStartRef.current > SESSION_LIMIT_MS) {
+      setSessionExpired(true);
+      setSpeechError("Oturum süresi doldu (10 dk). Yeni oturum başlatın.");
+      return;
+    }
+    const now = Date.now();
+    if (now - lastSubmitRef.current < SUBMIT_COOLDOWN_MS) {
+      setSpeechError("Lütfen bir saniye bekleyin...");
+      return;
+    }
     const trimmed = answer.trim();
     if (!trimmed || isLoading) return;
 
     setSpeechError("");
     setIsLoading(true);
+    lastSubmitRef.current = Date.now();
 
     const nextHistory: ConversationTurn[] = [
       ...history,
@@ -234,7 +267,7 @@ export default function LiveClient({
       ]);
 
       setAnswer("");
-    } catch (error) {
+    } catch {
       setSpeechError("Bağlantı hatası oluştu.");
     } finally {
       setIsLoading(false);
@@ -370,6 +403,14 @@ Vocabulary: ${speakingScore.vocabulary}`;
             {speechError}
           </div>
         ) : null}
+
+        {sessionExpired && (
+          <div className="mb-6 rounded-[28px] border border-amber-400/20 bg-amber-500/10 p-5">
+            <p className="text-sm font-medium text-amber-300">
+              ⏱ Oturum süresi doldu (10 dk). Sayfayı yenileyerek yeni oturum başlatabilirsiniz.
+            </p>
+          </div>
+        )}
 
         <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-6">
