@@ -46,8 +46,10 @@ export async function getUserCredits(userId: string): Promise<{
 }
 
 // ── deductCredits ─────────────────────────────────────────────────────────────
-// Deducts credits from user_quotas and writes a usage_logs row.
-// Not atomic — race conditions are possible but acceptable at this stage.
+// Atomically deducts credits from user_quotas using a conditional UPDATE.
+// The WHERE clause (gte) ensures credits_remaining >= cost, so the update
+// is rejected when credits are insufficient. We optimistically compute the
+// new balance after the check so no negative balances are possible.
 // Returns true on success, false on insufficient credits or DB error.
 export async function deductCredits(
   userId: string,
@@ -57,23 +59,36 @@ export async function deductCredits(
     const cost = ACTION_COSTS[actionType];
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    // Step 1: read current balance
+    const { data: quota, error: readError } = await supabase
       .from("user_quotas")
       .select("credits_remaining")
       .eq("user_id", userId)
       .maybeSingle();
 
-    if (error || !data) return false;
+    if (readError || !quota) return false;
 
-    const current = Number(data.credits_remaining ?? 0);
+    const current = Number(quota.credits_remaining ?? 0);
     if (current < cost) return false;
 
-    const { error: updateError } = await supabase
+    // Step 2: conditional update — optimistic lock on the exact current value.
+    // If another request modified credits_remaining between steps 1 and 2,
+    // the .eq("credits_remaining", current) clause will find no matching row
+    // and the update returns null, causing us to fail safely.
+    // The .gte(..., cost) clause additionally prevents any path to negative balances.
+    const { data: updated, error: updateError } = await supabase
       .from("user_quotas")
-      .update({ credits_remaining: current - cost, updated_at: new Date().toISOString() })
-      .eq("user_id", userId);
+      .update({
+        credits_remaining: current - cost,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", userId)
+      .eq("credits_remaining", current)
+      .gte("credits_remaining", cost)
+      .select("credits_remaining")
+      .maybeSingle();
 
-    if (updateError) return false;
+    if (updateError || !updated) return false;
 
     // Write usage log — failure here is non-fatal
     await supabase.from("usage_logs").insert({

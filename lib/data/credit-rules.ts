@@ -36,7 +36,6 @@ export const CREDIT_COST_RULES: UsageCostRule[] = [
 ];
 
 // ── Credit package definitions ────────────────────────────────────────────────
-// TODO: Connect packages to payment backend (Shopier / Stripe) when ready.
 export const CREDIT_PACKAGES: CreditPackage[] = [
   {
     id: "starter",
