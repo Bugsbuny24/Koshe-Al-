@@ -30,7 +30,7 @@ export default async function LessonPage() {
       (d) => d.name.toLowerCase() === targetLanguage.toLowerCase()
     )?.code ?? targetLanguage.slice(0, 2).toLowerCase();
 
-  const lessonCreditCost = 5;
+  const lessonCreditCost = 1;
   const creditState = await getUserCredits(user.id);
   const canGenerateLesson =
     creditState.exists && creditState.isActive && creditState.credits >= lessonCreditCost;
