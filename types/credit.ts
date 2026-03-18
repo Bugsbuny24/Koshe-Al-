@@ -32,15 +32,4 @@ export type UsageCostRule = {
   label: string;
 };
 
-export type CreditPackage = {
-  id: string;
-  name: string;
-  credits: number;
-  priceDisplay: string;
-  description: string;
-  isPopular?: boolean;
-  badge: string;
-  features: string[];
-};
-
 export type CreditWarningState = "ok" | "low" | "critical" | "empty";
