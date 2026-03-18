@@ -527,30 +527,23 @@ Vocabulary: ${speakingScore.vocabulary}`;
               </div>
             )}
 
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
-              <h3 className="text-lg font-semibold">Voice Engine Durumu</h3>
-
-              <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-sm text-slate-400">Speech Recognition</div>
-                  <div className="mt-2 text-base font-medium text-white">
-                    {recognitionSupported ? "Destekleniyor" : "Desteklenmiyor"}
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-                  <div className="text-sm text-slate-400">Speech Synthesis</div>
-                  <div className="mt-2 text-base font-medium text-white">
-                    {synthesisSupported ? "Destekleniyor" : "Desteklenmiyor"}
-                  </div>
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium text-slate-300">Ses Motoru</h3>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className={recognitionSupported ? "text-emerald-400" : "text-red-400"}>
+                    {recognitionSupported ? "🎙 Mic ✓" : "🎙 Mic ✗"}
+                  </span>
+                  <span className={synthesisSupported ? "text-emerald-400" : "text-amber-400"}>
+                    {synthesisSupported ? "🔊 Ses ✓" : "🔊 Ses ✗"}
+                  </span>
                 </div>
               </div>
-
-              <p className="mt-4 text-sm leading-7 text-slate-400">
-                Bu sürümde gerçek zamanlı sesli konuşma tarayıcı speech API ile
-                çalışır. Sunucu taraflı STT/TTS istersen sonraki adımda harici
-                provider bağlarız.
-              </p>
+              {(!recognitionSupported || !synthesisSupported) && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Chrome/Edge kullanmak en iyi ses deneyimini sağlar.
+                </p>
+              )}
             </div>
 
             {/* ── Navigation CTAs ────────────────────────────────────────── */}

@@ -7,7 +7,7 @@ type GrammarBoardProps = {
 export default function GrammarBoard({ notes }: GrammarBoardProps) {
   return (
     <BoardShell
-      title="Grammar Notes"
+      title="Grammar Notları"
       subtitle="Kısa ve net dilbilgisi açıklamaları"
     >
       {notes.length > 0 ? (
@@ -22,8 +22,9 @@ export default function GrammarBoard({ notes }: GrammarBoardProps) {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-400">
-          Henüz grammar notu yok.
+        <div className="rounded-2xl border border-white/8 bg-black/20 p-5 text-center">
+          <p className="text-sm text-slate-500">Grammar notları burada görünecek</p>
+          <p className="mt-1 text-xs text-slate-600">Konuştuktan sonra Koshei gramer analizini paylaşır</p>
         </div>
       )}
     </BoardShell>

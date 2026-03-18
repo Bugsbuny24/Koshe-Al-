@@ -67,14 +67,35 @@ export default async function FeedbackPage(props: {
           </p>
           <h1 className="text-3xl font-semibold">Geri Bildirim Gönder</h1>
           <p className="mt-3 text-sm text-slate-300">
-            Eksik yönleri, hataları, geliştirme önerilerini veya istediğin yeni
-            özellikleri bize buradan yazabilirsin.
+            Koshei'yi daha iyi hale getirmek için deneyimini paylaş. Her geri bildirim dikkate alınır.
           </p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            {[
+              { icon: "🐛", label: "Hata Bildirimi", desc: "Çalışmayan özellik veya beklenmedik davranış" },
+              { icon: "💡", label: "Özellik Önerisi", desc: "Eklemesini istediğin yeni bir özellik" },
+              { icon: "📚", label: "Eksik İçerik", desc: "Olmayan ders, seviye veya içerik eksikliği" },
+              { icon: "💳", label: "Ödeme / Kredi Sorunu", desc: "Kredi yüklenmedi veya ödeme problemi" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-start gap-3 rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+                <span className="text-lg">{item.icon}</span>
+                <div>
+                  <div className="text-xs font-medium text-slate-200">{item.label}</div>
+                  <div className="mt-0.5 text-xs text-slate-500">{item.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
         {success ? (
-          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-            {success}
+          <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">✅</span>
+              <div>
+                <div className="text-sm font-medium text-emerald-200">Geri bildirim gönderildi</div>
+                <div className="mt-0.5 text-xs text-emerald-300/70">{success} — Ekip en kısa sürede değerlendirecek.</div>
+              </div>
+            </div>
           </div>
         ) : null}
 

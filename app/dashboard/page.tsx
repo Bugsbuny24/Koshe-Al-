@@ -311,13 +311,17 @@ export default async function DashboardPage() {
                   })}
                 </div>
               ) : (
-                <div className="mt-5">
-                  <p className="text-sm text-slate-400">Henüz kurs kaydın yok.</p>
+                <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
+                  <div className="text-2xl">🎓</div>
+                  <p className="mt-3 text-sm font-medium text-slate-300">Henüz aktif kurs yok</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Bir dil programına kayıt olarak öğrenme yolculuğuna başlayabilirsin.
+                  </p>
                   <Link
                     href="/courses"
-                    className="mt-3 inline-block rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-white/10"
+                    className="mt-4 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:bg-white/10"
                   >
-                    Kurslara Göz At →
+                    📚 Programlara Göz At →
                   </Link>
                 </div>
               )}
@@ -362,8 +366,13 @@ export default async function DashboardPage() {
               ) : null}
 
               <Surface>
-                <div className="metric-label">NFT Koleksiyonları</div>
+                <div className="metric-label">Koleksiyon Ödülleri</div>
                 <div className="metric-value">{collectibleCount?.length || 0}</div>
+                {(!collectibleCount || collectibleCount.length === 0) && (
+                  <p className="mt-2 text-xs text-slate-500">
+                    Özel başarılarda nadir koleksiyonlar kazanılır
+                  </p>
+                )}
                 <Link
                   href="/profile"
                   className="mt-3 block text-xs text-cyan-300 hover:underline"
@@ -405,22 +414,34 @@ export default async function DashboardPage() {
           </Surface>
 
           <div className="xl:col-span-3">
-            <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               <Surface>
                 <div className="metric-label">Son Fluency</div>
                 <div className="metric-value">{latestScore?.fluency_score || 0}</div>
+                {!latestScore?.fluency_score && (
+                  <p className="mt-2 text-xs text-slate-500">İlk canlı pratiğinden sonra burada görünür</p>
+                )}
               </Surface>
               <Surface>
                 <div className="metric-label">Son Grammar</div>
                 <div className="metric-value">{latestScore?.grammar_score || 0}</div>
+                {!latestScore?.grammar_score && (
+                  <p className="mt-2 text-xs text-slate-500">Canlı pratikte grammar skoru otomatik hesaplanır</p>
+                )}
               </Surface>
               <Surface>
                 <div className="metric-label">Son Vocabulary</div>
                 <div className="metric-value">{latestScore?.vocabulary_score || 0}</div>
+                {!latestScore?.vocabulary_score && (
+                  <p className="mt-2 text-xs text-slate-500">Konuşmanda kullandığın kelimeler ölçülür</p>
+                )}
               </Surface>
               <Surface>
                 <div className="metric-label">Toplam Session</div>
                 <div className="metric-value">{sessionRows.length}</div>
+                {sessionRows.length === 0 && (
+                  <p className="mt-2 text-xs text-slate-500">Her canlı pratik bir session olarak kaydedilir</p>
+                )}
               </Surface>
             </div>
 
@@ -428,14 +449,23 @@ export default async function DashboardPage() {
               <Surface>
                 <div className="metric-label">Ortalama Fluency</div>
                 <div className="metric-value">{Math.round(avgFluency)}</div>
+                {sessionRows.length === 0 && (
+                  <p className="mt-2 text-xs text-slate-500">Tüm sessionların ortalaması burada gösterilir</p>
+                )}
               </Surface>
               <Surface>
                 <div className="metric-label">Ortalama Grammar</div>
                 <div className="metric-value">{Math.round(avgGrammar)}</div>
+                {sessionRows.length === 0 && (
+                  <p className="mt-2 text-xs text-slate-500">Gramer doğruluğun session başına ölçülür</p>
+                )}
               </Surface>
               <Surface>
                 <div className="metric-label">Ortalama Vocabulary</div>
                 <div className="metric-value">{Math.round(avgVocab)}</div>
+                {sessionRows.length === 0 && (
+                  <p className="mt-2 text-xs text-slate-500">Kelime çeşitliliğin ve gücün burada izlenir</p>
+                )}
               </Surface>
             </div>
 
@@ -486,7 +516,19 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-6 text-slate-400">Henüz kayıtlı hata yok.</p>
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
+                <div className="text-2xl">🧠</div>
+                <p className="mt-3 text-sm font-medium text-slate-300">Henüz hata kaydı yok</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Canlı pratik yaptıkça Koshei hatalarını hafızaya alır ve burada gösterir.
+                </p>
+                <Link
+                  href="/live"
+                  className="mt-4 inline-flex items-center gap-1 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
+                >
+                  🎤 Canlı Pratiğe Geç →
+                </Link>
+              </div>
             )}
           </Surface>
 
@@ -512,7 +554,19 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-6 text-slate-400">Henüz kayıtlı kelime yok.</p>
+              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
+                <div className="text-2xl">📚</div>
+                <p className="mt-3 text-sm font-medium text-slate-300">Henüz kelime eklenmedi</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Her canlı pratikten sonra konuşmanda öne çıkan kelimeler otomatik eklenir.
+                </p>
+                <Link
+                  href="/live"
+                  className="mt-4 inline-flex items-center gap-1 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
+                >
+                  🎤 İlk Pratikini Yap →
+                </Link>
+              </div>
             )}
           </Surface>
         </div>
