@@ -63,8 +63,7 @@ export async function POST(req: Request) {
     await deductCredits(user.id, "lesson_generation");
 
     return NextResponse.json(lesson);
-  } catch (error) {
-    void error;
+  } catch {
     return NextResponse.json(
       { error: "Lesson generation failed" },
       { status: 500 }

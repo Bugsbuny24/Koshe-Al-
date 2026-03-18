@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { CollectibleRewardRecord } from "@/types/university";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
-import { DEPARTMENTS } from "@/lib/data/curriculum";
 import CreditDisplay from "@/components/credits/CreditDisplay";
 
 type ProfileRow = {
@@ -345,7 +344,17 @@ export default async function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-6 text-slate-400">Henüz rozet kazanılmadı.</p>
+              <div className="mt-6 rounded-2xl border border-dashed border-white/10 p-8 text-center">
+                <div className="text-3xl">🏅</div>
+                <p className="mt-3 text-sm font-medium text-slate-300">Henüz rozet kazanılmadı</p>
+                <p className="mt-1 text-xs text-slate-500">Kurslara katıl ve canlı pratik yap — rozetler otomatik kazanılır.</p>
+                <Link
+                  href="/courses"
+                  className="mt-4 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:bg-white/10"
+                >
+                  📚 Programlara Göz At →
+                </Link>
+              </div>
             )}
           </div>
 
@@ -397,9 +406,17 @@ export default async function ProfilePage() {
                 ))}
               </div>
             ) : (
-              <p className="mt-6 text-slate-400">
-                Henüz sertifika kazanılmadı.
-              </p>
+              <div className="mt-6 rounded-2xl border border-dashed border-fuchsia-500/20 p-8 text-center">
+                <div className="text-3xl">🎓</div>
+                <p className="mt-3 text-sm font-medium text-slate-300">Henüz sertifika kazanılmadı</p>
+                <p className="mt-1 text-xs text-slate-500">Bir programı tamamladığında sertifikan burada görünür.</p>
+                <Link
+                  href="/courses"
+                  className="mt-4 inline-flex items-center gap-1 rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-xs text-fuchsia-300 transition hover:bg-fuchsia-500/20"
+                >
+                  🎓 Programa Başla →
+                </Link>
+              </div>
             )}
           </div>
         </section>
