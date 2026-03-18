@@ -6,6 +6,12 @@ import type { CollectibleRewardRecord } from "@/types/university";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import { DEPARTMENTS } from "@/lib/data/curriculum";
+import CreditBalanceCard from "@/components/credits/CreditBalanceCard";
+import CreditPackages from "@/components/credits/CreditPackages";
+import {
+  getMockCreditBalance,
+  getMockCreditTransactions,
+} from "@/lib/credits/credit-helpers";
 
 type ProfileRow = {
   full_name: string | null;
@@ -116,6 +122,10 @@ export default async function ProfilePage() {
   ]);
 
   const activeEnrollment = enrollments?.[0] || null;
+
+  // TODO: Replace with real Supabase queries when credit_balances / credit_transactions tables exist
+  const creditBalance = getMockCreditBalance(user.id);
+  const creditTransactions = getMockCreditTransactions(user.id);
 
   return (
     <main className="min-h-screen px-4 py-8 text-white sm:px-6">
@@ -644,6 +654,19 @@ export default async function ProfilePage() {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* ── Credit Balance ────────────────────────────────────────────────── */}
+        <section className="mt-8">
+          <CreditBalanceCard
+            balance={creditBalance}
+            recentTransactions={creditTransactions}
+          />
+        </section>
+
+        {/* ── Credit Packages ───────────────────────────────────────────────── */}
+        <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+          <CreditPackages />
         </section>
       </div>
     </main>

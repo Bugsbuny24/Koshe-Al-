@@ -2,6 +2,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import LiveClient from "@/components/live/LiveClient";
 import { DEPARTMENTS } from "@/lib/data/curriculum";
+import {
+  getMockCreditBalance,
+  buildCreditWarningState,
+  estimateSessionCost,
+} from "@/lib/credits/credit-helpers";
 
 export default async function LivePage() {
   const supabase = await createClient();
@@ -38,12 +43,21 @@ export default async function LivePage() {
       (d) => d.name.toLowerCase() === targetLanguage.toLowerCase()
     )?.code ?? targetLanguage.slice(0, 2).toLowerCase();
 
+  // TODO: Replace with real Supabase query when credit_balances table exists
+  const creditBalance = getMockCreditBalance(user.id);
+  const estimatedMinutes = 10;
+  const estimatedCost = estimateSessionCost("live", estimatedMinutes);
+  const creditWarningState = buildCreditWarningState(creditBalance.balance);
+
   return (
     <LiveClient
       nativeLanguage={profile.native_language || "Turkish"}
       targetLanguage={targetLanguage}
       stage={profile.difficulty_level || "A1"}
       languageCode={langCode}
+      creditBalance={creditBalance.balance}
+      estimatedCost={estimatedCost}
+      creditWarningState={creditWarningState}
     />
   );
 }

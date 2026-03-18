@@ -9,6 +9,7 @@ import GrammarBoard from "@/components/board/GrammarBoard";
 import VocabBoard from "@/components/board/VocabBoard";
 import NextActionBoard from "@/components/board/NextActionBoard";
 import MentorCard from "@/components/live/MentorCard";
+import CreditWarning from "@/components/credits/CreditWarning";
 import type { ChatRouteResponse } from "@/lib/ai/types";
 import {
   browserSupportsSpeechRecognition,
@@ -21,6 +22,7 @@ import { getSpeechLocaleByLanguageName } from "@/lib/constants/languages";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import type { MentorState } from "@/lib/data/mentors";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
+import type { CreditWarningState } from "@/types/credit";
 
 type LiveClientProps = {
   nativeLanguage: string;
@@ -28,6 +30,10 @@ type LiveClientProps = {
   stage: string;
   /** Optional: language code (e.g. "en") for academic context & mentor lookup */
   languageCode?: string;
+  /** Credit system — optional, fails safely when not provided */
+  creditBalance?: number;
+  estimatedCost?: number;
+  creditWarningState?: CreditWarningState;
 };
 
 type ConversationTurn = {
@@ -40,6 +46,9 @@ export default function LiveClient({
   targetLanguage,
   stage,
   languageCode,
+  creditBalance = 999,
+  estimatedCost = 0,
+  creditWarningState = "ok",
 }: LiveClientProps) {
   // ── Derive mentor + academic context ────────────────────────────────────────
   const mentor = useMemo(
@@ -264,6 +273,18 @@ Vocabulary: ${speakingScore.vocabulary}`;
   return (
     <main className="min-h-screen bg-[#050816] px-4 py-8 text-white md:px-6">
       <div className="mx-auto max-w-7xl">
+        {/* ── Credit warning / session cost ───────────────────────────────── */}
+        {(creditWarningState !== "ok" || estimatedCost > 0) && (
+          <div className="mb-6">
+            <CreditWarning
+              warningState={creditWarningState}
+              balance={creditBalance}
+              estimatedCost={estimatedCost}
+              featureLabel="Canlı Pratik (10 dk)"
+            />
+          </div>
+        )}
+
         {/* ── Mentor + Academic Context Header ────────────────────────────── */}
         <div className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-blue-500/10 to-cyan-500/10 p-6">
           {/* Academic breadcrumb */}
