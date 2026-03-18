@@ -3,8 +3,9 @@ import type { Metadata } from "next";
 import Navbar from "@/components/shared/Navbar";
 
 export const metadata: Metadata = {
-  title: "Koshei — AI Dil Öğretmeni",
-  description: "80 dilde AI konuşma pratiği. Konuş, hata yap, düzelt.",
+  title: "Koshei AI University",
+  description:
+    "AI mentor eşliğinde akademik dil programları. Speaking practice, rozet, sertifika ve kredi tabanlı öğrenme.",
 };
 
 export default function RootLayout({

@@ -6,12 +6,7 @@ import type { CollectibleRewardRecord } from "@/types/university";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import { DEPARTMENTS } from "@/lib/data/curriculum";
-import CreditBalanceCard from "@/components/credits/CreditBalanceCard";
-import CreditPackages from "@/components/credits/CreditPackages";
-import {
-  getMockCreditBalance,
-  getMockCreditTransactions,
-} from "@/lib/credits/credit-helpers";
+import CreditDisplay from "@/components/credits/CreditDisplay";
 
 type ProfileRow = {
   full_name: string | null;
@@ -122,10 +117,6 @@ export default async function ProfilePage() {
   ]);
 
   const activeEnrollment = enrollments?.[0] || null;
-
-  // TODO: Replace with real Supabase queries when credit_balances / credit_transactions tables exist
-  const creditBalance = getMockCreditBalance(user.id);
-  const creditTransactions = getMockCreditTransactions(user.id);
 
   return (
     <main className="min-h-screen px-4 py-8 text-white sm:px-6">
@@ -658,15 +649,25 @@ export default async function ProfilePage() {
 
         {/* ── Credit Balance ────────────────────────────────────────────────── */}
         <section className="mt-8">
-          <CreditBalanceCard
-            balance={creditBalance}
-            recentTransactions={creditTransactions}
-          />
+          <CreditDisplay variant="full" />
         </section>
 
-        {/* ── Credit Packages ───────────────────────────────────────────────── */}
+        {/* ── Kredi Paketleri CTA ───────────────────────────────────────────── */}
         <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
-          <CreditPackages />
+          <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">
+            Kredi Paketleri
+          </p>
+          <p className="mt-2 text-sm text-slate-400">
+            Kredinizi artırmak için bir paket seçin. Ödeme sonrası kısa sürede krediniz yüklenir.
+          </p>
+          <div className="mt-4">
+            <Link
+              href="/pricing"
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(34,211,238,0.2)] transition hover:opacity-90"
+            >
+              ✦ Paketleri Gör
+            </Link>
+          </div>
         </section>
       </div>
     </main>

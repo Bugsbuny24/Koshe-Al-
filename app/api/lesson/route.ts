@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getUserCredits, deductCredits } from "@/lib/credits/credit-service";
 import { generateLesson } from "@/lib/ai/tutor";
 
 export async function POST(req: Request) {
@@ -14,6 +15,31 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Unauthorized" },
         { status: 401 }
+      );
+    }
+
+    // ── Credit check ──────────────────────────────────────────────────────────
+    const creditState = await getUserCredits(user.id);
+    if (!creditState.exists) {
+      return NextResponse.json(
+        { error: "Kredi hesabınız bulunamadı.", code: "NO_QUOTA", remaining: 0 },
+        { status: 402 }
+      );
+    }
+    if (!creditState.isActive) {
+      return NextResponse.json(
+        { error: "Kredi hesabınız aktif değil.", code: "INACTIVE", remaining: 0 },
+        { status: 402 }
+      );
+    }
+    if (creditState.credits < 5) {
+      return NextResponse.json(
+        {
+          error: "Ders oluşturmak için en az 5 krediniz olmalı.",
+          code: "INSUFFICIENT",
+          remaining: creditState.credits,
+        },
+        { status: 402 }
       );
     }
 
@@ -34,10 +60,11 @@ export async function POST(req: Request) {
       level,
     });
 
+    await deductCredits(user.id, "lesson_generation");
+
     return NextResponse.json(lesson);
   } catch (error) {
-    console.error(error);
-
+    void error;
     return NextResponse.json(
       { error: "Lesson generation failed" },
       { status: 500 }

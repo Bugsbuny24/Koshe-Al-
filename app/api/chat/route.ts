@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getUserCredits, deductCredits } from "@/lib/credits/credit-service";
 import { buildTeacherPrompt } from "@/lib/ai/teacher-engine";
 import { calculateSpeakingScore } from "@/lib/ai/score-engine";
 import {
@@ -155,6 +156,27 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Onboarding incomplete" },
         { status: 403 }
+      );
+    }
+
+    // ── Credit check ────────────────────────────────────────────────────────
+    const creditState = await getUserCredits(user.id);
+    if (!creditState.exists) {
+      return NextResponse.json(
+        { error: "Kredi hesabınız bulunamadı.", code: "NO_QUOTA", remaining: 0 },
+        { status: 402 }
+      );
+    }
+    if (!creditState.isActive) {
+      return NextResponse.json(
+        { error: "Kredi hesabınız aktif değil.", code: "INACTIVE", remaining: 0 },
+        { status: 402 }
+      );
+    }
+    if (creditState.credits < 1) {
+      return NextResponse.json(
+        { error: "Yeterli krediniz yok.", code: "INSUFFICIENT", remaining: 0 },
+        { status: 402 }
       );
     }
 
@@ -364,6 +386,8 @@ export async function POST(req: Request) {
       output_tokens: 0,
       cost: 0,
     });
+
+    await deductCredits(user.id, "chat_message");
 
     const response: ChatRouteResponse = {
       conversationId,
