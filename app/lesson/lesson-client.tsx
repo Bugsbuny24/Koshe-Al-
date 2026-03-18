@@ -113,56 +113,99 @@ export default function LessonClient({
 
         {/* ── Generate button ───────────────────────────────────────────────── */}
         {!lesson ? (
-          <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center">
-            <div className="mb-4 text-4xl">📖</div>
-            <h2 className="text-xl font-semibold">Bugünkü Dersi Başlat</h2>
-            <p className="mt-2 text-sm text-slate-400">
-              {mentor.name} sana {targetLanguage} için kişiselleştirilmiş bir
-              ders hazırlayacak.
-            </p>
-            {/* Credit cost hint */}
-            <div className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-cyan-400/15 bg-cyan-500/8 px-4 py-2 text-xs text-cyan-300/80">
-              <span>✦</span>
-              <span>
-                Bu ders{" "}
-                <strong className="text-cyan-300">{lessonCreditCost} kredi</strong>{" "}
-                kullanır
-              </span>
-            </div>
+          <div className="space-y-5">
+            {/* Pre-lesson info panel */}
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
+              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300/80">Bugünkü Ders</p>
+              <h2 className="mt-2 text-xl font-semibold">
+                {targetLanguage} · {level} — Kişiselleştirilmiş Ders
+              </h2>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {[
+                  {
+                    icon: "🎯",
+                    label: "Bu dersin amacı",
+                    value: `${level} seviyesinde ${targetLanguage} becerilerini geliştirmek`,
+                  },
+                  {
+                    icon: "📖",
+                    label: "Bu derste ne öğreneceksin",
+                    value: "Yeni kelimeler, örnek cümleler ve konuşma pratiği görevi",
+                  },
+                  {
+                    icon: "✦",
+                    label: "Kredi maliyeti",
+                    value: `${lessonCreditCost} kredi — Mevcut: ${currentCredits} kredi`,
+                  },
+                  {
+                    icon: "🔜",
+                    label: "Dersten sonra",
+                    value: "Öğrendiklerini canlı pratikle pekiştir veya yeni ders oluştur",
+                  },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      <span>{item.icon}</span>
+                      <span>{item.label}</span>
+                    </div>
+                    <div className="mt-1.5 text-sm text-slate-300">{item.value}</div>
+                  </div>
+                ))}
+              </div>
 
-            {!canGenerateLesson && (
-              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-                {currentCredits === 0
-                  ? "Krediniz bitti. Ders oluşturmak için kredi yükleyin."
-                  : `Ders için ${lessonCreditCost} kredi gerekli. Mevcut: ${currentCredits} kredi.`}
-                <div className="mt-2">
-                  <Link
-                    href="/pricing"
-                    className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
-                  >
-                    ✦ Kredi Yükle
-                  </Link>
+              <div className="mt-5 flex items-center gap-3 rounded-xl border border-cyan-400/10 bg-cyan-500/5 px-4 py-3">
+                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${mentor.gradientFrom} ${mentor.gradientTo} text-xs font-bold text-white`}>
+                  {mentor.avatarInitials}
+                </div>
+                <div className="text-xs text-slate-400">
+                  <span className="font-medium text-slate-200">{mentor.name}</span> senin için kişiselleştirilmiş bir ders hazırlayacak. {mentor.specialization}.
                 </div>
               </div>
-            )}
+            </div>
 
-            {lessonError && (
-              <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                {lessonError}
-              </div>
-            )}
+            {/* Generate area */}
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center">
+              <div className="mb-4 text-4xl">📖</div>
+              <h2 className="text-xl font-semibold">Dersi Oluştur</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                Hazır olduğunda butona bas — {mentor.name} sana özel{" "}
+                <span className="text-white">{targetLanguage} {level}</span> dersi oluşturur.
+              </p>
 
-            <button
-              onClick={loadLesson}
-              disabled={loading || !canGenerateLesson}
-              className="mt-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(34,211,238,0.25)] transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {loading
-                ? "Yükleniyor..."
-                : !canGenerateLesson
-                ? "Yetersiz Kredi"
-                : "Ders Oluştur"}
-            </button>
+              {!canGenerateLesson && (
+                <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                  {currentCredits === 0
+                    ? "Krediniz bitti. Ders oluşturmak için kredi yükleyin."
+                    : `Ders için ${lessonCreditCost} kredi gerekli. Mevcut: ${currentCredits} kredi.`}
+                  <div className="mt-2">
+                    <Link
+                      href="/pricing"
+                      className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                    >
+                      ✦ Kredi Yükle
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {lessonError && (
+                <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  {lessonError}
+                </div>
+              )}
+
+              <button
+                onClick={loadLesson}
+                disabled={loading || !canGenerateLesson}
+                className="mt-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(34,211,238,0.25)] transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading
+                  ? "Ders hazırlanıyor..."
+                  : !canGenerateLesson
+                  ? "Yetersiz Kredi"
+                  : "Dersi Oluştur"}
+              </button>
+            </div>
           </div>
         ) : null}
 
