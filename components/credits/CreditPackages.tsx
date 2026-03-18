@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CREDIT_PACKAGES } from "@/lib/data/credit-rules";
+import { CREDIT_PACKAGES_DEF } from "@/lib/data/credit-packages";
 
 export default function CreditPackages() {
   return (
@@ -13,8 +13,8 @@ export default function CreditPackages() {
         et.
       </p>
 
-      <div className="mt-6 grid gap-5 sm:grid-cols-3">
-        {CREDIT_PACKAGES.map((pkg) => (
+      <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        {CREDIT_PACKAGES_DEF.map((pkg) => (
           <div
             key={pkg.id}
             className={[
@@ -32,12 +32,11 @@ export default function CreditPackages() {
               </div>
             )}
 
-            <div className="text-2xl">{pkg.badge}</div>
             <div className="mt-3 text-sm uppercase tracking-[0.2em] text-slate-400">
               {pkg.name}
             </div>
             <div className="mt-1 text-3xl font-bold text-white">
-              {pkg.priceDisplay}
+              {pkg.priceTRY}
             </div>
             <div className="mt-1 text-xs text-slate-500">{pkg.description}</div>
 
@@ -48,32 +47,34 @@ export default function CreditPackages() {
               </span>
             </div>
 
-            <ul className="mt-4 space-y-2">
-              {pkg.features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-xs text-slate-300">
-                  <span className="text-cyan-400">✓</span>
-                  {f}
-                </li>
-              ))}
-            </ul>
-
-            <Link
-              href="/pricing"
-              className={[
-                "mt-6 block rounded-2xl px-4 py-2.5 text-center text-sm font-semibold transition",
-                pkg.isPopular
-                  ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
-                  : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
-              ].join(" ")}
-            >
-              Satın Al
-            </Link>
+            {pkg.shopierUrl ? (
+              <a
+                href={pkg.shopierUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={[
+                  "mt-6 block rounded-2xl px-4 py-2.5 text-center text-sm font-semibold transition",
+                  pkg.isPopular
+                    ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
+                    : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
+                ].join(" ")}
+              >
+                {pkg.name} Paketi Al
+              </a>
+            ) : (
+              <Link
+                href="/pricing"
+                className="mt-6 block rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-center text-sm font-semibold text-slate-400 transition hover:bg-white/10"
+              >
+                Yakında
+              </Link>
+            )}
           </div>
         ))}
       </div>
 
       <p className="mt-4 text-xs text-slate-600">
-        * Ödeme entegrasyonu yakında aktif olacak.
+        * Ödeme Shopier üzerinden gerçekleşir, kredi kısa sürede manuel yüklenir.
       </p>
     </div>
   );

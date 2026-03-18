@@ -22,7 +22,7 @@ export default function LessonClient({
   canGenerateLesson = true,
   creditWarningState = "ok",
   currentCredits = 0,
-  lessonCreditCost = 5,
+  lessonCreditCost = 1,
 }: {
   targetLanguage: string;
   level: string;
@@ -47,23 +47,28 @@ export default function LessonClient({
     setCompleted(false);
     setLessonError(null);
 
-    const res = await fetch("/api/lesson", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ language: targetLanguage, level }),
-    });
+    try {
+      const res = await fetch("/api/lesson", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ language: targetLanguage, level }),
+      });
 
-    if (res.status === 402) {
-      const json = await res.json() as Record<string, unknown>;
-      const msg = typeof json.error === "string" ? json.error : "Yeterli krediniz yok.";
-      setLessonError(msg);
+      if (!res.ok) {
+        const json = await res.json() as Record<string, unknown>;
+        const msg = typeof json.error === "string" ? json.error : "Ders oluşturulamadı.";
+        setLessonError(msg);
+        setLoading(false);
+        return;
+      }
+
+      const data = await res.json() as Lesson;
+      setLesson(data);
+    } catch {
+      setLessonError("Bağlantı hatası oluştu.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    const data = await res.json() as Lesson;
-    setLesson(data);
-    setLoading(false);
   }
 
   return (
