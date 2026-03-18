@@ -9,7 +9,7 @@ export type CreditActionType =
 // ── Fixed costs per action ────────────────────────────────────────────────────
 const ACTION_COSTS: Record<CreditActionType, number> = {
   chat_message: 1,
-  lesson_generation: 5,
+  lesson_generation: 1,
   stt_request: 1,
 };
 

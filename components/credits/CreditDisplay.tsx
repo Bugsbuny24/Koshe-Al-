@@ -39,6 +39,10 @@ export default function CreditDisplay({ variant = "full" }: CreditDisplayProps) 
 
     fetch("/api/credits")
       .then((res) => {
+        if (res.status === 401) {
+          // session sona erdi — sessizce null döndür, Navbar chip kaybolur
+          return null;
+        }
         if (!res.ok) return null;
         return res.json() as Promise<CreditApiResponse>;
       })
