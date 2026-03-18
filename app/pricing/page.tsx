@@ -20,7 +20,7 @@ export default function PricingPage() {
         </div>
 
         {/* ── Credit packages ──────────────────────────────────────────────── */}
-        <div className="grid gap-6 sm:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {CREDIT_PACKAGES_DEF.map((pkg) => (
             <div
               key={pkg.id}
@@ -51,6 +51,8 @@ export default function PricingPage() {
                 {pkg.credits.toLocaleString("tr-TR")}
                 <span className="ml-1.5 text-sm font-normal text-slate-400">kredi</span>
               </div>
+
+              <p className="mt-3 text-sm text-slate-400">{pkg.description}</p>
 
               {pkg.shopierUrl ? (
                 <a

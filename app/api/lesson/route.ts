@@ -32,10 +32,10 @@ export async function POST(req: Request) {
         { status: 402 }
       );
     }
-    if (creditState.credits < 5) {
+    if (creditState.credits < 1) {
       return NextResponse.json(
         {
-          error: "Ders oluşturmak için en az 5 krediniz olmalı.",
+          error: "Yeterli krediniz yok.",
           code: "INSUFFICIENT",
           remaining: creditState.credits,
         },

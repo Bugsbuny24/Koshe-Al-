@@ -250,7 +250,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {CREDIT_PACKAGES_DEF.map((pkg) => (
               <div
                 key={pkg.id}
@@ -274,13 +274,14 @@ export default function HomePage() {
                   {pkg.credits.toLocaleString("tr-TR")}
                   <span className="ml-1.5 text-sm font-normal text-slate-400">kredi</span>
                 </div>
+                <p className="mt-2 text-xs text-slate-500">{pkg.description}</p>
                 {pkg.shopierUrl ? (
                   <a
                     href={pkg.shopierUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className={[
-                      "mt-8 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
+                      "mt-6 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
                       pkg.isPopular
                         ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white hover:opacity-90"
                         : "border border-white/10 bg-white/5 text-slate-200 hover:bg-white/10",
@@ -292,7 +293,7 @@ export default function HomePage() {
                   <button
                     type="button"
                     disabled
-                    className="mt-8 block w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-slate-500"
+                    className="mt-6 block w-full cursor-not-allowed rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-slate-500"
                   >
                     Yakında
                   </button>
