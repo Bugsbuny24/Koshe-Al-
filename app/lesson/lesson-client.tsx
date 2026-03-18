@@ -5,7 +5,7 @@ import { useState } from "react";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import MentorCard from "@/components/live/MentorCard";
-import { getUsageCreditCost } from "@/lib/credits/credit-helpers";
+import type { CreditWarningState } from "@/types/credit";
 
 type Lesson = {
   lessonTitle: string;
@@ -19,30 +19,48 @@ export default function LessonClient({
   targetLanguage,
   level,
   languageCode,
+  canGenerateLesson = true,
+  creditWarningState = "ok",
+  currentCredits = 0,
+  lessonCreditCost = 5,
 }: {
   targetLanguage: string;
   level: string;
   languageCode?: string;
+  canGenerateLesson?: boolean;
+  creditWarningState?: CreditWarningState;
+  currentCredits?: number;
+  lessonCreditCost?: number;
 }) {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [lessonError, setLessonError] = useState<string | null>(null);
 
   const langCode = languageCode ?? targetLanguage.slice(0, 2).toLowerCase();
   const academicCtx = getAcademicContext(langCode, level);
   const mentor = getMentorForLanguage(langCode);
-  const lessonCreditCost = getUsageCreditCost("lesson_generation");
 
   async function loadLesson() {
+    if (!canGenerateLesson) return;
     setLoading(true);
     setCompleted(false);
+    setLessonError(null);
 
     const res = await fetch("/api/lesson", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ language: targetLanguage, level }),
     });
 
-    const data = await res.json();
+    if (res.status === 402) {
+      const data = await res.json() as { error?: string };
+      setLessonError(data.error ?? "Yeterli krediniz yok.");
+      setLoading(false);
+      return;
+    }
+
+    const data = await res.json() as Lesson;
     setLesson(data);
     setLoading(false);
   }
@@ -105,12 +123,39 @@ export default function LessonClient({
                 kullanır
               </span>
             </div>
+
+            {!canGenerateLesson && (
+              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                {currentCredits === 0
+                  ? "Krediniz bitti. Ders oluşturmak için kredi yükleyin."
+                  : `Ders için ${lessonCreditCost} kredi gerekli. Mevcut: ${currentCredits} kredi.`}
+                <div className="mt-2">
+                  <Link
+                    href="/pricing"
+                    className="inline-flex items-center gap-1 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90"
+                  >
+                    ✦ Kredi Yükle
+                  </Link>
+                </div>
+              </div>
+            )}
+
+            {lessonError && (
+              <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {lessonError}
+              </div>
+            )}
+
             <button
               onClick={loadLesson}
-              disabled={loading}
-              className="mt-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(34,211,238,0.25)] transition hover:opacity-90 disabled:opacity-50"
+              disabled={loading || !canGenerateLesson}
+              className="mt-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-8 py-3 text-sm font-semibold text-white shadow-[0_0_30px_rgba(34,211,238,0.25)] transition hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {loading ? "Yükleniyor..." : "Ders Oluştur"}
+              {loading
+                ? "Yükleniyor..."
+                : !canGenerateLesson
+                ? "Yetersiz Kredi"
+                : "Ders Oluştur"}
             </button>
           </div>
         ) : null}

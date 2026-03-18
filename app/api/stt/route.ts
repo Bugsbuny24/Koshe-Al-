@@ -1,9 +1,42 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getUserCredits, deductCredits } from "@/lib/credits/credit-service";
 
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // ── Credit check ──────────────────────────────────────────────────────────
+    const creditState = await getUserCredits(user.id);
+    if (!creditState.exists) {
+      return NextResponse.json(
+        { error: "Kredi hesabınız bulunamadı.", code: "NO_QUOTA", remaining: 0 },
+        { status: 402 }
+      );
+    }
+    if (!creditState.isActive) {
+      return NextResponse.json(
+        { error: "Kredi hesabınız aktif değil.", code: "INACTIVE", remaining: 0 },
+        { status: 402 }
+      );
+    }
+    if (creditState.credits < 1) {
+      return NextResponse.json(
+        { error: "Yeterli krediniz yok.", code: "INSUFFICIENT", remaining: 0 },
+        { status: 402 }
+      );
+    }
+
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: "GEMINI_API_KEY missing" }, { status: 500 });
@@ -43,18 +76,23 @@ export async function POST(req: Request) {
     );
 
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      return NextResponse.json({ error: (err as any)?.error?.message || "STT error" }, { status: 500 });
+      const err = await res.json().catch(() => ({})) as { error?: { message?: string } };
+      return NextResponse.json({ error: err?.error?.message || "STT error" }, { status: 500 });
     }
 
-    const data = await res.json();
+    const data = await res.json() as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    };
     const transcript = data?.candidates?.[0]?.content?.parts
-      ?.map((p: any) => p?.text || "")
+      ?.map((p) => p?.text || "")
       .join("") || "";
 
+    await deductCredits(user.id, "stt_request");
+
     return NextResponse.json({ transcript: transcript.trim() });
-  } catch (e: any) {
-    return NextResponse.json({ error: e?.message || "stt error" }, { status: 500 });
+  } catch (e) {
+    const err = e as { message?: string };
+    return NextResponse.json({ error: err?.message || "stt error" }, { status: 500 });
   }
 }
 

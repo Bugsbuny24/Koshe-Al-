@@ -3,10 +3,10 @@ import { createClient } from "@/lib/supabase/server";
 import LiveClient from "@/components/live/LiveClient";
 import { DEPARTMENTS } from "@/lib/data/curriculum";
 import {
-  getMockCreditBalance,
   buildCreditWarningState,
   estimateSessionCost,
 } from "@/lib/credits/credit-helpers";
+import { getUserCredits } from "@/lib/credits/credit-service";
 
 export default async function LivePage() {
   const supabase = await createClient();
@@ -37,17 +37,17 @@ export default async function LivePage() {
 
   const targetLanguage = profile.target_language || "English";
 
-  // Derive language code for mentor + academic context
   const langCode =
     DEPARTMENTS.find(
       (d) => d.name.toLowerCase() === targetLanguage.toLowerCase()
     )?.code ?? targetLanguage.slice(0, 2).toLowerCase();
 
-  // TODO: Replace with real Supabase query when credit_balances table exists
-  const creditBalance = getMockCreditBalance(user.id);
+  const creditState = await getUserCredits(user.id);
   const estimatedMinutes = 10;
   const estimatedCost = estimateSessionCost("live", estimatedMinutes);
-  const creditWarningState = buildCreditWarningState(creditBalance.balance);
+  const creditWarningState = buildCreditWarningState(creditState.credits);
+  const canStart =
+    creditState.exists && creditState.isActive && creditState.credits >= 1;
 
   return (
     <LiveClient
@@ -55,9 +55,10 @@ export default async function LivePage() {
       targetLanguage={targetLanguage}
       stage={profile.difficulty_level || "A1"}
       languageCode={langCode}
-      creditBalance={creditBalance.balance}
+      creditBalance={creditState.credits}
       estimatedCost={estimatedCost}
       creditWarningState={creditWarningState}
+      canStart={canStart}
     />
   );
 }

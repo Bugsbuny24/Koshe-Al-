@@ -6,11 +6,7 @@ import { SectionHeader, Surface } from "@/components/ui/Surface";
 import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import { DEPARTMENTS } from "@/lib/data/curriculum";
-import CreditBalanceCard from "@/components/credits/CreditBalanceCard";
-import {
-  getMockCreditBalance,
-  getMockCreditTransactions,
-} from "@/lib/credits/credit-helpers";
+import CreditDisplay from "@/components/credits/CreditDisplay";
 
 type ProfileRow = {
   full_name: string | null;
@@ -178,10 +174,6 @@ export default async function DashboardPage() {
   const activeLevel = primaryEnrollment?.level ?? profile?.difficulty_level ?? "A1";
   const academicCtx = getAcademicContext(activeLangCode, activeLevel);
   const mentor = getMentorForLanguage(activeLangCode);
-
-  // TODO: Replace with real Supabase queries when credit_balances / credit_transactions tables exist
-  const creditBalance = getMockCreditBalance(user.id);
-  const creditTransactions = getMockCreditTransactions(user.id);
 
   return (
     <main className="px-4 py-8 sm:px-6 sm:py-10">
@@ -385,10 +377,7 @@ export default async function DashboardPage() {
 
         {/* ── Credit balance ───────────────────────────────────────────────── */}
         <div className="mt-8">
-          <CreditBalanceCard
-            balance={creditBalance}
-            recentTransactions={creditTransactions}
-          />
+          <CreditDisplay variant="full" />
         </div>
 
         {/* ── Stats + profile ──────────────────────────────────────────────── */}

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
-import { formatCreditBalance, getMockCreditBalance } from "@/lib/credits/credit-helpers";
+import { formatCreditBalance } from "@/lib/credits/credit-helpers";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard" },
@@ -18,13 +19,54 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+type CreditApiResponse = {
+  credits: number;
+  isActive: boolean;
+  exists: boolean;
+};
+
+function CreditChip() {
+  const [data, setData] = useState<CreditApiResponse | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/credits")
+      .then((res) => {
+        if (!res.ok) return null;
+        return res.json() as Promise<CreditApiResponse>;
+      })
+      .then((json) => {
+        if (!cancelled) setData(json);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!data || !data.exists) return null;
+
+  const chipColor =
+    data.credits <= 0
+      ? "border-red-400/20 bg-red-500/10 text-red-300"
+      : data.credits <= 5
+      ? "border-amber-400/20 bg-amber-500/10 text-amber-300"
+      : "border-cyan-400/20 bg-cyan-500/10 text-cyan-300";
+
+  return (
+    <Link
+      href="/pricing"
+      className={`hidden items-center gap-1.5 rounded-2xl border px-3 py-2 text-xs font-semibold transition hover:opacity-80 sm:inline-flex ${chipColor}`}
+      title="Kredi Bakiyesi"
+    >
+      <span>✦</span>
+      <span>{formatCreditBalance(data.credits)}</span>
+    </Link>
+  );
+}
+
 export default function Navbar() {
   const pathname = usePathname();
-
-  // TODO: Replace with real credit balance from API / context once
-  //       credit_balances table exists in DB.
-  const mockBalance = getMockCreditBalance();
-  const displayBalance = formatCreditBalance(mockBalance.balance);
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/10 bg-[#050816]/70 backdrop-blur-2xl">
@@ -65,15 +107,7 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Credit balance chip */}
-          <Link
-            href="/profile"
-            className="hidden items-center gap-1.5 rounded-2xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-2 text-xs font-semibold text-cyan-300 transition hover:bg-cyan-500/15 sm:inline-flex"
-            title="Kredi Bakiyesi"
-          >
-            <span>✦</span>
-            <span>{displayBalance}</span>
-          </Link>
+          <CreditChip />
 
           <Link
             href="/profile"

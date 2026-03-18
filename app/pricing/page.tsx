@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { CREDIT_PACKAGES, CREDIT_COST_RULES } from "@/lib/data/credit-rules";
 
+const SHOPIER_LINKS: Record<string, string> = {
+  starter: "https://www.shopier.com/TradeVisual/45264454",
+  growth: "https://www.shopier.com/TradeVisual/45264598",
+  power: "https://www.shopier.com/TradeVisual/45264598",
+};
+
 export default function PricingPage() {
   return (
     <main className="min-h-screen bg-[#050816] px-6 py-12 text-white">
@@ -9,7 +15,7 @@ export default function PricingPage() {
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="mb-14 text-center">
           <div className="text-sm uppercase tracking-[0.3em] text-cyan-300">
-            Koshei AI
+            Koshei AI University
           </div>
           <h1 className="mt-3 text-4xl font-semibold">Kredi Paketi Seç</h1>
           <p className="mx-auto mt-4 max-w-xl text-slate-300">
@@ -63,9 +69,10 @@ export default function PricingPage() {
                 ))}
               </ul>
 
-              {/* TODO: Connect to payment backend (Shopier / Stripe) */}
-              <Link
-                href="/dashboard"
+              <a
+                href={SHOPIER_LINKS[pkg.id] ?? SHOPIER_LINKS.starter}
+                target="_blank"
+                rel="noopener noreferrer"
                 className={[
                   "mt-8 block rounded-2xl px-4 py-3 text-center text-sm font-semibold transition",
                   pkg.isPopular
@@ -74,7 +81,7 @@ export default function PricingPage() {
                 ].join(" ")}
               >
                 {pkg.name} Paketi Al
-              </Link>
+              </a>
             </div>
           ))}
         </div>
@@ -105,10 +112,9 @@ export default function PricingPage() {
         </div>
 
         {/* ── Footer note ──────────────────────────────────────────────────── */}
-        <p className="mt-10 text-center text-sm text-slate-500">
-          * Ödeme entegrasyonu yakında aktif olacak. Krediler satın alma sonrası
-          hesabınıza otomatik yüklenir.
-        </p>
+        <div className="mt-10 rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-center text-sm text-slate-400">
+          Shopier üzerinden ödeme yapıldıktan sonra krediniz kısa sürede manuel olarak hesabınıza yüklenir.
+        </div>
 
         <div className="mt-6 text-center">
           <Link href="/dashboard" className="text-cyan-300 hover:text-cyan-200">

@@ -34,6 +34,7 @@ type LiveClientProps = {
   creditBalance?: number;
   estimatedCost?: number;
   creditWarningState?: CreditWarningState;
+  canStart?: boolean;
 };
 
 type ConversationTurn = {
@@ -49,6 +50,7 @@ export default function LiveClient({
   creditBalance = 999,
   estimatedCost = 0,
   creditWarningState = "ok",
+  canStart = true,
 }: LiveClientProps) {
   // ── Derive mentor + academic context ────────────────────────────────────────
   const mentor = useMemo(
@@ -141,6 +143,7 @@ export default function LiveClient({
   }, [teacherReply, nextQuestion, autoSpeak, synthesisSupported, speechLocale]);
 
   function startRecording() {
+    if (!canStart) return;
     if (!recognitionSupported) {
       setSpeechError("Bu tarayıcı mikrofon konuşma tanımayı desteklemiyor.");
       return;
@@ -178,6 +181,7 @@ export default function LiveClient({
   }
 
   async function submitAnswer() {
+    if (!canStart) return;
     const trimmed = answer.trim();
     if (!trimmed || isLoading) return;
 
@@ -452,13 +456,35 @@ Vocabulary: ${speakingScore.vocabulary}`;
               onChange={setAnswer}
               onSubmit={submitAnswer}
               onStartRecording={
-                micEnabled && recognitionSupported ? startRecording : undefined
+                micEnabled && recognitionSupported && canStart ? startRecording : undefined
               }
               onStopRecording={stopRecordingHandler}
               isLoading={isLoading}
               isRecording={isRecording}
               targetLanguage={targetLanguage}
             />
+
+            {!canStart && (
+              <div className="rounded-[28px] border border-amber-400/20 bg-amber-500/10 p-5">
+                <p className="text-sm font-medium text-amber-300">
+                  ⚠ Yeterli krediniz yok. Konuşmaya başlamak için kredi yükleyin.
+                </p>
+                <div className="mt-3 flex gap-3">
+                  <a
+                    href="/pricing"
+                    className="rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90"
+                  >
+                    ✦ Kredi Yükle
+                  </a>
+                  <a
+                    href="/profile"
+                    className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10"
+                  >
+                    Profil
+                  </a>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-5 md:p-6">
               <h3 className="text-lg font-semibold">Voice Engine Durumu</h3>
