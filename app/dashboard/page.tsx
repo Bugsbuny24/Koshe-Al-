@@ -148,16 +148,6 @@ export default async function DashboardPage() {
 
   const latestScore = sessionRows[0];
 
-  const avgFluency = sessionRows.length
-    ? sessionRows.reduce((s, r) => s + Number(r.fluency_score || 0), 0) / sessionRows.length
-    : 0;
-  const avgGrammar = sessionRows.length
-    ? sessionRows.reduce((s, r) => s + Number(r.grammar_score || 0), 0) / sessionRows.length
-    : 0;
-  const avgVocab = sessionRows.length
-    ? sessionRows.reduce((s, r) => s + Number(r.vocabulary_score || 0), 0) / sessionRows.length
-    : 0;
-
   function progressColor(p: number) {
     if (p >= 100) return "from-amber-400 to-yellow-500";
     if (p >= 80) return "from-fuchsia-500 to-violet-500";
@@ -165,14 +155,12 @@ export default async function DashboardPage() {
     return "from-slate-500 to-slate-400";
   }
 
-  // Derive academic context from most recent enrollment or profile fallback
+  // Derive mentor from most recent enrollment or profile fallback
   const primaryEnrollment = enrollments?.find((e) => e.status === "active") ?? enrollments?.[0] ?? null;
   const targetLang = profile?.target_language || "English";
   const activeLangCode = primaryEnrollment?.language_code
     ?? DEPARTMENTS.find((d) => d.name.toLowerCase() === targetLang.toLowerCase())?.code
     ?? targetLang.slice(0, 2).toLowerCase();
-  const activeLevel = primaryEnrollment?.level ?? profile?.difficulty_level ?? "A1";
-  const academicCtx = getAcademicContext(activeLangCode, activeLevel);
   const mentor = getMentorForLanguage(activeLangCode);
 
   return (
@@ -184,24 +172,12 @@ export default async function DashboardPage() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">
-                Koshei AI University — Dashboard
+                Koshei AI University
               </p>
               <h1 className="glow-text mt-2 text-3xl font-bold text-white sm:text-5xl">
                 Hoş geldin, {profile?.full_name || "Öğrenci"}
               </h1>
-
-              {/* Active program breadcrumb */}
-              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-                <span className="text-slate-400">{academicCtx.facultyName}</span>
-                <span>›</span>
-                <span className="text-slate-300 font-medium">{academicCtx.programTitle}</span>
-                {academicCtx.courseTitle ? (
-                  <>
-                    <span>›</span>
-                    <span className="text-cyan-400">{academicCtx.courseTitle}</span>
-                  </>
-                ) : null}
-              </div>
+              <p className="mt-2 text-sm text-slate-400">Continue your journey</p>
 
               {/* Mentor hint */}
               <div className="mt-4 flex items-center gap-3">
@@ -212,7 +188,6 @@ export default async function DashboardPage() {
                 </div>
                 <span className="text-sm text-slate-400">
                   Mentorın: <span className="text-white font-medium">{mentor.name}</span>
-                  {" "}· {mentor.title}
                 </span>
               </div>
             </div>
@@ -250,7 +225,6 @@ export default async function DashboardPage() {
               <SectionHeader
                 eyebrow="Aktif Program"
                 title="Eğitim İlerlemem"
-                description="Kayıtlı kurslarının ilerleme durumu"
               />
               {enrollments && enrollments.length > 0 ? (
                 <div className="mt-5 space-y-4">
@@ -314,9 +288,6 @@ export default async function DashboardPage() {
                 <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
                   <div className="text-2xl">🎓</div>
                   <p className="mt-3 text-sm font-medium text-slate-300">Henüz aktif kurs yok</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    Bir dil programına kayıt olarak öğrenme yolculuğuna başlayabilirsin.
-                  </p>
                   <Link
                     href="/courses"
                     className="mt-4 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:bg-white/10"
@@ -368,11 +339,6 @@ export default async function DashboardPage() {
               <Surface>
                 <div className="metric-label">Koleksiyon Ödülleri</div>
                 <div className="metric-value">{collectibleCount?.length || 0}</div>
-                {(!collectibleCount || collectibleCount.length === 0) && (
-                  <p className="mt-2 text-xs text-slate-500">
-                    Özel başarılarda nadir koleksiyonlar kazanılır
-                  </p>
-                )}
                 <Link
                   href="/profile"
                   className="mt-3 block text-xs text-cyan-300 hover:underline"
@@ -416,56 +382,20 @@ export default async function DashboardPage() {
           <div className="xl:col-span-3">
             <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
               <Surface>
-                <div className="metric-label">Son Fluency</div>
+                <div className="metric-label">Fluency</div>
                 <div className="metric-value">{latestScore?.fluency_score || 0}</div>
-                {!latestScore?.fluency_score && (
-                  <p className="mt-2 text-xs text-slate-500">İlk canlı pratiğinden sonra burada görünür</p>
-                )}
               </Surface>
               <Surface>
-                <div className="metric-label">Son Grammar</div>
+                <div className="metric-label">Grammar</div>
                 <div className="metric-value">{latestScore?.grammar_score || 0}</div>
-                {!latestScore?.grammar_score && (
-                  <p className="mt-2 text-xs text-slate-500">Canlı pratikte grammar skoru otomatik hesaplanır</p>
-                )}
               </Surface>
               <Surface>
-                <div className="metric-label">Son Vocabulary</div>
+                <div className="metric-label">Vocabulary</div>
                 <div className="metric-value">{latestScore?.vocabulary_score || 0}</div>
-                {!latestScore?.vocabulary_score && (
-                  <p className="mt-2 text-xs text-slate-500">Konuşmanda kullandığın kelimeler ölçülür</p>
-                )}
               </Surface>
               <Surface>
                 <div className="metric-label">Toplam Session</div>
                 <div className="metric-value">{sessionRows.length}</div>
-                {sessionRows.length === 0 && (
-                  <p className="mt-2 text-xs text-slate-500">Her canlı pratik bir session olarak kaydedilir</p>
-                )}
-              </Surface>
-            </div>
-
-            <div className="mt-6 grid gap-6 lg:grid-cols-3">
-              <Surface>
-                <div className="metric-label">Ortalama Fluency</div>
-                <div className="metric-value">{Math.round(avgFluency)}</div>
-                {sessionRows.length === 0 && (
-                  <p className="mt-2 text-xs text-slate-500">Tüm sessionların ortalaması burada gösterilir</p>
-                )}
-              </Surface>
-              <Surface>
-                <div className="metric-label">Ortalama Grammar</div>
-                <div className="metric-value">{Math.round(avgGrammar)}</div>
-                {sessionRows.length === 0 && (
-                  <p className="mt-2 text-xs text-slate-500">Gramer doğruluğun session başına ölçülür</p>
-                )}
-              </Surface>
-              <Surface>
-                <div className="metric-label">Ortalama Vocabulary</div>
-                <div className="metric-value">{Math.round(avgVocab)}</div>
-                {sessionRows.length === 0 && (
-                  <p className="mt-2 text-xs text-slate-500">Kelime çeşitliliğin ve gücün burada izlenir</p>
-                )}
               </Surface>
             </div>
 
@@ -474,7 +404,6 @@ export default async function DashboardPage() {
               <SectionHeader
                 eyebrow="Akademik Yolculuk"
                 title="Sertifika Yolculuğun"
-                description="Rozetlerini, sertifikalarını ve kazanımlarını gör."
               />
               <div className="mt-5 flex flex-wrap gap-3">
                 <Link href="/profile" className="primary-button">
@@ -497,7 +426,6 @@ export default async function DashboardPage() {
             <SectionHeader
               eyebrow="Son Hatalar"
               title="En son düzeltmelerin"
-              description="Koshei'nin hafızaya aldığı son hatalar"
             />
             {mistakeRows.length > 0 ? (
               <div className="mt-6 space-y-4">
@@ -519,9 +447,6 @@ export default async function DashboardPage() {
               <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
                 <div className="text-2xl">🧠</div>
                 <p className="mt-3 text-sm font-medium text-slate-300">Henüz hata kaydı yok</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Canlı pratik yaptıkça Koshei hatalarını hafızaya alır ve burada gösterir.
-                </p>
                 <Link
                   href="/live"
                   className="mt-4 inline-flex items-center gap-1 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
@@ -536,7 +461,6 @@ export default async function DashboardPage() {
             <SectionHeader
               eyebrow="Vocabulary"
               title="Son öğrenilen kelimeler"
-              description="Güç seviyeleriyle birlikte son kelimeler"
             />
             {wordRows.length > 0 ? (
               <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -557,9 +481,6 @@ export default async function DashboardPage() {
               <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
                 <div className="text-2xl">📚</div>
                 <p className="mt-3 text-sm font-medium text-slate-300">Henüz kelime eklenmedi</p>
-                <p className="mt-1 text-xs text-slate-500">
-                  Her canlı pratikten sonra konuşmanda öne çıkan kelimeler otomatik eklenir.
-                </p>
                 <Link
                   href="/live"
                   className="mt-4 inline-flex items-center gap-1 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"

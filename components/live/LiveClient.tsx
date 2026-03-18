@@ -21,7 +21,6 @@ import {
 import { getSpeechLocaleByLanguageName } from "@/lib/constants/languages";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import type { MentorState } from "@/lib/data/mentors";
-import { getAcademicContext } from "@/lib/data/academic-catalog";
 import type { CreditWarningState } from "@/types/credit";
 
 type LiveClientProps = {
@@ -56,10 +55,6 @@ export default function LiveClient({
   const mentor = useMemo(
     () => getMentorForLanguage(languageCode ?? targetLanguage.slice(0, 2).toLowerCase()),
     [languageCode, targetLanguage]
-  );
-  const academicCtx = useMemo(
-    () => getAcademicContext(languageCode ?? targetLanguage.slice(0, 2).toLowerCase(), stage),
-    [languageCode, targetLanguage, stage]
   );
   const [answer, setAnswer] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -274,18 +269,6 @@ export default function LiveClient({
     }
   }
 
-  async function handleReplayTeacher() {
-    if (!teacherReply && !nextQuestion) return;
-
-    await speakText({
-      text: teacherReply || nextQuestion,
-      lang: speechLocale,
-      rate: 0.98,
-      pitch: 1,
-      volume: 1,
-    });
-  }
-
   async function handleShareScore() {
     if (!speakingScore) return;
 
@@ -324,19 +307,6 @@ Vocabulary: ${speakingScore.vocabulary}`;
 
         {/* ── Mentor + Academic Context Header ────────────────────────────── */}
         <div className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-blue-500/10 to-cyan-500/10 p-6">
-          {/* Academic breadcrumb */}
-          <div className="mb-5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-            <span>{academicCtx.facultyName}</span>
-            <span>›</span>
-            <span className="text-slate-400">{academicCtx.programTitle}</span>
-            {academicCtx.courseTitle ? (
-              <>
-                <span>›</span>
-                <span className="text-cyan-400">{academicCtx.courseTitle}</span>
-              </>
-            ) : null}
-          </div>
-
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-5">
               {/* Mentor card */}
@@ -349,9 +319,6 @@ Vocabulary: ${speakingScore.vocabulary}`;
                 <h1 className="mt-1.5 text-2xl font-semibold">
                   {targetLanguage} · {stage}
                 </h1>
-                <p className="mt-1 text-sm text-slate-400">
-                  Ana dil: {nativeLanguage}
-                </p>
               </div>
             </div>
 
@@ -385,14 +352,6 @@ Vocabulary: ${speakingScore.vocabulary}`;
                 }`}
               >
                 {micEnabled ? "🎤 Mic Aktif" : "🎤 Mic Kapalı"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleReplayTeacher}
-                className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                Öğretmeni Tekrar Dinle
               </button>
             </div>
           </div>
@@ -526,25 +485,6 @@ Vocabulary: ${speakingScore.vocabulary}`;
                 </div>
               </div>
             )}
-
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium text-slate-300">Ses Motoru</h3>
-                <div className="flex items-center gap-3 text-xs">
-                  <span className={recognitionSupported ? "text-emerald-400" : "text-red-400"}>
-                    {recognitionSupported ? "🎙 Mic ✓" : "🎙 Mic ✗"}
-                  </span>
-                  <span className={synthesisSupported ? "text-emerald-400" : "text-amber-400"}>
-                    {synthesisSupported ? "🔊 Ses ✓" : "🔊 Ses ✗"}
-                  </span>
-                </div>
-              </div>
-              {(!recognitionSupported || !synthesisSupported) && (
-                <p className="mt-2 text-xs text-slate-500">
-                  Chrome/Edge kullanmak en iyi ses deneyimini sağlar.
-                </p>
-              )}
-            </div>
 
             {/* ── Navigation CTAs ────────────────────────────────────────── */}
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-5">
