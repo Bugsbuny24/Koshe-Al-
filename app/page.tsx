@@ -41,21 +41,6 @@ const FACULTY_META: Record<string, { programCount: number; exampleAreas: string[
   CREATIVE: { programCount: 1, exampleAreas: ["Speaking Mastery", "Yaratıcı Anlatım"], badge: "🎨" },
 };
 
-const MENTOR_META: Record<string, { forStudents: string; focusArea: string }> = {
-  elena: {
-    forStudents: "Genel dil öğrencileri · İngilizce, Fransızca, Almanca",
-    focusArea: "Akıcılık, telaffuz ve doğal günlük konuşma",
-  },
-  atlas: {
-    forStudents: "Teknoloji profesyonelleri ve yazılımcılar",
-    focusArea: "Teknik İngilizce, AI kavramları ve inovasyon dili",
-  },
-  mira: {
-    forStudents: "İş dünyası, sunum ve liderlik odaklı öğrenciler",
-    focusArea: "İş iletişimi, müzakere ve yönetim dili",
-  },
-};
-
 const BADGE_SHOWCASE = [
   {
     level: "Başlangıç",
@@ -230,35 +215,20 @@ export default function HomePage() {
         <div className="mb-8 text-center">
           <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">Neden Koshei</div>
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">Gerçek Sonuçlar, Gerçek Akademik Deneyim</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-slate-400">
-            Koshei AI University; kurs platformu değil, AI mentor eşliğinde yürütülen bir akademik dil programıdır.
-          </p>
         </div>
         <div className="grid gap-5 md:grid-cols-3">
           {[
-            {
-              icon: "🎯",
-              title: "Kişiselleştirilmiş Program",
-              desc: "Her öğrenci kendi seviyesine ve hedefine göre ilerleme alır. A1'den C2'ye, AI mentor seni adım adım yönlendirir.",
-            },
-            {
-              icon: "📈",
-              title: "Ölçülebilir Gelişim",
-              desc: "Her konuşma oturumundan sonra fluency, grammar ve vocabulary skorların güncellenir. İlerleme grafikle görünür.",
-            },
-            {
-              icon: "🏛️",
-              title: "Akademik Çerçeve",
-              desc: "Fakülte yapısı, program sertifikaları ve rozet sistemi — gerçek bir üniversite deneyimi, yapay zekâ hızıyla.",
-            },
+            { icon: "🎯", title: "Kişiselleştirilmiş Program", desc: "A1'den C2'ye, sana özel öğrenme yolu" },
+            { icon: "📈", title: "Ölçülebilir Gelişim", desc: "Her oturumdan sonra skor güncellenir" },
+            { icon: "🏛️", title: "Akademik Çerçeve", desc: "Fakülte, rozet ve sertifika sistemi" },
           ].map((item) => (
             <div
               key={item.title}
-              className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+              className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-xl"
             >
               <div className="text-3xl">{item.icon}</div>
               <div className="mt-3 text-lg font-semibold">{item.title}</div>
-              <p className="mt-2 text-sm leading-7 text-slate-400">{item.desc}</p>
+              <p className="mt-1 text-sm text-slate-400">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -275,17 +245,14 @@ export default function HomePage() {
             {HOW_IT_WORKS.map((item) => (
               <div
                 key={item.step}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+                className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-xl"
               >
                 <div className="flex items-center justify-between">
                   <div className="text-xs font-mono text-cyan-400/60">{item.step}</div>
                   <span className="text-xl">{item.icon}</span>
                 </div>
                 <div className="mt-3 text-lg font-semibold">{item.title}</div>
-                <p className="mt-2 text-sm leading-6 text-slate-400">{item.desc}</p>
-                <div className="mt-4 rounded-xl border border-cyan-400/10 bg-cyan-400/5 px-3 py-2 text-xs text-cyan-300/80">
-                  ✦ {item.output}
-                </div>
+                <p className="mt-1 text-sm text-slate-400">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -297,9 +264,6 @@ export default function HomePage() {
         <div className="mb-10 text-center">
           <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">Fakülteler</div>
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">Akademik Programlar</h2>
-          <p className="mx-auto mt-4 max-w-xl text-slate-400">
-            Her fakülte kendi mentor kadrosu, rozet sistemi ve sertifika programıyla gelir.
-          </p>
         </div>
         <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-4">
           {FACULTIES.map((f) => {
@@ -307,29 +271,19 @@ export default function HomePage() {
             return (
               <div
                 key={f.code}
-                className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+                className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-xl"
               >
                 <div className="text-3xl">{f.icon}</div>
                 <div className="mt-3 text-lg font-semibold">{f.name}</div>
-                <p className="mt-2 text-sm text-slate-400">{f.description}</p>
                 {meta && (
-                  <>
-                    <div className="mt-4 flex items-center gap-2 text-xs text-slate-500">
-                      <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
-                        {meta.programCount} program
-                      </span>
-                      <span className="rounded-lg border border-cyan-400/15 bg-cyan-500/8 px-2 py-1 text-cyan-300/70">
-                        Sertifika ✦
-                      </span>
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {meta.exampleAreas.map((area) => (
-                        <span key={area} className="rounded-lg bg-white/5 px-2 py-1 text-xs text-slate-400">
-                          {area}
-                        </span>
-                      ))}
-                    </div>
-                  </>
+                  <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                    <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-1">
+                      {meta.programCount} program
+                    </span>
+                    <span className="rounded-lg border border-cyan-400/15 bg-cyan-500/8 px-2 py-1 text-cyan-300/70">
+                      Sertifika ✦
+                    </span>
+                  </div>
                 )}
               </div>
             );
@@ -351,36 +305,20 @@ export default function HomePage() {
           <div className="mb-10 text-center">
             <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">Mentorlar</div>
             <h2 className="mt-4 text-3xl font-semibold md:text-4xl">AI Mentor Kadrosu</h2>
-            <p className="mx-auto mt-4 max-w-xl text-slate-400">
-              Her mentor farklı bir öğrenci profiline odaklanır. Programına en uygun mentor otomatik atanır.
-            </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
             {MENTORS.map((m) => {
-              const meta = MENTOR_META[m.id];
               return (
                 <div
                   key={m.id}
-                  className="rounded-3xl border border-white/10 bg-white/5 p-6 backdrop-blur-xl"
+                  className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-xl"
                 >
                   <div className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r ${m.gradientFrom} ${m.gradientTo} text-lg font-bold`}>
                     {m.avatarInitials}
                   </div>
                   <div className="mt-4 text-xl font-semibold">{m.name}</div>
                   <div className="mt-1 text-xs uppercase tracking-[0.2em] text-slate-500">{m.title}</div>
-                  <p className="mt-3 text-sm text-slate-400">{m.specialization}</p>
-                  {meta && (
-                    <div className="mt-4 space-y-2">
-                      <div className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-xs text-slate-400">
-                        <span className="text-slate-500">Kimler için: </span>
-                        {meta.forStudents}
-                      </div>
-                      <div className="rounded-xl border border-cyan-400/10 bg-cyan-500/5 px-3 py-2 text-xs text-cyan-300/80">
-                        <span className="text-slate-500">Odak: </span>
-                        {meta.focusArea}
-                      </div>
-                    </div>
-                  )}
+                  <p className="mt-2 text-sm text-slate-400">{m.specialization}</p>
                 </div>
               );
             })}
@@ -393,28 +331,18 @@ export default function HomePage() {
         <div className="mb-10 text-center">
           <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">Rozetler & Sertifikalar</div>
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">Akademik Başarı Sistemi</h2>
-          <p className="mx-auto mt-4 max-w-xl text-slate-400">
-            Her seviyeyi tamamladığında rozet, her programı bitirdiğinde sertifika kazanırsın.
-            Rozetler ve sertifikalar profilinde kalıcı olarak görünür.
-          </p>
         </div>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {BADGE_SHOWCASE.map((b) => (
             <div
               key={b.level}
-              className={`rounded-3xl border ${b.border} bg-gradient-to-b ${b.colorGrad} p-6 backdrop-blur-xl`}
+              className={`rounded-3xl border ${b.border} bg-gradient-to-b ${b.colorGrad} p-6 shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-xl`}
             >
               <div className="text-3xl">{b.emoji}</div>
               <div className={`mt-3 text-lg font-semibold ${b.text}`}>{b.level}</div>
               <div className="mt-1 text-xs font-mono text-slate-500">{b.cefrRange}</div>
-              <p className="mt-3 text-sm text-slate-400">{b.desc}</p>
-              <div className="mt-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="text-base">🏅</span> Seviye rozeti
-                </div>
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <span className="text-base">📜</span> Program sertifikası
-                </div>
+              <div className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                <span className="text-base">🏅</span> Rozet · <span className="text-base">📜</span> Sertifika
               </div>
             </div>
           ))}
@@ -431,14 +359,11 @@ export default function HomePage() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="rounded-3xl border border-white/10 bg-white/5 p-5 backdrop-blur-xl"
+              className="rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-xl"
             >
               <div className="flex items-center gap-3">
                 <span className="text-2xl">{f.icon}</span>
-                <div>
-                  <div className="font-semibold">{f.title}</div>
-                  <p className="mt-0.5 text-sm text-slate-400">{f.desc}</p>
-                </div>
+                <div className="font-semibold">{f.title}</div>
               </div>
             </div>
           ))}
@@ -508,40 +433,9 @@ export default function HomePage() {
             ))}
           </div>
 
-          <p className="mt-8 text-center text-sm text-slate-500">
-            Shopier üzerinden ödeme sonrası krediniz kısa sürede manuel olarak yüklenir.
+          <p className="mt-8 text-center text-xs text-slate-500">
+            Ödeme sonrası krediniz kısa sürede yüklenir.
           </p>
-
-          {/* Credit system explanation */}
-          <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
-            <div className="grid gap-4 sm:grid-cols-3">
-              {[
-                {
-                  icon: "✦",
-                  title: "Neden abonelik değil kredi?",
-                  desc: "Aylık ödeme yapıp kullanmadığın özellikler için para ödemezsin. Kredin var, harcarsın — süre sınırı yok.",
-                },
-                {
-                  icon: "⚡",
-                  title: "Krediyle ne yapılır?",
-                  desc: "Ders oluşturma, canlı pratik dakikaları, sertifika düzenleme — her AI aksiyonu krediyle çalışır.",
-                },
-                {
-                  icon: "🔄",
-                  title: "Kullan, bitince yükle",
-                  desc: "Kreditin düşünce bildirim alırsın. İstediğin paketi tekrar alıp devam edersin.",
-                },
-              ].map((item) => (
-                <div key={item.title} className="flex gap-3">
-                  <span className="mt-0.5 text-lg text-cyan-400">{item.icon}</span>
-                  <div>
-                    <div className="text-sm font-medium text-slate-200">{item.title}</div>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">{item.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
 
           <div className="mt-6 text-center">
             <Link
@@ -556,15 +450,11 @@ export default function HomePage() {
 
       {/* ── FINAL CTA ────────────────────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-4 pb-20 pt-12 md:px-6">
-        <div className="rounded-[32px] border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-fuchsia-500/10 px-6 py-14 text-center backdrop-blur-xl md:px-12">
+        <div className="rounded-[32px] border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-fuchsia-500/10 px-6 py-14 text-center shadow-[0_8px_40px_rgba(0,0,0,0.4)] backdrop-blur-xl md:px-12">
           <div className="text-sm uppercase tracking-[0.35em] text-cyan-300">Başlamak İçin En İyi Zaman — Bugün</div>
           <h2 className="mt-4 text-3xl font-semibold md:text-4xl">
             Akademik Yolculuğuna Başla
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-slate-300">
-            Koshei AI University ile AI mentor eşliğinde dil öğren, her oturumdan sonra gelişimini gör,
-            rozet ve sertifikanı kazan.
-          </p>
 
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
             <Link

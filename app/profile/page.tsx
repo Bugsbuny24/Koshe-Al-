@@ -347,7 +347,6 @@ export default async function ProfilePage() {
               <div className="mt-6 rounded-2xl border border-dashed border-white/10 p-8 text-center">
                 <div className="text-3xl">🏅</div>
                 <p className="mt-3 text-sm font-medium text-slate-300">Henüz rozet kazanılmadı</p>
-                <p className="mt-1 text-xs text-slate-500">Kurslara katıl ve canlı pratik yap — rozetler otomatik kazanılır.</p>
                 <Link
                   href="/courses"
                   className="mt-4 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:bg-white/10"
@@ -409,7 +408,6 @@ export default async function ProfilePage() {
               <div className="mt-6 rounded-2xl border border-dashed border-fuchsia-500/20 p-8 text-center">
                 <div className="text-3xl">🎓</div>
                 <p className="mt-3 text-sm font-medium text-slate-300">Henüz sertifika kazanılmadı</p>
-                <p className="mt-1 text-xs text-slate-500">Bir programı tamamladığında sertifikan burada görünür.</p>
                 <Link
                   href="/courses"
                   className="mt-4 inline-flex items-center gap-1 rounded-xl border border-fuchsia-500/20 bg-fuchsia-500/10 px-4 py-2 text-xs text-fuchsia-300 transition hover:bg-fuchsia-500/20"
@@ -429,11 +427,6 @@ export default async function ProfilePage() {
           <h2 className="mt-2 text-2xl font-semibold">
             Dijital Ödül Koleksiyonum
           </h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Kazandığın rozetler ve sertifikalar NFT-ready dijital varlıklara
-            dönüşür. Profilinde vitrin olarak görünür, indirebilir ve ileride
-            listeyebilirsin.
-          </p>
 
           {collectibles && collectibles.length > 0 ? (
             <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -492,12 +485,8 @@ export default async function ProfilePage() {
           ) : (
             <div className="mt-8 rounded-3xl border border-dashed border-white/10 p-10 text-center">
               <div className="text-4xl">💎</div>
-              <p className="mt-4 text-slate-400">
+              <p className="mt-4 text-sm font-medium text-slate-300">
                 Henüz koleksiyonel ödül kazanılmadı.
-              </p>
-              <p className="mt-2 text-sm text-slate-500">
-                Kurslara kayıt ol ve ilerle — rozetler ve sertifikalar otomatik
-                koleksiyona eklenir.
               </p>
               <Link
                 href="/courses"
@@ -515,9 +504,6 @@ export default async function ProfilePage() {
             Akademik Yolculuk
           </div>
           <h2 className="mt-2 text-2xl font-semibold">Program Geçmişim</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Kayıtlı olduğun tüm programlar, tamamlanan üniteler ve ilerleme durumun.
-          </p>
 
           {enrollments && enrollments.length > 0 ? (
             <div className="mt-6 space-y-3">
@@ -673,9 +659,6 @@ export default async function ProfilePage() {
         <section className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
           <p className="text-xs uppercase tracking-[0.3em] text-cyan-300/80">
             Kredi Paketleri
-          </p>
-          <p className="mt-2 text-sm text-slate-400">
-            Kredinizi artırmak için bir paket seçin. Ödeme sonrası kısa sürede krediniz yüklenir.
           </p>
           <div className="mt-4">
             <Link

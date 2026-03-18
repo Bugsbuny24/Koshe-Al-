@@ -2,29 +2,6 @@ import Link from "next/link";
 import { CREDIT_COST_RULES } from "@/lib/data/credit-rules";
 import { CREDIT_PACKAGES_DEF } from "@/lib/data/credit-packages";
 
-const PACKAGE_META: Record<string, { forWhom: string; intensity: string; example: string }> = {
-  starter: {
-    forWhom: "Koshei'i keşfetmek isteyen yeni öğrenciler",
-    intensity: "Haftada 1-2 seans, yaklaşık 2-3 haftalık kullanım",
-    example: "~20 ders oluştur veya ~33 dakika canlı pratik yap",
-  },
-  growth: {
-    forWhom: "Düzenli öğrenmeyi alışkanlık haline getirmek isteyenler",
-    intensity: "Haftada 3-5 seans, yaklaşık 4-6 haftalık kullanım",
-    example: "~60 ders + ~100 dakika canlı pratik + 1 sertifika",
-  },
-  pro: {
-    forWhom: "Yoğun program takip eden ileri seviye öğrenciler",
-    intensity: "Her gün düzenli seans, 2-3 aylık yoğun kullanım",
-    example: "~200 ders + ~333 dakika canlı pratik + çoklu sertifika",
-  },
-  prestige: {
-    forWhom: "Koshei'yi ana öğrenme platformu olarak kullananlar",
-    intensity: "Sınırsız kullanım hissi — uzun süreli program",
-    example: "~600 ders + ~1000 dakika canlı pratik + tüm rozet ve sertifikalar",
-  },
-};
-
 export default function PricingPage() {
   return (
     <main className="min-h-screen bg-[#050816] px-6 py-12 text-white">
@@ -36,9 +13,8 @@ export default function PricingPage() {
             Koshei AI University
           </div>
           <h1 className="mt-3 text-4xl font-semibold">Kredi Paketi Seç</h1>
-          <p className="mx-auto mt-4 max-w-xl text-slate-300">
-            Kredinle istediğin zaman ders oluştur, canlı pratik yap ve AI
-            özelliklerini kullan. Süre sınırı yok — kullandıkça ödersin.
+          <p className="mx-auto mt-3 max-w-md text-slate-400">
+            Kullandıkça öde. Süre sınırı yok.
           </p>
         </div>
 
@@ -77,24 +53,6 @@ export default function PricingPage() {
 
               <p className="mt-3 text-sm text-slate-400">{pkg.description}</p>
 
-              {/* Package meta: who it's for + usage intensity */}
-              {(() => {
-                const meta = PACKAGE_META[pkg.id];
-                return meta ? (
-                  <div className="mt-4 space-y-2 border-t border-white/8 pt-4">
-                    <div className="text-xs text-slate-500">
-                      <span className="text-slate-400">Kimler için: </span>{meta.forWhom}
-                    </div>
-                    <div className="text-xs text-slate-500">
-                      <span className="text-slate-400">Yoğunluk: </span>{meta.intensity}
-                    </div>
-                    <div className="rounded-xl bg-white/5 px-3 py-2 text-xs text-slate-400">
-                      ✦ {meta.example}
-                    </div>
-                  </div>
-                ) : null;
-              })()}
-
               {pkg.shopierUrl ? (
                 <a
                   href={pkg.shopierUrl}
@@ -128,9 +86,6 @@ export default function PricingPage() {
             Kredi Kullanımı
           </p>
           <h2 className="mt-2 text-xl font-semibold">Ne kadar kredi harcar?</h2>
-          <p className="mt-2 text-sm text-slate-400">
-            Her AI özelliği aşağıdaki oranlarda kredi kullanır.
-          </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
             {CREDIT_COST_RULES.map((rule) => (
@@ -156,20 +111,12 @@ export default function PricingPage() {
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {[
             {
-              q: "Neden abonelik değil kredi?",
-              a: "Aylık ücret ödeyip kullanmadığın özellikler için para vermezsin. Kredin bittikçe yüklersin, süre sınırı yoktur.",
-            },
-            {
-              q: "Krediyle tam olarak ne yapabilirim?",
-              a: "Ders oluşturma (1 kredi), canlı konuşma dakikaları (1 kredi/dk) ve sertifika düzenleme (5 kredi) için kullanılır.",
+              q: "Kredi nasıl çalışır?",
+              a: "Aylık ücret yok. Kredi al, istediğinde harca — ders, canlı pratik ve sertifika için kullanılır.",
             },
             {
               q: "Ödeme sonrası ne olur?",
               a: "Shopier üzerinden ödeme yaptıktan sonra ekip, krediyi kısa sürede manuel olarak hesabına yükler.",
-            },
-            {
-              q: "Kredi yükleme nasıl yapılır?",
-              a: "Shopier bağlantısına tıkla, ödemeyi tamamla. Hesabınızda krediniz otomatik güncellenecektir.",
             },
           ].map((item) => (
             <div

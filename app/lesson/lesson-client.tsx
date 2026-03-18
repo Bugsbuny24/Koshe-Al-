@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { getAcademicContext } from "@/lib/data/academic-catalog";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import MentorCard from "@/components/live/MentorCard";
 import type { CreditWarningState } from "@/types/credit";
@@ -38,7 +37,6 @@ export default function LessonClient({
   const [lessonError, setLessonError] = useState<string | null>(null);
 
   const langCode = languageCode ?? targetLanguage.slice(0, 2).toLowerCase();
-  const academicCtx = getAcademicContext(langCode, level);
   const mentor = getMentorForLanguage(langCode);
 
   async function loadLesson() {
@@ -76,19 +74,6 @@ export default function LessonClient({
       <div className="mx-auto max-w-4xl">
         {/* ── Header ───────────────────────────────────────────────────────── */}
         <div className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-fuchsia-500/10 p-6">
-          {/* Academic breadcrumb */}
-          <div className="mb-4 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
-            <span>{academicCtx.facultyName}</span>
-            <span>›</span>
-            <span className="text-slate-400">{academicCtx.programTitle}</span>
-            {academicCtx.courseTitle ? (
-              <>
-                <span>›</span>
-                <span className="text-cyan-400">{academicCtx.courseTitle}</span>
-              </>
-            ) : null}
-          </div>
-
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-4">
               <MentorCard mentor={mentor} state="idle" />
@@ -114,66 +99,16 @@ export default function LessonClient({
         {/* ── Generate button ───────────────────────────────────────────────── */}
         {!lesson ? (
           <div className="space-y-5">
-            {/* Pre-lesson info panel */}
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-              <p className="text-xs uppercase tracking-[0.25em] text-cyan-300/80">Bugünkü Ders</p>
-              <h2 className="mt-2 text-xl font-semibold">
-                {targetLanguage} · {level} — Kişiselleştirilmiş Ders
-              </h2>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {[
-                  {
-                    icon: "🎯",
-                    label: "Bu dersin amacı",
-                    value: `${level} seviyesinde ${targetLanguage} becerilerini geliştirmek`,
-                  },
-                  {
-                    icon: "📖",
-                    label: "Bu derste ne öğreneceksin",
-                    value: "Yeni kelimeler, örnek cümleler ve konuşma pratiği görevi",
-                  },
-                  {
-                    icon: "✦",
-                    label: "Kredi maliyeti",
-                    value: `${lessonCreditCost} kredi — Mevcut: ${currentCredits} kredi`,
-                  },
-                  {
-                    icon: "🔜",
-                    label: "Dersten sonra",
-                    value: "Öğrendiklerini canlı pratikle pekiştir veya yeni ders oluştur",
-                  },
-                ].map((item) => (
-                  <div key={item.label} className="rounded-xl border border-white/8 bg-black/20 px-4 py-3">
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      <span>{item.icon}</span>
-                      <span>{item.label}</span>
-                    </div>
-                    <div className="mt-1.5 text-sm text-slate-300">{item.value}</div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-5 flex items-center gap-3 rounded-xl border border-cyan-400/10 bg-cyan-500/5 px-4 py-3">
-                <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-r ${mentor.gradientFrom} ${mentor.gradientTo} text-xs font-bold text-white`}>
-                  {mentor.avatarInitials}
-                </div>
-                <div className="text-xs text-slate-400">
-                  <span className="font-medium text-slate-200">{mentor.name}</span> senin için kişiselleştirilmiş bir ders hazırlayacak. {mentor.specialization}.
-                </div>
-              </div>
-            </div>
-
             {/* Generate area */}
-            <div className="rounded-[28px] border border-white/10 bg-white/5 p-8 text-center">
-              <div className="mb-4 text-4xl">📖</div>
-              <h2 className="text-xl font-semibold">Dersi Oluştur</h2>
+            <div className="rounded-[28px] border border-white/10 bg-white/5 p-10 text-center">
+              <div className="mb-6 text-5xl">📖</div>
+              <h2 className="text-2xl font-semibold">Generate Lesson</h2>
               <p className="mt-2 text-sm text-slate-400">
-                Hazır olduğunda butona bas — {mentor.name} sana özel{" "}
-                <span className="text-white">{targetLanguage} {level}</span> dersi oluşturur.
+                {targetLanguage} · {level}
               </p>
 
               {!canGenerateLesson && (
-                <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+                <div className="mt-6 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
                   {currentCredits === 0
                     ? "Krediniz bitti. Ders oluşturmak için kredi yükleyin."
                     : `Ders için ${lessonCreditCost} kredi gerekli. Mevcut: ${currentCredits} kredi.`}
