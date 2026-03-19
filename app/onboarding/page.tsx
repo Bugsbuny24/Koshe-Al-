@@ -176,7 +176,7 @@ export default function OnboardingPage() {
                 className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-400/40"
               >
                 {LANGUAGES.map((l) => (
-                  <option key={l.value} value={l.value}>{l.label}</option>
+                  <option key={l.code} value={l.code}>{l.name}</option>
                 ))}
               </select>
             </div>
@@ -186,18 +186,18 @@ export default function OnboardingPage() {
               <div className="grid gap-2 sm:grid-cols-2">
                 {popularLanguages.map((lang) => (
                   <button
-                    key={lang.value}
+                    key={lang.code}
                     type="button"
-                    onClick={() => setTargetLanguage(lang.value)}
+                    onClick={() => setTargetLanguage(lang.code)}
                     className={[
                       "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition",
-                      targetLanguage === lang.value
+                      targetLanguage === lang.code
                         ? "border-cyan-400/40 bg-cyan-400/10 text-white"
                         : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/8",
                     ].join(" ")}
                   >
-                    <span className="text-xl">{lang.flag}</span>
-                    <span>{lang.label}</span>
+                    <span className="text-sm font-mono text-slate-500 uppercase">{lang.code}</span>
+                    <span>{lang.name}</span>
                   </button>
                 ))}
               </div>
@@ -206,19 +206,19 @@ export default function OnboardingPage() {
             <div className="mb-8">
               <label className="text-sm text-slate-400 mb-3 block">Seviyeni seç</label>
               <div className="flex flex-wrap gap-2">
-                {(STAGES as { value: string; label: string }[]).map((s) => (
+                {STAGES.map((s) => (
                   <button
-                    key={s.value}
+                    key={s}
                     type="button"
-                    onClick={() => setLevel(s.value)}
+                    onClick={() => setLevel(s)}
                     className={[
                       "rounded-xl border px-4 py-2 text-sm font-medium transition",
-                      level === s.value
+                      level === s
                         ? "border-fuchsia-400/40 bg-fuchsia-400/15 text-fuchsia-300"
                         : "border-white/10 bg-white/5 text-slate-400 hover:text-white",
                     ].join(" ")}
                   >
-                    {s.value}
+                    {s}
                   </button>
                 ))}
               </div>
