@@ -22,6 +22,8 @@ export default function LessonClient({
   creditWarningState = "ok",
   currentCredits = 0,
   lessonCreditCost = 1,
+  unitId,
+  courseId,
 }: {
   targetLanguage: string;
   level: string;
@@ -30,6 +32,8 @@ export default function LessonClient({
   creditWarningState?: CreditWarningState;
   currentCredits?: number;
   lessonCreditCost?: number;
+  unitId?: string;
+  courseId?: string;
 }) {
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(false);
@@ -195,7 +199,17 @@ export default function LessonClient({
                   Dersi okudun ve örneği anladın mı?
                 </p>
                 <button
-                  onClick={() => setCompleted(true)}
+                  onClick={() => {
+                    setCompleted(true);
+                    // Unit progress kaydet — hata olursa sessizce geç
+                    if (unitId && courseId) {
+                      fetch("/api/lesson/complete", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ unitId, courseId }),
+                      }).catch(() => {});
+                    }
+                  }}
                   className="mt-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-600 px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
                 >
                   ✓ Dersi Tamamla

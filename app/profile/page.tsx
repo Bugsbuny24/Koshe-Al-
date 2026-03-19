@@ -162,6 +162,13 @@ export default async function ProfilePage() {
               </div>
 
               <Link
+                href="/profile/edit"
+                className="mt-4 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 transition hover:bg-white/10"
+              >
+                ✏️ Profili Düzenle
+              </Link>
+
+              <Link
                 href="/courses"
                 className="mt-5 block w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-3 text-center text-sm font-semibold text-white transition hover:opacity-90"
               >

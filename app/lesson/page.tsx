@@ -30,6 +30,13 @@ export default async function LessonPage() {
       (d) => d.name.toLowerCase() === targetLanguage.toLowerCase()
     )?.code ?? targetLanguage.slice(0, 2).toLowerCase();
 
+  const dept = DEPARTMENTS.find(
+    (d) => d.name.toLowerCase() === targetLanguage.toLowerCase()
+  );
+  const currentLevel = dept?.levels.find((l) => l.level === level);
+  const firstUnitId = currentLevel?.units[0]?.id ?? null;
+  const lessonCourseId = `${langCode}-${level.toLowerCase()}`;
+
   const lessonCreditCost = 1;
   const creditState = await getUserCredits(user.id);
   const canGenerateLesson =
@@ -45,6 +52,8 @@ export default async function LessonPage() {
       creditWarningState={creditWarningState}
       currentCredits={creditState.credits}
       lessonCreditCost={lessonCreditCost}
+      unitId={firstUnitId ?? undefined}
+      courseId={lessonCourseId}
     />
   );
 }
