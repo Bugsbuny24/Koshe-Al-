@@ -72,6 +72,7 @@ export default function LiveClient({
   const SESSION_LIMIT_MS = 10 * 60 * 1000;
   const sessionStartRef = useRef<number>(Date.now());
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [sessionSeconds, setSessionSeconds] = useState(0);
   const [teacherReply, setTeacherReply] = useState(
     `Hello! I'm ready to help you practice ${targetLanguage}. Tell me about yourself.`
   );
@@ -127,6 +128,15 @@ export default function LiveClient({
   useEffect(() => {
     historyEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [history]);
+
+  // Session countdown timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - sessionStartRef.current) / 1000);
+      setSessionSeconds(elapsed);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     if (!autoSpeak || !teacherReply || !synthesisSupported) return;
@@ -290,6 +300,16 @@ Vocabulary: ${speakingScore.vocabulary}`;
     alert("Skor panoya kopyalandı.");
   }
 
+  function formatTime(totalSeconds: number): string {
+    const m = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+    const s = (totalSeconds % 60).toString().padStart(2, "0");
+    return `${m}:${s}`;
+  }
+
+  const limitSeconds = SESSION_LIMIT_MS / 1000;
+  const remainingSeconds = Math.max(0, limitSeconds - sessionSeconds);
+  const isNearEnd = remainingSeconds <= 60 && remainingSeconds > 0 && !sessionExpired;
+
   return (
     <main className="min-h-screen bg-[#050816] px-4 py-8 text-white md:px-6">
       <div className="mx-auto max-w-7xl">
@@ -319,6 +339,23 @@ Vocabulary: ${speakingScore.vocabulary}`;
                 <h1 className="mt-1.5 text-2xl font-semibold">
                   {targetLanguage} · {stage}
                 </h1>
+              </div>
+
+              {/* Session timer chip */}
+              <div
+                className={[
+                  "flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-mono font-medium transition-colors",
+                  sessionExpired
+                    ? "bg-red-500/15 text-red-300 border border-red-400/20"
+                    : isNearEnd
+                    ? "bg-amber-500/15 text-amber-300 border border-amber-400/20"
+                    : "bg-white/5 text-slate-400 border border-white/10",
+                ].join(" ")}
+              >
+                <span>{sessionExpired ? "⏰" : "⏱"}</span>
+                <span>
+                  {sessionExpired ? "Süre doldu" : formatTime(remainingSeconds)}
+                </span>
               </div>
             </div>
 
