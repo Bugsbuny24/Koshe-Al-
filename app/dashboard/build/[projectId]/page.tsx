@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
-export default function ProjectWorkspacePage({ params }: { params: { projectId: string } }) {
+export default async function ProjectWorkspacePage({ params }: { params: Promise<{ projectId: string }> }) {
+  await params; // resolved for Next.js 15 async params compatibility
   return (
     <div className="max-w-6xl mx-auto space-y-4">
       <div>

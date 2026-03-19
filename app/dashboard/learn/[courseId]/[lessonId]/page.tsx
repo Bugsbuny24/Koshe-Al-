@@ -1,15 +1,16 @@
-'use client';
 import { AIMentor } from '@/components/learn/AIMentor';
 import Link from 'next/link';
 
-export default function LessonPage({ params }: { params: { courseId: string; lessonId: string } }) {
+export default async function LessonPage({ params }: { params: Promise<{ courseId: string; lessonId: string }> }) {
+  const { courseId, lessonId } = await params;
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <Link href={`/dashboard/learn/${params.courseId}`} className="text-sm text-[#8A8680] hover:text-[#F0A500]">
+        <Link href={`/dashboard/learn/${courseId}`} className="text-sm text-[#8A8680] hover:text-[#F0A500]">
           ← Kursa Dön
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">Ders {params.lessonId}</h1>
+        <h1 className="mt-2 text-2xl font-bold">Ders {lessonId}</h1>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -22,7 +23,7 @@ export default function LessonPage({ params }: { params: { courseId: string; les
         </div>
 
         {/* AI Mentor */}
-        <AIMentor courseId={params.courseId} lessonId={params.lessonId} />
+        <AIMentor courseId={courseId} lessonId={lessonId} />
       </div>
     </div>
   );
