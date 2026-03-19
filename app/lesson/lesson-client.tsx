@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { getMentorForLanguage } from "@/lib/data/mentors";
 import MentorCard from "@/components/live/MentorCard";
@@ -24,6 +25,9 @@ export default function LessonClient({
   lessonCreditCost = 1,
   unitId,
   courseId,
+  unitTitle,
+  completedCount = 0,
+  totalUnits = 0,
 }: {
   targetLanguage: string;
   level: string;
@@ -34,7 +38,11 @@ export default function LessonClient({
   lessonCreditCost?: number;
   unitId?: string;
   courseId?: string;
+  unitTitle?: string;
+  completedCount?: number;
+  totalUnits?: number;
 }) {
+  const router = useRouter();
   const [lesson, setLesson] = useState<Lesson | null>(null);
   const [loading, setLoading] = useState(false);
   const [completed, setCompleted] = useState(false);
@@ -42,6 +50,7 @@ export default function LessonClient({
 
   const langCode = languageCode ?? targetLanguage.slice(0, 2).toLowerCase();
   const mentor = getMentorForLanguage(langCode);
+  const allDone = totalUnits > 0 && completedCount >= totalUnits;
 
   async function loadLesson() {
     if (!canGenerateLesson) return;
@@ -88,6 +97,11 @@ export default function LessonClient({
                 <h1 className="mt-1 text-2xl font-semibold">
                   {targetLanguage} · {level}
                 </h1>
+                {totalUnits > 0 && (
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    {completedCount}/{totalUnits} ünite tamamlandı
+                  </p>
+                )}
               </div>
             </div>
 
@@ -100,13 +114,40 @@ export default function LessonClient({
           </div>
         </div>
 
+        {/* ── All units completed banner ────────────────────────────────────── */}
+        {allDone && !lesson && (
+          <div className="rounded-[28px] border border-amber-400/20 bg-gradient-to-r from-amber-500/10 to-yellow-500/10 p-8 text-center">
+            <p className="text-5xl mb-3">🎓</p>
+            <h2 className="text-2xl font-bold text-amber-300">Tebrikler!</h2>
+            <p className="mt-2 text-sm text-slate-300">
+              Bu seviyedeki tüm üniteleri tamamladın. Bir sonraki seviyeye geçmeye hazırsın.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-center gap-3">
+              <Link
+                href="/courses"
+                className="rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                Sonraki Seviyeye Geç →
+              </Link>
+              <Link
+                href="/live"
+                className="rounded-2xl border border-white/10 bg-white/5 px-6 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+              >
+                🎤 Konuşmaya Devam Et
+              </Link>
+            </div>
+          </div>
+        )}
+
         {/* ── Generate button ───────────────────────────────────────────────── */}
-        {!lesson ? (
+        {!lesson && !allDone ? (
           <div className="space-y-5">
             {/* Generate area */}
             <div className="rounded-[28px] border border-white/10 bg-white/5 p-10 text-center">
               <div className="mb-6 text-5xl">📖</div>
-              <h2 className="text-2xl font-semibold">Generate Lesson</h2>
+              <h2 className="text-2xl font-semibold">
+                {unitTitle ?? "Ders Oluştur"}
+              </h2>
               <p className="mt-2 text-sm text-slate-400">
                 {targetLanguage} · {level}
               </p>
@@ -231,10 +272,10 @@ export default function LessonClient({
                     🎤 Canlı Pratiğe Geç
                   </Link>
                   <button
-                    onClick={loadLesson}
-                    className="rounded-2xl border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-slate-300 transition hover:bg-white/10"
+                    onClick={() => router.refresh()}
+                    className="rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-2.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(16,185,129,0.25)] transition hover:opacity-90"
                   >
-                    📖 Yeni Ders Oluştur
+                    📖 Sonraki Derse Geç →
                   </button>
                   <Link
                     href="/courses"

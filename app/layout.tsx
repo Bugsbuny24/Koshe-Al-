@@ -1,6 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import NavbarWrapper from "@/components/shared/NavbarWrapper";
+import { StudentProvider } from "@/contexts/StudentContext";
 
 // Force all pages to be dynamically rendered so Supabase auth is evaluated
 // at request time (not at build time when env vars may not be available).
@@ -22,8 +23,10 @@ export default function RootLayout({
       <body>
         <div className="min-h-screen bg-app text-white">
           <div className="bg-grid" />
-          <NavbarWrapper />
-          <div className="relative z-10">{children}</div>
+          <StudentProvider>
+            <NavbarWrapper />
+            <div className="relative z-10">{children}</div>
+          </StudentProvider>
         </div>
       </body>
     </html>
