@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import type { Department } from "@/types/university";
 import { getCourseId } from "@/lib/data/curriculum";
+import { useStudent } from "@/contexts/StudentContext";
 
 interface EnrollButtonProps {
   dept: Department;
@@ -15,6 +16,7 @@ interface EnrollButtonProps {
 
 export function EnrollButton({ dept, courseLevel, isEnrolled, progress }: EnrollButtonProps) {
   const router = useRouter();
+  const { setEnrollment } = useStudent();
   const [loading, setLoading] = useState(false);
   const [enrolled, setEnrolled] = useState(isEnrolled);
   const [currentProgress, setCurrentProgress] = useState(progress);
@@ -36,6 +38,7 @@ export function EnrollButton({ dept, courseLevel, isEnrolled, progress }: Enroll
 
       if (res.ok) {
         setEnrolled(true);
+        setEnrollment(dept.code, courseLevel.level, courseId);
         router.refresh();
       }
     } finally {
