@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SectionHeader, Surface } from "@/components/ui/Surface";
@@ -26,23 +25,6 @@ type EnrollmentRow = {
   status: string | null;
 };
 
-type BadgeRow = {
-  id: string;
-  title: string;
-  image_url: string | null;
-  level: string | null;
-  earned_at: string | null;
-};
-
-type CertRow = {
-  id: string;
-  title: string;
-  language_code: string;
-  level: string;
-  image_url: string | null;
-  issued_at: string | null;
-};
-
 type SessionRow = {
   fluency_score: number | null;
   grammar_score: number | null;
@@ -54,29 +36,18 @@ type MemoryRow = {
   wrong_sentence: string | null;
   correct_sentence: string | null;
   explanation: string | null;
-  created_at: string | null;
 };
 
 type VocabRow = {
   word: string | null;
   strength: number | null;
-  last_seen: string | null;
-};
-
-type CollectibleCountRow = {
-  id: string;
 };
 
 export default async function DashboardPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const [
     { data: profile },
@@ -84,9 +55,6 @@ export default async function DashboardPage() {
     { data: recentMistakes },
     { data: recentWords },
     { data: enrollments },
-    { data: latestBadges },
-    { data: latestCerts },
-    { data: collectibleCount },
   ] = await Promise.all([
     supabase
       .from("profiles")
@@ -121,337 +89,266 @@ export default async function DashboardPage() {
       .order("updated_at", { ascending: false })
       .limit(3)
       .returns<EnrollmentRow[]>(),
-    supabase
-      .from("achievements")
-      .select("id,title,image_url,level,earned_at")
-      .eq("user_id", user.id)
-      .order("earned_at", { ascending: false })
-      .limit(2)
-      .returns<BadgeRow[]>(),
-    supabase
-      .from("certificates")
-      .select("id,title,language_code,level,image_url,issued_at")
-      .eq("user_id", user.id)
-      .order("issued_at", { ascending: false })
-      .limit(1)
-      .returns<CertRow[]>(),
-    supabase
-      .from("collectible_rewards")
-      .select("id")
-      .eq("user_id", user.id)
-      .returns<CollectibleCountRow[]>(),
   ]);
 
   const sessionRows = sessions ?? [];
   const mistakeRows = recentMistakes ?? [];
   const wordRows = recentWords ?? [];
+  const latestScore = sessionRows[0] ?? null;
+  const isNewUser = sessionRows.length === 0;
 
-  const latestScore = sessionRows[0];
+  const avgFluency = sessionRows.length
+    ? Math.round(sessionRows.reduce((s, r) => s + Number(r.fluency_score || 0), 0) / sessionRows.length)
+    : null;
+  const avgGrammar = sessionRows.length
+    ? Math.round(sessionRows.reduce((s, r) => s + Number(r.grammar_score || 0), 0) / sessionRows.length)
+    : null;
+  const avgVocab = sessionRows.length
+    ? Math.round(sessionRows.reduce((s, r) => s + Number(r.vocabulary_score || 0), 0) / sessionRows.length)
+    : null;
 
-  function progressColor(p: number) {
-    if (p >= 100) return "from-amber-400 to-yellow-500";
-    if (p >= 80) return "from-fuchsia-500 to-violet-500";
-    if (p >= 50) return "from-cyan-400 to-blue-500";
-    return "from-slate-500 to-slate-400";
-  }
-
-  // Derive mentor from most recent enrollment or profile fallback
-  const primaryEnrollment = enrollments?.find((e) => e.status === "active") ?? enrollments?.[0] ?? null;
   const targetLang = profile?.target_language || "English";
-  const activeLangCode = primaryEnrollment?.language_code
-    ?? DEPARTMENTS.find((d) => d.name.toLowerCase() === targetLang.toLowerCase())?.code
-    ?? targetLang.slice(0, 2).toLowerCase();
+  const activeLangCode =
+    enrollments?.find((e) => e.status === "active")?.language_code ??
+    DEPARTMENTS.find((d) => d.name.toLowerCase() === targetLang.toLowerCase())?.code ??
+    targetLang.slice(0, 2).toLowerCase();
+  const activeLevel =
+    enrollments?.find((e) => e.status === "active")?.level ??
+    profile?.difficulty_level ?? "A1";
+  const academicCtx = getAcademicContext(activeLangCode, activeLevel);
   const mentor = getMentorForLanguage(activeLangCode);
 
   return (
     <main className="px-4 py-8 sm:px-6 sm:py-10">
-      <div className="mx-auto max-w-7xl">
+      <div className="mx-auto max-w-7xl space-y-8">
 
-        {/* ── Hero header ─────────────────────────────────────────────────── */}
+        {/* ── Hero header ─────────────────────────────────────────────── */}
         <Surface className="gradient-border p-6 sm:p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">
-                Koshei AI University
+                Koshei AI University — Dashboard
               </p>
               <h1 className="glow-text mt-2 text-3xl font-bold text-white sm:text-5xl">
-                Hoş geldin, {profile?.full_name || "Öğrenci"}
+                Hoş geldin, {profile?.full_name || "Öğrenci"} 👋
               </h1>
-              <p className="mt-2 text-sm text-slate-400">Continue your journey</p>
-
-              {/* Mentor hint */}
+              <div className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
+                <span className="text-slate-400">{academicCtx.facultyName}</span>
+                <span>›</span>
+                <span className="text-slate-300 font-medium">{academicCtx.programTitle}</span>
+                {academicCtx.courseTitle && (
+                  <>
+                    <span>›</span>
+                    <span className="text-cyan-400">{academicCtx.courseTitle}</span>
+                  </>
+                )}
+              </div>
               <div className="mt-4 flex items-center gap-3">
-                <div
-                  className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${mentor.gradientFrom} ${mentor.gradientTo} text-xs font-bold text-white`}
-                >
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br ${mentor.gradientFrom} ${mentor.gradientTo} text-xs font-bold text-white`}>
                   {mentor.avatarInitials}
                 </div>
                 <span className="text-sm text-slate-400">
-                  Mentorın: <span className="text-white font-medium">{mentor.name}</span>
+                  Mentorın: <span className="text-white font-medium">{mentor.name}</span> · {mentor.title}
                 </span>
               </div>
             </div>
-
             <div className="flex flex-wrap gap-3">
               <Link href="/live" className="primary-button">
-                🎤 Canlı Pratiğe Geç
+                🎤 Konuşmaya Başla
               </Link>
               <Link href="/lesson" className="soft-button">
-                📖 Derse Git
+                📖 Günlük Ders
               </Link>
-              {primaryEnrollment ? (
-                <Link
-                  href={`/courses/${activeLangCode}`}
-                  className="soft-button"
-                >
-                  🎓 Programına Devam Et
-                </Link>
-              ) : (
-                <Link href="/courses" className="soft-button">
-                  Kurslar
-                </Link>
-              )}
+              <Link href="/courses" className="soft-button">
+                📚 Programlar
+              </Link>
             </div>
           </div>
         </Surface>
 
-        {/* ── Active program + rewards row ────────────────────────────────── */}
-        {(enrollments && enrollments.length > 0) ||
-        (latestBadges && latestBadges.length > 0) ||
-        (latestCerts && latestCerts.length > 0) ? (
-          <div className="mt-8 grid gap-6 lg:grid-cols-3">
-            {/* Active enrollments */}
-            <Surface className="lg:col-span-2">
-              <SectionHeader
-                eyebrow="Aktif Program"
-                title="Eğitim İlerlemem"
-              />
-              {enrollments && enrollments.length > 0 ? (
-                <div className="mt-5 space-y-4">
-                  {enrollments.map((e) => {
-                    const ctx = getAcademicContext(e.language_code, e.level);
-                    return (
-                      <div
-                        key={e.course_id}
-                        className="rounded-2xl border border-white/10 bg-black/20 p-4"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div>
-                            <div className="font-medium text-white">
-                              {ctx.programTitle}
-                            </div>
-                            <div className="mt-0.5 text-xs text-slate-500">
-                              {ctx.facultyName} · {e.level}
-                            </div>
-                          </div>
-                          <span className="shrink-0 text-xs text-slate-400">
-                            {e.completed_units_count || 0}/{e.total_units_count || 0} ünite
-                          </span>
-                        </div>
-                        <div className="mt-3">
-                          <div className="mb-1.5 flex justify-between text-xs text-slate-400">
-                            <span>İlerleme</span>
-                            <span>{e.progress_percent || 0}%</span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-                            <div
-                              className={`h-full rounded-full bg-gradient-to-r ${progressColor(e.progress_percent || 0)}`}
-                              style={{ width: `${e.progress_percent || 0}%` }}
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <Link
-                            href="/live"
-                            className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
-                          >
-                            🎤 Canlı Pratik
-                          </Link>
-                          <Link
-                            href="/lesson"
-                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10"
-                          >
-                            📖 Ders
-                          </Link>
-                          <Link
-                            href={`/courses/${e.language_code}/${e.level}`}
-                            className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10"
-                          >
-                            Sonraki Ünite →
-                          </Link>
-                        </div>
-                      </div>
-                    );
-                  })}
+        {/* ── Yeni kullanıcı başlangıç rehberi ────────────────────────── */}
+        {isNewUser && (
+          <div className="rounded-3xl border border-fuchsia-400/20 bg-gradient-to-r from-fuchsia-500/10 to-violet-500/10 p-6 sm:p-8">
+            <div className="flex items-start gap-4">
+              <span className="text-4xl">🚀</span>
+              <div className="flex-1">
+                <h2 className="text-xl font-bold text-white">Başlamaya hazır mısın?</h2>
+                <p className="mt-2 text-sm text-slate-300 leading-7">
+                  Hesabın oluşturuldu. Şimdi ilk adımlarını at ve AI mentorunla tanış.
+                  20 ücretsiz kredinle hemen başlayabilirsin.
+                </p>
+                <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                  {[
+                    {
+                      icon: "🎤",
+                      title: "Canlı Pratik",
+                      desc: "AI mentorunla ilk konuşmanı yap",
+                      href: "/live",
+                      primary: true,
+                    },
+                    {
+                      icon: "📖",
+                      title: "Günlük Ders",
+                      desc: "Kişiselleştirilmiş ders oluştur",
+                      href: "/lesson",
+                      primary: false,
+                    },
+                    {
+                      icon: "📚",
+                      title: "Program Seç",
+                      desc: "Akademik programına kayıt ol",
+                      href: "/courses",
+                      primary: false,
+                    },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={[
+                        "flex flex-col gap-2 rounded-2xl p-4 transition",
+                        item.primary
+                          ? "bg-gradient-to-r from-fuchsia-600 to-violet-600 text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:opacity-90"
+                          : "border border-white/10 bg-white/5 hover:bg-white/10",
+                      ].join(" ")}
+                    >
+                      <span className="text-2xl">{item.icon}</span>
+                      <span className="font-semibold text-sm">{item.title}</span>
+                      <span className={`text-xs ${item.primary ? "text-fuchsia-200" : "text-slate-400"}`}>
+                        {item.desc}
+                      </span>
+                    </Link>
+                  ))}
                 </div>
-              ) : (
-                <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-                  <div className="text-2xl">🎓</div>
-                  <p className="mt-3 text-sm font-medium text-slate-300">Henüz aktif kurs yok</p>
-                  <Link
-                    href="/courses"
-                    className="mt-4 inline-flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300 transition hover:bg-white/10"
-                  >
-                    📚 Programlara Göz At →
-                  </Link>
-                </div>
-              )}
-            </Surface>
-
-            {/* Rewards sidebar */}
-            <div className="space-y-5">
-              {latestBadges && latestBadges.length > 0 ? (
-                <Surface>
-                  <SectionHeader eyebrow="Son Rozet" title="Kazanılan Badge" />
-                  <div className="mt-4 flex items-center gap-4">
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl border border-white/10">
-                      {latestBadges[0].image_url ? (
-                        <Image
-                          src={latestBadges[0].image_url}
-                          alt={latestBadges[0].title}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center text-xl">🏅</div>
-                      )}
-                    </div>
-                    <div>
-                      <div className="font-semibold text-white">{latestBadges[0].title}</div>
-                      <div className="mt-1 text-xs text-cyan-300">{latestBadges[0].level || ""}</div>
-                    </div>
-                  </div>
-                </Surface>
-              ) : null}
-
-              {latestCerts && latestCerts.length > 0 ? (
-                <Surface>
-                  <SectionHeader eyebrow="Son Sertifika" title={latestCerts[0].title} />
-                  <div className="mt-3 text-xs text-slate-400">
-                    {latestCerts[0].language_code.toUpperCase()} · {latestCerts[0].level} ·{" "}
-                    {latestCerts[0].issued_at
-                      ? new Date(latestCerts[0].issued_at).toLocaleDateString("tr-TR")
-                      : "-"}
-                  </div>
-                </Surface>
-              ) : null}
-
-              <Surface>
-                <div className="metric-label">Koleksiyon Ödülleri</div>
-                <div className="metric-value">{collectibleCount?.length || 0}</div>
-                <Link
-                  href="/profile"
-                  className="mt-3 block text-xs text-cyan-300 hover:underline"
-                >
-                  Sertifika Yolculuğunu Gör →
-                </Link>
-              </Surface>
-            </div>
-          </div>
-        ) : null}
-
-        {/* ── Credit balance ───────────────────────────────────────────────── */}
-        <div className="mt-8">
-          <CreditDisplay variant="full" />
-        </div>
-
-        {/* ── Stats + profile ──────────────────────────────────────────────── */}
-        <div className="mt-8 grid gap-6 xl:grid-cols-4">
-          <Surface className="xl:col-span-1">
-            <SectionHeader
-              eyebrow="Profil"
-              title="Öğrenci Bilgileri"
-              description="Aktif öğrenme profilin"
-            />
-            <div className="mt-6 space-y-3 text-sm text-slate-300">
-              {[
-                { label: "Ad", value: profile?.full_name },
-                { label: "Ana Dil", value: profile?.native_language },
-                { label: "Hedef Dil", value: profile?.target_language },
-                { label: "Seviye", value: profile?.difficulty_level },
-                { label: "Amaç", value: profile?.learning_stage },
-              ].map((item) => (
-                <div key={item.label} className="panel-dark p-4">
-                  <div className="text-xs uppercase tracking-[0.2em] text-slate-500">{item.label}</div>
-                  <div className="mt-2 text-white">{item.value || "-"}</div>
-                </div>
-              ))}
-            </div>
-          </Surface>
-
-          <div className="xl:col-span-3">
-            <div className="mt-6 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
-              <Surface>
-                <div className="metric-label">Fluency</div>
-                <div className="metric-value">{latestScore?.fluency_score || 0}</div>
-              </Surface>
-              <Surface>
-                <div className="metric-label">Grammar</div>
-                <div className="metric-value">{latestScore?.grammar_score || 0}</div>
-              </Surface>
-              <Surface>
-                <div className="metric-label">Vocabulary</div>
-                <div className="metric-value">{latestScore?.vocabulary_score || 0}</div>
-              </Surface>
-              <Surface>
-                <div className="metric-label">Toplam Session</div>
-                <div className="metric-value">{sessionRows.length}</div>
-              </Surface>
-            </div>
-
-            {/* ── Journey CTAs ─────────────────────────────────────────────── */}
-            <Surface className="mt-6">
-              <SectionHeader
-                eyebrow="Akademik Yolculuk"
-                title="Sertifika Yolculuğun"
-              />
-              <div className="mt-5 flex flex-wrap gap-3">
-                <Link href="/profile" className="primary-button">
-                  🏆 Rozetlerimi İncele
-                </Link>
-                <Link href="/courses" className="soft-button">
-                  📚 Tüm Programlar
-                </Link>
-                <Link href="/feedback" className="soft-button">
-                  Feedback
-                </Link>
               </div>
-            </Surface>
+            </div>
           </div>
+        )}
+
+        {/* ── Kredi bakiyesi ──────────────────────────────────────────── */}
+        <CreditDisplay variant="full" />
+
+        {/* ── Stats ───────────────────────────────────────────────────── */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { label: "Son Fluency", value: latestScore?.fluency_score ?? "—" },
+            { label: "Son Grammar", value: latestScore?.grammar_score ?? "—" },
+            { label: "Son Vocabulary", value: latestScore?.vocabulary_score ?? "—" },
+            { label: "Toplam Session", value: sessionRows.length || "—" },
+          ].map((s) => (
+            <Surface key={s.label}>
+              <div className="metric-label">{s.label}</div>
+              <div className="metric-value">{s.value}</div>
+            </Surface>
+          ))}
         </div>
 
-        {/* ── Recent mistakes + Vocabulary ─────────────────────────────────── */}
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {/* Ortalamalar — sadece veri varsa */}
+        {sessionRows.length > 0 && (
+          <div className="grid gap-4 sm:grid-cols-3">
+            {[
+              { label: "Ort. Fluency", value: avgFluency },
+              { label: "Ort. Grammar", value: avgGrammar },
+              { label: "Ort. Vocabulary", value: avgVocab },
+            ].map((s) => (
+              <Surface key={s.label}>
+                <div className="metric-label">{s.label}</div>
+                <div className="metric-value">{s.value}</div>
+              </Surface>
+            ))}
+          </div>
+        )}
+
+        {/* ── Aktif programlar ────────────────────────────────────────── */}
+        {enrollments && enrollments.length > 0 && (
           <Surface>
             <SectionHeader
-              eyebrow="Son Hatalar"
-              title="En son düzeltmelerin"
+              eyebrow="Aktif Program"
+              title="Eğitim İlerlemem"
+              description="Kayıtlı kurslarının ilerleme durumu"
+            />
+            <div className="mt-5 space-y-4">
+              {enrollments.map((e) => {
+                const ctx = getAcademicContext(e.language_code, e.level);
+                const progress = e.progress_percent || 0;
+                const progressColor =
+                  progress >= 100 ? "from-amber-400 to-yellow-500"
+                  : progress >= 80 ? "from-fuchsia-500 to-violet-500"
+                  : progress >= 50 ? "from-cyan-400 to-blue-500"
+                  : "from-slate-500 to-slate-400";
+
+                return (
+                  <div key={e.course_id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-medium text-white">{ctx.programTitle}</div>
+                        <div className="mt-0.5 text-xs text-slate-500">{ctx.facultyName} · {e.level}</div>
+                      </div>
+                      <span className="text-xs text-slate-400">
+                        {e.completed_units_count || 0}/{e.total_units_count || 0} ünite
+                      </span>
+                    </div>
+                    <div className="mt-3">
+                      <div className="mb-1.5 flex justify-between text-xs text-slate-400">
+                        <span>İlerleme</span>
+                        <span>{progress}%</span>
+                      </div>
+                      <div className="h-2 overflow-hidden rounded-full bg-white/10">
+                        <div
+                          className={`h-full rounded-full bg-gradient-to-r ${progressColor}`}
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Link href="/live" className="rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-3 py-1.5 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20">
+                        🎤 Canlı Pratik
+                      </Link>
+                      <Link href="/lesson" className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10">
+                        📖 Ders
+                      </Link>
+                      <Link href={`/courses/${e.language_code}/${e.level}`} className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10">
+                        Sonraki Ünite →
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Surface>
+        )}
+
+        {/* ── Son hatalar + Kelimeler ─────────────────────────────────── */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Surface>
+            <SectionHeader
+              eyebrow="Hafıza"
+              title="Son Hatalar"
+              description="AI'nin kaydettiği düzeltmeler"
             />
             {mistakeRows.length > 0 ? (
-              <div className="mt-6 space-y-4">
-                {mistakeRows.map((item, index) => (
-                  <div
-                    key={`${item.wrong_sentence}-${index}`}
-                    className="rounded-2xl border border-cyan-400/15 bg-cyan-400/8 p-4"
-                  >
-                    <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Yanlış</div>
-                    <div className="mt-2 text-white">{item.wrong_sentence || "-"}</div>
-                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Doğru</div>
-                    <div className="mt-2 text-cyan-300">{item.correct_sentence || "-"}</div>
-                    <div className="mt-4 text-xs uppercase tracking-[0.2em] text-slate-400">Açıklama</div>
-                    <div className="mt-2 text-slate-200">{item.explanation || "-"}</div>
+              <div className="mt-5 space-y-4">
+                {mistakeRows.map((item, i) => (
+                  <div key={i} className="rounded-2xl border border-cyan-400/15 bg-cyan-400/5 p-4">
+                    <div className="text-xs uppercase tracking-[0.2em] text-slate-500 mb-1">Hatalı</div>
+                    <div className="text-sm text-slate-300 line-through">{item.wrong_sentence || "—"}</div>
+                    <div className="text-xs uppercase tracking-[0.2em] text-cyan-400 mt-3 mb-1">Doğrusu</div>
+                    <div className="text-sm text-cyan-300 font-medium">{item.correct_sentence || "—"}</div>
+                    {item.explanation && (
+                      <>
+                        <div className="text-xs uppercase tracking-[0.2em] text-slate-500 mt-3 mb-1">Neden</div>
+                        <div className="text-xs text-slate-400">{item.explanation}</div>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-                <div className="text-2xl">🧠</div>
-                <p className="mt-3 text-sm font-medium text-slate-300">Henüz hata kaydı yok</p>
-                <Link
-                  href="/live"
-                  className="mt-4 inline-flex items-center gap-1 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
-                >
-                  🎤 Canlı Pratiğe Geç →
+              <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center">
+                <p className="text-3xl mb-3">🧠</p>
+                <p className="text-sm text-slate-400">Henüz hata kaydı yok.</p>
+                <p className="text-xs text-slate-600 mt-1">İlk konuşmandan sonra hatalar burada görünür.</p>
+                <Link href="/live" className="mt-4 inline-block rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-300 hover:bg-white/10">
+                  Konuşmaya Başla →
                 </Link>
               </div>
             )}
@@ -459,38 +356,64 @@ export default async function DashboardPage() {
 
           <Surface>
             <SectionHeader
-              eyebrow="Vocabulary"
-              title="Son öğrenilen kelimeler"
+              eyebrow="Kelime Hazinesi"
+              title="Son Kelimeler"
+              description="Öğrendiğin kelimeler"
             />
             {wordRows.length > 0 ? (
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                {wordRows.map((item, index) => (
-                  <div
-                    key={`${item.word}-${index}`}
-                    className="rounded-2xl border border-white/10 bg-black/20 px-4 py-4"
-                  >
-                    <div className="text-base font-semibold text-white">
-                      {item.word || "-"}
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {wordRows.map((item, i) => (
+                  <div key={i} className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3">
+                    <div className="font-semibold text-white">{item.word || "—"}</div>
+                    <div className="mt-1 text-xs text-slate-500">
+                      Güç: {item.strength || 1}/5
                     </div>
-                    <div className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-500">Strength</div>
-                    <div className="mt-1 text-slate-300">{item.strength || 1}</div>
+                    <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-blue-500"
+                        style={{ width: `${Math.min((item.strength || 1) * 20, 100)}%` }}
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="mt-5 rounded-2xl border border-white/10 bg-black/20 p-6 text-center">
-                <div className="text-2xl">📚</div>
-                <p className="mt-3 text-sm font-medium text-slate-300">Henüz kelime eklenmedi</p>
-                <Link
-                  href="/live"
-                  className="mt-4 inline-flex items-center gap-1 rounded-xl border border-cyan-400/20 bg-cyan-500/10 px-4 py-2 text-xs font-medium text-cyan-300 transition hover:bg-cyan-500/20"
-                >
-                  🎤 İlk Pratikini Yap →
-                </Link>
+              <div className="mt-5 rounded-2xl border border-dashed border-white/10 p-8 text-center">
+                <p className="text-3xl mb-3">📝</p>
+                <p className="text-sm text-slate-400">Henüz kelime kaydı yok.</p>
+                <p className="text-xs text-slate-600 mt-1">Konuşmalar sırasında öğrenilen kelimeler burada görünür.</p>
               </div>
             )}
           </Surface>
         </div>
+
+        {/* ── Profil özeti ─────────────────────────────────────────────── */}
+        <Surface>
+          <SectionHeader
+            eyebrow="Profil"
+            title="Öğrenme Profilin"
+            description="Onboarding'de seçtiğin ayarlar"
+          />
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: "Ad", value: profile?.full_name },
+              { label: "Ana Dil", value: profile?.native_language },
+              { label: "Hedef Dil", value: profile?.target_language },
+              { label: "Seviye", value: profile?.difficulty_level },
+              { label: "Amaç", value: profile?.learning_stage },
+            ].map((item) => (
+              <div key={item.label} className="panel-dark p-4">
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-500">{item.label}</div>
+                <div className="mt-2 text-sm font-medium text-white">{item.value || "—"}</div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link href="/profile" className="soft-button">🏆 Rozetler & Sertifikalar</Link>
+            <Link href="/feedback" className="soft-button">💬 Feedback</Link>
+          </div>
+        </Surface>
+
       </div>
     </main>
   );
