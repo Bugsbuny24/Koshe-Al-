@@ -76,7 +76,7 @@ export default function HomePage() {
 
       {/* ── Hero Section ── */}
       <section
-        className="relative w-full overflow-hidden"
+        className="relative w-full overflow-hidden pt-16"
         style={{
           minHeight: "calc(100vh - 64px)",
           background:

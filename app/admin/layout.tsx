@@ -50,6 +50,9 @@ export default async function AdminLayout({
     { href: "/admin/students",   label: "Öğrenciler",   icon: "👥" },
     { href: "/admin/rewards",    label: "Ödüller",      icon: "🏆" },
     { href: "/admin/credits",    label: "Credits",      icon: "💳" },
+    { href: "/admin/users",     label: "Kullanıcılar", icon: "👤" },
+    { href: "/admin/analytics", label: "Analytics",    icon: "📊" },
+    { href: "/admin/feedback",  label: "Feedback",     icon: "💬" },
   ];
 
   return (
