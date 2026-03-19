@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { MENTORS } from "@/lib/data/mentors";
 import { FACULTIES } from "@/lib/data/academic-catalog";
 import { CREDIT_PACKAGES_DEF } from "@/lib/data/credit-packages";
@@ -16,14 +15,13 @@ export default function HomePage() {
         {/* Arkaplan Görseli ve Efektler */}
         <div className="absolute inset-0 z-0">
           {/* Görselin üzerine metinlerin okunabilmesi için hafif koyu bir katman */}
-          <div className="absolute inset-0 bg-[#050816]/60 z-10 mix-blend-multiply" />
-          
-          <Image 
-            src="/hero-bg.jpg" 
-            alt="Koshei Universe" 
-            fill
-            priority
-            className="object-cover object-center"
+          <div className="absolute inset-0 bg-[#050816]/40 z-10" />
+
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://github.com/user-attachments/assets/df444298-181a-4482-b34c-2fe097a2989f"
+            alt="Koshei Universe"
+            className="absolute inset-0 w-full h-full object-cover object-center"
           />
 
           {/* Sayfanın geri kalanına (koyu temaya) yumuşak geçiş */}
@@ -31,28 +29,6 @@ export default function HomePage() {
         </div>
 
         <div className="relative z-20 mx-auto max-w-5xl px-4 sm:px-6 flex flex-col items-center text-center mt-20">
-          
-          {/* Logo İkonu */}
-          <div className="mb-6 relative">
-            <div className="absolute inset-0 bg-cyan-400/30 blur-[40px] rounded-full" />
-            <span className="relative text-5xl">🛡️</span>
-          </div>
-
-          <h1 className="text-6xl sm:text-8xl lg:text-[140px] font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-400 uppercase drop-shadow-[0_0_30px_rgba(255,255,255,0.3)]">
-            Koshei
-          </h1>
-
-          <div className="mt-4 flex items-center gap-4">
-            <div className="h-px w-12 bg-cyan-500/50" />
-            <p className="text-xl sm:text-3xl text-cyan-50 font-light tracking-[0.3em] drop-shadow-[0_0_15px_rgba(34,211,238,0.8)]">
-              Geleceğin Eğitimi
-            </p>
-            <div className="h-px w-12 bg-cyan-500/50" />
-          </div>
-
-          <p className="mt-8 text-lg text-slate-300 leading-8 max-w-2xl" style={{ textShadow: "0 2px 10px rgba(0,0,0,0.8)" }}>
-            AI mentor rehberliğinde akademik dil programları. Her konuşma skorlanır, her hata hafızaya alınır, her ilerleme sertifikayla kanıtlanır.
-          </p>
 
           <div className="mt-12 flex flex-col sm:flex-row gap-5">
             <Link
