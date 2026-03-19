@@ -4,7 +4,9 @@ let genAIInstance: GoogleGenerativeAI | null = null;
 
 export function getGenAI(): GoogleGenerativeAI {
   if (!genAIInstance) {
-    genAIInstance = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error('GEMINI_API_KEY is not set');
+    genAIInstance = new GoogleGenerativeAI(apiKey);
   }
   return genAIInstance;
 }
