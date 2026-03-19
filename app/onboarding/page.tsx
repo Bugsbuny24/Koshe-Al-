@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { LANGUAGES, STAGES } from "@/lib/constants/languages";
@@ -8,41 +7,30 @@ import { FACULTIES } from "@/lib/data/academic-catalog";
 import type { AcademicProgram } from "@/lib/data/academic-catalog";
 
 const GOALS = [
-  { value: "conversation", label: "Günlük Konuşma" },
-  { value: "business", label: "İş Dili" },
-  { value: "travel", label: "Seyahat" },
-  { value: "academic", label: "Akademik" },
-  { value: "exam", label: "Sınav Hazırlığı" },
+  { value: "conversation", label: "Günlük Konuşma", icon: "💬" },
+  { value: "business", label: "İş Dili", icon: "💼" },
+  { value: "travel", label: "Seyahat", icon: "✈️" },
+  { value: "academic", label: "Akademik", icon: "🎓" },
+  { value: "exam", label: "Sınav Hazırlığı", icon: "📝" },
 ];
 
 type Step = 1 | 2 | 3 | 4;
 
 export default function OnboardingPage() {
-  const router = useRouter();
   const supabase = createClient();
 
-  const popularLanguages = useMemo(
-    () => LANGUAGES.filter((item) => item.isPopular),
-    []
-  );
+  const popularLanguages = useMemo(() => LANGUAGES.filter((item) => item.isPopular), []);
 
   const [step, setStep] = useState<Step>(1);
   const [bootLoading, setBootLoading] = useState(true);
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState("");
 
-  // Step 1 — language
   const [nativeLanguage, setNativeLanguage] = useState("Turkish");
   const [targetLanguage, setTargetLanguage] = useState("English");
   const [level, setLevel] = useState("A1");
-
-  // Step 2 — goal
   const [goal, setGoal] = useState("conversation");
-
-  // Step 3 — faculty
   const [facultyCode, setFacultyCode] = useState("");
-
-  // Step 4 — program
   const [programSlug, setProgramSlug] = useState("");
 
   const selectedFaculty = useMemo(
@@ -52,36 +40,21 @@ export default function OnboardingPage() {
   const availablePrograms: AcademicProgram[] = selectedFaculty?.programs ?? [];
 
   useEffect(() => {
-    let mounted = true;
-
     async function bootstrap() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        router.push("/login");
+        window.location.href = "/login";
         return;
       }
 
-      const { data: profile, error } = await supabase
+      const { data: profile } = await supabase
         .from("profiles")
-        .select(
-          "native_language,target_language,difficulty_level,learning_stage,onboarding_completed"
-        )
+        .select("native_language,target_language,difficulty_level,learning_stage,onboarding_completed")
         .eq("id", user.id)
         .single();
 
-      if (!mounted) return;
-
-      if (error) {
-        setErrorText(error.message);
-        setBootLoading(false);
-        return;
-      }
-
       if (profile?.onboarding_completed) {
-        router.push("/dashboard");
+        window.location.href = "/dashboard";
         return;
       }
 
@@ -94,44 +67,18 @@ export default function OnboardingPage() {
     }
 
     bootstrap();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    return () => {
-      mounted = false;
-    };
-  }, [router, supabase]);
-
-  function nextStep() {
-    setErrorText("");
-    if (step === 3 && !facultyCode) {
-      setErrorText("Lütfen bir fakülte seçin.");
-      return;
-    }
-    if (step < 4) setStep((s) => (s + 1) as Step);
-  }
-
-  function prevStep() {
-    setErrorText("");
-    if (step > 1) setStep((s) => (s - 1) as Step);
-  }
-
-  async function finishOnboarding() {
+  async function handleFinish() {
     setLoading(true);
     setErrorText("");
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setErrorText("Kullanıcı bulunamadı.");
-      setLoading(false);
+      window.location.href = "/login";
       return;
     }
-
-    const metadata = {
-      faculty_id: facultyCode || null,
-      program_id: programSlug || null,
-    };
 
     const { error } = await supabase
       .from("profiles")
@@ -141,7 +88,6 @@ export default function OnboardingPage() {
         difficulty_level: level,
         learning_stage: goal,
         onboarding_completed: true,
-        metadata,
       })
       .eq("id", user.id);
 
@@ -151,265 +97,273 @@ export default function OnboardingPage() {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    // Program seçildiyse kayıt ol
+    if (programSlug) {
+      const dept = FACULTIES.flatMap((f) => f.programs).find((p) => p.slug === programSlug);
+      if (dept) {
+        const firstCourse = dept.courses[0];
+        if (firstCourse) {
+          await supabase.from("course_enrollments").upsert(
+            {
+              user_id: user.id,
+              course_id: firstCourse.id,
+              language_code: targetLanguage.slice(0, 2).toLowerCase(),
+              level: level,
+              progress_percent: 0,
+              completed_units_count: 0,
+              total_units_count: firstCourse.units.length,
+              status: "active",
+            },
+            { onConflict: "user_id,course_id" }
+          );
+        }
+      }
+    }
+
+    window.location.href = "/dashboard";
   }
 
   if (bootLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#050816] text-white">
-        <div className="rounded-2xl border border-white/10 bg-white/5 px-6 py-4 text-sm text-slate-300">
-          Onboarding hazırlanıyor...
+      <div className="flex min-h-screen items-center justify-center bg-[#050816]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-400/30 to-fuchsia-500/30">
+            <span className="text-lg font-bold text-white animate-pulse">K</span>
+          </div>
+          <p className="text-sm text-slate-400">Yükleniyor...</p>
         </div>
-      </main>
+      </div>
     );
   }
 
-  return (
-    <main className="min-h-screen bg-[#050816] px-6 py-10 text-white">
-      <div className="mx-auto max-w-2xl">
-        {/* ── Header ───────────────────────────────────────────────────────── */}
-        <div className="mb-8 rounded-[28px] border border-white/10 bg-gradient-to-r from-fuchsia-500/10 via-blue-500/10 to-cyan-500/10 p-6">
-          <div className="text-sm uppercase tracking-[0.25em] text-cyan-300">
-            Onboarding — Adım {step} / 4
-          </div>
-          <h1 className="mt-2 text-3xl font-semibold">Koshei AI seni tanısın</h1>
-          <p className="mt-2 text-slate-300 text-sm">
-            Tercihlerini belirle. AI öğretmenin buna göre çalışır.
-          </p>
+  const stepTitles: Record<Step, string> = {
+    1: "Dil Seçimi",
+    2: "Öğrenme Hedefin",
+    3: "Fakülte Seç",
+    4: "Program Seç",
+  };
 
+  return (
+    <main className="min-h-screen bg-[#050816] px-4 py-12 text-white">
+      <div className="mx-auto max-w-2xl">
+
+        {/* Header */}
+        <div className="mb-10 text-center">
+          <div className="text-xs uppercase tracking-[0.35em] text-cyan-300 mb-3">Koshei AI University</div>
+          <h1 className="text-3xl font-bold">Profilini Oluştur</h1>
+          <p className="mt-2 text-slate-400 text-sm">
+            Adım {step} / 4 — {stepTitles[step]}
+          </p>
           {/* Progress bar */}
-          <div className="mt-4 flex gap-1">
-            {([1, 2, 3, 4] as const).map((s) => (
-              <div
-                key={s}
-                className={`h-1 flex-1 rounded-full transition-all ${
-                  s <= step ? "bg-cyan-400" : "bg-white/10"
-                }`}
-              />
-            ))}
+          <div className="mt-5 h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-fuchsia-500 transition-all duration-500"
+              style={{ width: `${(step / 4) * 100}%` }}
+            />
           </div>
         </div>
 
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-          {/* ── Step 1: Language ──────────────────────────────────────────── */}
-          {step === 1 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-semibold">Dil Seçimi</h2>
+        {/* Step 1 — Dil seçimi */}
+        {step === 1 && (
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
+            <h2 className="text-xl font-semibold mb-6">Hangi dili öğrenmek istiyorsun?</h2>
 
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Ana Dilin</label>
-                <select
-                  value={nativeLanguage}
-                  onChange={(e) => setNativeLanguage(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
-                >
-                  {LANGUAGES.map((language) => (
-                    <option key={`native-${language.code}`} value={language.name}>
-                      {language.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">
-                  Öğrenmek İstediğin Dil
-                </label>
-                <select
-                  value={targetLanguage}
-                  onChange={(e) => setTargetLanguage(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
-                >
-                  {LANGUAGES.map((language) => (
-                    <option key={`target-${language.code}`} value={language.name}>
-                      {language.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm text-slate-300">Seviyen</label>
-                <select
-                  value={level}
-                  onChange={(e) => setLevel(e.target.value)}
-                  className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none"
-                >
-                  {STAGES.map((stage) => (
-                    <option key={stage} value={stage}>
-                      {stage}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs text-slate-500">Popüler Diller</p>
-                <div className="flex flex-wrap gap-2">
-                  {popularLanguages.slice(0, 10).map((language) => (
-                    <button
-                      key={language.code}
-                      type="button"
-                      onClick={() => setTargetLanguage(language.name)}
-                      className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                        targetLanguage === language.name
-                          ? "border-cyan-400/40 bg-cyan-500/20 text-cyan-300"
-                          : "border-white/10 bg-black/20 text-slate-300 hover:bg-white/10"
-                      }`}
-                    >
-                      {language.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
+            <div className="mb-6">
+              <label className="text-sm text-slate-400 mb-2 block">Ana dilin</label>
+              <select
+                value={nativeLanguage}
+                onChange={(e) => setNativeLanguage(e.target.value)}
+                className="w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-white outline-none focus:border-cyan-400/40"
+              >
+                {LANGUAGES.map((l) => (
+                  <option key={l.value} value={l.value}>{l.label}</option>
+                ))}
+              </select>
             </div>
-          )}
 
-          {/* ── Step 2: Goal ──────────────────────────────────────────────── */}
-          {step === 2 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-semibold">Hedef Seçimi</h2>
-              <p className="text-sm text-slate-400">
-                Öğrenme amacın ne? AI öğretmenin buna göre dersleri şekillendirir.
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {GOALS.map((item) => (
+            <div className="mb-6">
+              <label className="text-sm text-slate-400 mb-3 block">Öğrenmek istediğin dil</label>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {popularLanguages.map((lang) => (
                   <button
-                    key={item.value}
+                    key={lang.value}
                     type="button"
-                    onClick={() => setGoal(item.value)}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      goal === item.value
-                        ? "border-cyan-400/40 bg-cyan-500/10 text-cyan-300"
-                        : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/10"
-                    }`}
+                    onClick={() => setTargetLanguage(lang.value)}
+                    className={[
+                      "flex items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition",
+                      targetLanguage === lang.value
+                        ? "border-cyan-400/40 bg-cyan-400/10 text-white"
+                        : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/8",
+                    ].join(" ")}
                   >
-                    <span className="font-medium">{item.label}</span>
+                    <span className="text-xl">{lang.flag}</span>
+                    <span>{lang.label}</span>
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* ── Step 3: Faculty ───────────────────────────────────────────── */}
-          {step === 3 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-semibold">Fakülte Seçimi</h2>
-              <p className="text-sm text-slate-400">
-                Hangi fakültede okumak istiyorsun?
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {FACULTIES.map((f) => (
+            <div className="mb-8">
+              <label className="text-sm text-slate-400 mb-3 block">Seviyeni seç</label>
+              <div className="flex flex-wrap gap-2">
+                {(STAGES as { value: string; label: string }[]).map((s) => (
                   <button
-                    key={f.code}
+                    key={s.value}
                     type="button"
-                    onClick={() => {
-                      setFacultyCode(f.code);
-                      setProgramSlug("");
-                    }}
-                    className={`rounded-2xl border p-4 text-left transition ${
-                      facultyCode === f.code
-                        ? "border-cyan-400/40 bg-cyan-500/10"
-                        : "border-white/10 bg-white/5 hover:bg-white/10"
-                    }`}
+                    onClick={() => setLevel(s.value)}
+                    className={[
+                      "rounded-xl border px-4 py-2 text-sm font-medium transition",
+                      level === s.value
+                        ? "border-fuchsia-400/40 bg-fuchsia-400/15 text-fuchsia-300"
+                        : "border-white/10 bg-white/5 text-slate-400 hover:text-white",
+                    ].join(" ")}
                   >
-                    <span className="text-2xl">{f.icon}</span>
-                    <div className="mt-2 font-medium text-white">{f.name}</div>
-                    <p className="mt-1 text-xs text-slate-400">{f.description}</p>
+                    {s.value}
                   </button>
                 ))}
               </div>
             </div>
-          )}
 
-          {/* ── Step 4: Program ───────────────────────────────────────────── */}
-          {step === 4 && (
-            <div className="space-y-5">
-              <h2 className="text-xl font-semibold">Program Seçimi</h2>
-              {selectedFaculty ? (
-                <p className="text-sm text-slate-400">
-                  {selectedFaculty.name} fakültesindeki programlardan birini seç.
-                </p>
-              ) : (
-                <p className="text-sm text-slate-400">
-                  Program seçimi isteğe bağlıdır.
-                </p>
-              )}
-              {availablePrograms.length > 0 && (
-                <div className="grid gap-3">
-                  {availablePrograms.map((prog) => (
-                    <button
-                      key={prog.slug}
-                      type="button"
-                      onClick={() => setProgramSlug(prog.slug)}
-                      className={`rounded-2xl border p-4 text-left transition ${
-                        programSlug === prog.slug
-                          ? "border-cyan-400/40 bg-cyan-500/10"
-                          : "border-white/10 bg-white/5 hover:bg-white/10"
-                      }`}
-                    >
-                      <div className="font-medium text-white">{prog.title}</div>
-                      <p className="mt-1 text-xs text-slate-400">
-                        {prog.shortDescription}
-                      </p>
-                      <div className="mt-2 flex gap-2">
-                        <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-slate-500">
-                          {prog.durationLabel}
-                        </span>
-                        <span className="rounded-full bg-white/5 px-2 py-0.5 text-xs text-slate-500">
-                          {prog.difficultyLabel}
-                        </span>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-slate-500">
-                Program seçmeden de devam edebilirsin, sonradan değiştirebilirsin.
-              </p>
+            <button
+              onClick={() => setStep(2)}
+              disabled={!targetLanguage}
+              className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-40"
+            >
+              Devam →
+            </button>
+          </div>
+        )}
+
+        {/* Step 2 — Hedef */}
+        {step === 2 && (
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
+            <h2 className="text-xl font-semibold mb-6">Ne için öğreniyorsun?</h2>
+            <div className="space-y-3 mb-8">
+              {GOALS.map((g) => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => setGoal(g.value)}
+                  className={[
+                    "flex w-full items-center gap-4 rounded-2xl border px-5 py-4 text-left transition",
+                    goal === g.value
+                      ? "border-fuchsia-400/40 bg-fuchsia-400/10 text-white"
+                      : "border-white/10 bg-white/5 text-slate-300 hover:bg-white/8",
+                  ].join(" ")}
+                >
+                  <span className="text-2xl">{g.icon}</span>
+                  <span className="font-medium">{g.label}</span>
+                  {goal === g.value && <span className="ml-auto text-fuchsia-400">✓</span>}
+                </button>
+              ))}
             </div>
-          )}
-
-          {/* ── Errors ───────────────────────────────────────────────────── */}
-          {errorText && (
-            <div className="mt-5 rounded-2xl border border-red-400/20 bg-red-400/10 px-4 py-3 text-sm text-red-300">
-              {errorText}
-            </div>
-          )}
-
-          {/* ── Navigation ───────────────────────────────────────────────── */}
-          <div className="mt-8 flex gap-3">
-            {step > 1 && (
+            <div className="flex gap-3">
               <button
-                type="button"
-                onClick={prevStep}
-                className="rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-slate-300 transition hover:bg-white/10"
+                onClick={() => setStep(1)}
+                className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-medium text-slate-300 transition hover:bg-white/10"
               >
                 ← Geri
               </button>
-            )}
-
-            {step < 4 ? (
               <button
-                type="button"
-                onClick={nextStep}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-6 py-3 text-sm font-medium text-white transition hover:opacity-90"
+                onClick={() => setStep(3)}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
               >
                 Devam →
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={finishOnboarding}
-                disabled={loading}
-                className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 px-6 py-3 text-sm font-medium text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {loading ? "Kaydediliyor..." : "Onboarding'i Tamamla"}
-              </button>
-            )}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Step 3 — Fakülte */}
+        {step === 3 && (
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
+            <h2 className="text-xl font-semibold mb-2">Fakülte Seç</h2>
+            <p className="text-sm text-slate-400 mb-6">İstersen atlayabilirsin, daha sonra da seçebilirsin.</p>
+            <div className="grid gap-3 sm:grid-cols-2 mb-8">
+              {FACULTIES.map((f) => (
+                <button
+                  key={f.code}
+                  type="button"
+                  onClick={() => setFacultyCode(f.code)}
+                  className={[
+                    "flex items-start gap-3 rounded-2xl border p-4 text-left transition",
+                    facultyCode === f.code
+                      ? "border-cyan-400/40 bg-cyan-400/10"
+                      : "border-white/10 bg-white/5 hover:bg-white/8",
+                  ].join(" ")}
+                >
+                  <span className="text-2xl mt-0.5">{f.icon}</span>
+                  <div>
+                    <div className="text-sm font-medium text-white">{f.name}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{f.programs.length} program</div>
+                  </div>
+                  {facultyCode === f.code && <span className="ml-auto text-cyan-400 text-sm">✓</span>}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setStep(2)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-medium text-slate-300 transition hover:bg-white/10">
+                ← Geri
+              </button>
+              <button
+                onClick={() => facultyCode ? setStep(4) : handleFinish()}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3.5 text-sm font-semibold text-white transition hover:opacity-90"
+              >
+                {facultyCode ? "Devam →" : "Atla ve Başla"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step 4 — Program */}
+        {step === 4 && (
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
+            <h2 className="text-xl font-semibold mb-2">Program Seç</h2>
+            <p className="text-sm text-slate-400 mb-6">{selectedFaculty?.name} fakültesindeki programlar</p>
+            <div className="space-y-3 mb-8">
+              {availablePrograms.map((p) => (
+                <button
+                  key={p.slug}
+                  type="button"
+                  onClick={() => setProgramSlug(p.slug)}
+                  className={[
+                    "flex w-full items-start gap-4 rounded-2xl border p-4 text-left transition",
+                    programSlug === p.slug
+                      ? "border-fuchsia-400/40 bg-fuchsia-400/10"
+                      : "border-white/10 bg-white/5 hover:bg-white/8",
+                  ].join(" ")}
+                >
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-white">{p.title}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">{p.durationLabel} · {p.difficultyLabel}</div>
+                    <div className="text-xs text-slate-400 mt-1">{p.shortDescription}</div>
+                  </div>
+                  {programSlug === p.slug && <span className="text-fuchsia-400">✓</span>}
+                </button>
+              ))}
+            </div>
+
+            {errorText && (
+              <div className="mb-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {errorText}
+              </div>
+            )}
+
+            <div className="flex gap-3">
+              <button onClick={() => setStep(3)} className="flex-1 rounded-2xl border border-white/10 bg-white/5 py-3.5 text-sm font-medium text-slate-300 transition hover:bg-white/10">
+                ← Geri
+              </button>
+              <button
+                onClick={handleFinish}
+                disabled={loading}
+                className="flex-1 rounded-2xl bg-gradient-to-r from-fuchsia-600 to-violet-600 py-3.5 text-sm font-semibold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition hover:opacity-90 disabled:opacity-50"
+              >
+                {loading ? "Kaydediliyor..." : "🚀 Başla!"}
+              </button>
+            </div>
+          </div>
+        )}
+
       </div>
     </main>
   );
