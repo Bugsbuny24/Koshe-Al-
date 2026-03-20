@@ -2,10 +2,20 @@
 
 import { useState, useCallback } from 'react';
 
+type PaymentType = 'course' | 'subscription' | 'module' | 'freelance' | 'credits';
+
+interface PaymentMeta {
+  userId?: string;
+  type?: PaymentType;
+  planId?: string;
+  packageId?: string;
+  [key: string]: unknown;
+}
+
 interface PaymentOptions {
   amount: number;
   memo: string;
-  metadata: Record<string, unknown>;
+  metadata: PaymentMeta;
   onSuccess?: (txid: string) => void;
   onError?: (error: Error) => void;
 }
@@ -21,18 +31,25 @@ export function usePiPayment() {
 
     setLoading(true);
 
+    const { amount, memo, metadata } = options;
+    const { userId, type, planId, packageId } = metadata;
+
     window.Pi.createPayment(
-      {
-        amount: options.amount,
-        memo: options.memo,
-        metadata: options.metadata,
-      },
+      { amount, memo, metadata },
       {
         onReadyForServerApproval: async (paymentId) => {
           const res = await fetch('/api/payments/approve', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId }),
+            body: JSON.stringify({
+              paymentId,
+              userId,
+              type,
+              planId,
+              packageId,
+              amount,
+              memo,
+            }),
           });
           if (!res.ok) {
             const data = await res.json().catch(() => null);
@@ -43,7 +60,16 @@ export function usePiPayment() {
           const res = await fetch('/api/payments/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid }),
+            body: JSON.stringify({
+              paymentId,
+              txid,
+              userId,
+              type,
+              planId,
+              packageId,
+              amount,
+              memo,
+            }),
           });
           if (!res.ok) {
             const data = await res.json().catch(() => null);

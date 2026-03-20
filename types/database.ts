@@ -37,7 +37,9 @@ export interface UserQuota {
   credits_remaining: number;
   credits_total: number;
   is_active: boolean;
+  plan_started_at: string | null;
   plan_expires_at: string | null;
+  updated_at: string | null;
 }
 
 export interface PiPayment {
@@ -48,7 +50,7 @@ export interface PiPayment {
   amount: number;
   memo: string | null;
   status: 'pending' | 'approved' | 'completed' | 'cancelled';
-  payment_type: 'course' | 'subscription' | 'module' | 'freelance';
+  payment_type: 'course' | 'subscription' | 'module' | 'freelance' | 'credits';
   reference_id: string | null;
   created_at: string;
   completed_at: string | null;

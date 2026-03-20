@@ -30,10 +30,18 @@ export function usePiAuth() {
       const auth = await window.Pi.authenticate(
         ['username', 'payments'],
         async (payment) => {
+          const meta = (payment.metadata ?? {}) as Record<string, unknown>;
           await fetch('/api/payments/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId: payment.identifier }),
+            body: JSON.stringify({
+              paymentId: payment.identifier,
+              txid: payment.transaction?.txid ?? null,
+              userId: typeof meta.userId === 'string' ? meta.userId : null,
+              type: typeof meta.type === 'string' ? meta.type : null,
+              planId: typeof meta.planId === 'string' ? meta.planId : null,
+              packageId: typeof meta.packageId === 'string' ? meta.packageId : null,
+            }),
           });
         }
       );

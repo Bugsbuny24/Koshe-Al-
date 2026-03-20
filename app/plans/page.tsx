@@ -78,15 +78,17 @@ export default function PlansPage() {
       ['username', 'payments'],
       async (incompletePmt) => {
         try {
+          const meta = (incompletePmt.metadata ?? {}) as Record<string, unknown>;
           await fetch('/api/payments/complete', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               paymentId: incompletePmt.identifier,
               txid: incompletePmt.transaction?.txid ?? null,
-              userId: user?.id ?? null,
-              type: 'subscription',
-              planId: null,
+              userId: typeof meta.userId === 'string' ? meta.userId : (user?.id ?? null),
+              type: typeof meta.type === 'string' ? meta.type : 'subscription',
+              planId: typeof meta.planId === 'string' ? meta.planId : null,
+              packageId: typeof meta.packageId === 'string' ? meta.packageId : null,
             }),
           });
         } catch {
@@ -120,11 +122,22 @@ export default function PlansPage() {
         },
         {
           onReadyForServerApproval: async (paymentId) => {
-            await fetch('/api/payments/approve', {
+            const res = await fetch('/api/payments/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId, userId: user.id }),
+              body: JSON.stringify({
+                paymentId,
+                userId: user.id,
+                type: 'subscription',
+                planId: plan.id,
+                amount: plan.price,
+                memo: `Koshei ${plan.name} - Aylık Plan`,
+              }),
             });
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              throw new Error(data?.error || 'Payment approval failed');
+            }
           },
           onReadyForServerCompletion: async (paymentId, txid) => {
             const res = await fetch('/api/payments/complete', {

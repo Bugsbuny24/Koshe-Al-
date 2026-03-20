@@ -13,7 +13,7 @@ function jsonError(message: string, status = 400) {
 
 export async function POST(req: NextRequest) {
   try {
-    const { paymentId, txid, userId, type, planId, packageId } = await req.json();
+    const { paymentId, txid, userId, type, planId, packageId, amount, memo } = await req.json();
 
     if (!paymentId) {
       return jsonError('Missing paymentId', 400);
@@ -30,7 +30,11 @@ export async function POST(req: NextRequest) {
       `https://api.minepi.com/v2/payments/${paymentId}/complete`,
       {
         method: 'POST',
-        headers: { Authorization: `Key ${apiKey}` },
+        headers: {
+          Authorization: `Key ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ txid }),
       }
     );
 
@@ -49,9 +53,9 @@ export async function POST(req: NextRequest) {
       completed_at: new Date().toISOString(),
       user_id: userId,
       payment_type: type,
-      amount: 0,
-      memo: '',
-    });
+      amount: typeof amount === 'number' ? amount : 0,
+      memo: typeof memo === 'string' ? memo : null,
+    }, { onConflict: 'payment_id' });
 
     if (type === 'subscription' && planId && userId) {
       const credits = PLAN_CREDITS[planId] ?? 0;
