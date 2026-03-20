@@ -3,19 +3,18 @@ export function isPiBrowser(): boolean {
   return typeof window.Pi !== 'undefined';
 }
 
-export async function authenticateWithPi(): Promise<{ accessToken: string; uid: string; username: string } | null> {
+export async function authenticateWithPi(): Promise<{
+  accessToken: string;
+  uid: string;
+  username: string;
+} | null> {
   if (!isPiBrowser()) return null;
 
-  const auth = await window.Pi.authenticate(
-    ['username', 'payments'],
-    async (payment) => {
-      await fetch('/api/payments/complete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentId: payment.identifier }),
-      });
-    }
-  );
+  const auth = await window.Pi.authenticate(['username'], async () => {});
+
+  if (!auth?.accessToken || !auth?.user?.uid || !auth?.user?.username) {
+    throw new Error('Pi auth incomplete');
+  }
 
   return {
     accessToken: auth.accessToken,
