@@ -137,11 +137,12 @@ export default function PlansPage() {
         },
         {
           onReadyForServerApproval: async (paymentId) => {
-            const res = await fetch('/api/payments/approve', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ paymentId }),
-            });
+  await fetch('/api/payments/approve', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ paymentId, userId: user?.id }),
+  });
+},
 
             const data = await res.json().catch(() => null);
 
