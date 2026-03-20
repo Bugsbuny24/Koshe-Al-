@@ -3,9 +3,17 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
-import { authenticateWithPiForPayment } from '@/lib/pi/sdk';
 
-const PLANS = [
+type Plan = {
+  id: 'starter' | 'pro' | 'ultra';
+  name: string;
+  price: number;
+  credits: number;
+  color: string;
+  features: string[];
+};
+
+const PLANS: Plan[] = [
   {
     id: 'starter',
     name: 'Starter',
@@ -53,15 +61,48 @@ const PLANS = [
   },
 ];
 
+type PiPaymentError = {
+  message?: string;
+};
+
 export default function PlansPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
   const user = useUserStore((s) => s.user);
   const setUser = useUserStore((s) => s.setUser);
 
-  const handlePurchase = async (plan: typeof PLANS[0]) => {
-    if (!window?.Pi) {
+  const handlePurchase = async (plan: Plan) => {
+    const pi =
+      typeof window !== 'undefined'
+        ? (window as typeof window & {
+            Pi?: {
+              authenticate: (
+                scopes: string[],
+                onIncompletePaymentFound: (payment: { identifier: string }) => Promise<void> | void
+              ) => Promise<{
+                accessToken?: string;
+                user?: { uid?: string; username?: string };
+              }>;
+              createPayment: (
+                paymentData: {
+                  amount: number;
+                  memo: string;
+                  metadata: Record<string, unknown>;
+                },
+                callbacks: {
+                  onReadyForServerApproval: (paymentId: string) => Promise<void> | void;
+                  onReadyForServerCompletion: (paymentId: string, txid: string) => Promise<void> | void;
+                  onCancel: () => void;
+                  onError: (error: PiPaymentError) => void;
+                }
+              ) => void;
+            };
+          }).Pi
+        : undefined;
+
+    if (!pi) {
       setError('Pi Browser gerekli.');
       return;
     }
@@ -75,9 +116,16 @@ export default function PlansPage() {
     setError(null);
 
     try {
-      await authenticateWithPiForPayment();
+      const paymentAuth = await pi.authenticate(
+        ['username', 'payments'],
+        async () => {}
+      );
 
-      window.Pi.createPayment(
+      if (!paymentAuth?.accessToken || !paymentAuth?.user?.uid) {
+        throw new Error('Payment auth failed');
+      }
+
+      pi.createPayment(
         {
           amount: plan.price,
           memo: `Koshei ${plan.name} - Aylık Plan`,
@@ -95,11 +143,13 @@ export default function PlansPage() {
               body: JSON.stringify({ paymentId }),
             });
 
+            const data = await res.json().catch(() => null);
+
             if (!res.ok) {
-              const data = await res.json().catch(() => null);
               throw new Error(data?.error || 'Payment approval failed');
             }
           },
+
           onReadyForServerCompletion: async (paymentId, txid) => {
             const res = await fetch('/api/payments/complete', {
               method: 'POST',
@@ -119,7 +169,6 @@ export default function PlansPage() {
               throw new Error(data?.error || 'Payment completion failed');
             }
 
-            // Store içindeki kullanıcıyı da güncelle ki dashboard tekrar /plans'a atmasın
             setUser({
               ...user,
               plan_id: plan.id,
@@ -129,11 +178,13 @@ export default function PlansPage() {
             setLoading(null);
             router.push('/dashboard');
           },
+
           onCancel: () => {
             setLoading(null);
           },
+
           onError: (err) => {
-            setError(err.message);
+            setError(err?.message || 'Ödeme sırasında hata oluştu');
             setLoading(null);
           },
         }
@@ -156,6 +207,7 @@ export default function PlansPage() {
     >
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>🚀</div>
+
         <h1
           style={{
             fontSize: 32,
@@ -166,6 +218,7 @@ export default function PlansPage() {
         >
           Plan Seç
         </h1>
+
         <p style={{ color: '#8A8680', fontSize: 15 }}>
           Pi ile öde, hemen başla
         </p>
@@ -182,6 +235,8 @@ export default function PlansPage() {
             color: '#ff6464',
             fontSize: 14,
             textAlign: 'center',
+            maxWidth: 480,
+            marginInline: 'auto',
           }}
         >
           {error}
@@ -214,6 +269,7 @@ export default function PlansPage() {
                 justifyContent: 'space-between',
                 alignItems: 'baseline',
                 marginBottom: 16,
+                gap: 16,
               }}
             >
               <div>
@@ -227,6 +283,7 @@ export default function PlansPage() {
                 >
                   {plan.name}
                 </h2>
+
                 <p style={{ color: '#8A8680', fontSize: 14 }}>
                   {plan.credits} kredi/ay
                 </p>
