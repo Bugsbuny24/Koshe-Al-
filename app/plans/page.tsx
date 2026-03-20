@@ -61,52 +61,18 @@ const PLANS: Plan[] = [
   },
 ];
 
-type PiPaymentError = {
-  message?: string;
-};
-
 export default function PlansPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
-
   const user = useUserStore((s) => s.user);
   const setUser = useUserStore((s) => s.setUser);
 
   const handlePurchase = async (plan: Plan) => {
-    const pi =
-      typeof window !== 'undefined'
-        ? (window as typeof window & {
-            Pi?: {
-              authenticate: (
-                scopes: string[],
-                onIncompletePaymentFound: (payment: { identifier: string }) => Promise<void> | void
-              ) => Promise<{
-                accessToken?: string;
-                user?: { uid?: string; username?: string };
-              }>;
-              createPayment: (
-                paymentData: {
-                  amount: number;
-                  memo: string;
-                  metadata: Record<string, unknown>;
-                },
-                callbacks: {
-                  onReadyForServerApproval: (paymentId: string) => Promise<void> | void;
-                  onReadyForServerCompletion: (paymentId: string, txid: string) => Promise<void> | void;
-                  onCancel: () => void;
-                  onError: (error: PiPaymentError) => void;
-                }
-              ) => void;
-            };
-          }).Pi
-        : undefined;
-
-    if (!pi) {
+    if (!window?.Pi) {
       setError('Pi Browser gerekli.');
       return;
     }
-
     if (!user?.id) {
       setError('Önce giriş yapmalısın.');
       return;
@@ -116,16 +82,7 @@ export default function PlansPage() {
     setError(null);
 
     try {
-      const paymentAuth = await pi.authenticate(
-        ['username', 'payments'],
-        async () => {}
-      );
-
-      if (!paymentAuth?.accessToken || !paymentAuth?.user?.uid) {
-        throw new Error('Payment auth failed');
-      }
-
-      pi.createPayment(
+      window.Pi.createPayment(
         {
           amount: plan.price,
           memo: `Koshei ${plan.name} - Aylık Plan`,
@@ -137,18 +94,11 @@ export default function PlansPage() {
         },
         {
           onReadyForServerApproval: async (paymentId) => {
-  await fetch('/api/payments/approve', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ paymentId, userId: user?.id }),
-  });
-},
-
-            const data = await res.json().catch(() => null);
-
-            if (!res.ok) {
-              throw new Error(data?.error || 'Payment approval failed');
-            }
+            await fetch('/api/payments/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId, userId: user.id }),
+            });
           },
 
           onReadyForServerCompletion: async (paymentId, txid) => {
@@ -165,24 +115,16 @@ export default function PlansPage() {
             });
 
             const data = await res.json().catch(() => null);
-
             if (!res.ok) {
               throw new Error(data?.error || 'Payment completion failed');
             }
 
-            setUser({
-              ...user,
-              plan_id: plan.id,
-              is_premium: true,
-            });
-
+            setUser({ ...user, plan_id: plan.id, is_premium: true });
             setLoading(null);
             router.push('/dashboard');
           },
 
-          onCancel: () => {
-            setLoading(null);
-          },
+          onCancel: () => setLoading(null),
 
           onError: (err) => {
             setError(err?.message || 'Ödeme sırasında hata oluştu');
@@ -208,7 +150,6 @@ export default function PlansPage() {
     >
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>🚀</div>
-
         <h1
           style={{
             fontSize: 32,
@@ -219,7 +160,6 @@ export default function PlansPage() {
         >
           Plan Seç
         </h1>
-
         <p style={{ color: '#8A8680', fontSize: 15 }}>
           Pi ile öde, hemen başla
         </p>
@@ -261,7 +201,6 @@ export default function PlansPage() {
               border: `1px solid ${plan.color}55`,
               borderRadius: 24,
               padding: 24,
-              boxShadow: `0 0 0 1px ${plan.color}22 inset`,
             }}
           >
             <div
@@ -270,7 +209,6 @@ export default function PlansPage() {
                 justifyContent: 'space-between',
                 alignItems: 'baseline',
                 marginBottom: 16,
-                gap: 16,
               }}
             >
               <div>
@@ -284,22 +222,12 @@ export default function PlansPage() {
                 >
                   {plan.name}
                 </h2>
-
                 <p style={{ color: '#8A8680', fontSize: 14 }}>
                   {plan.credits} kredi/ay
                 </p>
               </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <div
-                  style={{
-                    fontSize: 26,
-                    fontWeight: 800,
-                    color: '#F0EDE6',
-                  }}
-                >
-                  {plan.price} π
-                </div>
+              <div style={{ fontSize: 26, fontWeight: 800 }}>
+                {plan.price} π
               </div>
             </div>
 
@@ -327,17 +255,14 @@ export default function PlansPage() {
                 border: 'none',
                 borderRadius: 16,
                 padding: '16px 20px',
-                background: plan.color,
-                color: '#060608',
+                background: loading === plan.id ? '#2A2A30' : plan.color,
+                color: loading === plan.id ? '#8A8680' : '#060608',
                 fontWeight: 800,
                 fontSize: 18,
                 cursor: loading === plan.id ? 'not-allowed' : 'pointer',
-                opacity: loading === plan.id ? 0.7 : 1,
               }}
             >
-              {loading === plan.id
-                ? 'İşleniyor...'
-                : `${plan.price} π ile Satın Al`}
+              {loading === plan.id ? 'İşleniyor...' : `${plan.price} π ile Satın Al`}
             </button>
           </div>
         ))}
