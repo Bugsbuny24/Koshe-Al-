@@ -9,9 +9,9 @@ export async function POST(req: NextRequest) {
   }
 
   // Sandbox modda Pi API doğrulamasını atla
-  const isSandbox = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true';
+  const isSandbox = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' || process.env.PI_SANDBOX === 'true';
 
-  if (!isSandbox) {
+  
     const piRes = await fetch('https://api.minepi.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
