@@ -2,27 +2,63 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
+// ── Modeller ────────────────────────────────────────────────────────────────
 export const MODELS = {
-  FLASH_LITE: 'gemini-2.5-flash-lite',
-  FLASH:      'gemini-2.5-flash',
-  PRO:        'gemini-2.5-pro',
+  FLASH_LITE:  'gemini-2.5-flash-lite',
+  FLASH:       'gemini-2.5-flash',
+  PRO:         'gemini-2.5-pro',
+  FLASH_TTS:   'gemini-2.5-flash-tts',
+  PRO_TTS:     'gemini-2.5-pro-tts',
+  LIVE_AUDIO:  'gemini-2.5-flash-live',
+  IMAGE_GEN:   'imagen-4',
+  IMAGE_FAST:  'imagen-4-fast',
+  VIDEO:       'veo-3',
+  VIDEO_FAST:  'veo-3-fast',
+  EMBEDDING:   'gemini-embedding-2',
 } as const;
 
-export type ModelTier = keyof typeof MODELS;
+export type ModelKey = keyof typeof MODELS;
 
-const CATEGORY_TIERS: Record<string, { primary: ModelTier; fallback: ModelTier }> = {
-  mentor_simple:  { primary: 'FLASH_LITE', fallback: 'FLASH' },
-  mentor_complex: { primary: 'FLASH',      fallback: 'FLASH_LITE' },
-  builder:        { primary: 'PRO',        fallback: 'FLASH' },
-  review:         { primary: 'FLASH',      fallback: 'FLASH_LITE' },
+// ── Kredi maliyetleri ────────────────────────────────────────────────────────
+export const CREDIT_COSTS = {
+  mentor_lite:  0.5,
+  mentor_flash: 1.0,
+  builder:      5.0,
+  image_gen:    10.0,
+  live_audio:   2.0,  // dakika başına
+  tts:          0.5,
+  video_15s:    50.0,
+} as const;
+
+export type FeatureKey = keyof typeof CREDIT_COSTS;
+
+// ── Plan limitleri ───────────────────────────────────────────────────────────
+export const PLAN_FEATURES: Record<string, FeatureKey[]> = {
+  starter: ['mentor_lite', 'mentor_flash', 'tts'],
+  pro:     ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio'],
+  ultra:   ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio', 'video_15s'],
 };
 
-const COST: Record<ModelTier, { input: number; output: number }> = {
-  FLASH_LITE: { input: 0.0000001,  output: 0.0000004 },
-  FLASH:      { input: 0.0000003,  output: 0.0000025 },
-  PRO:        { input: 0.00000125, output: 0.00001 },
+// ── Routing ──────────────────────────────────────────────────────────────────
+export const FEATURE_MODEL: Record<FeatureKey, ModelKey> = {
+  mentor_lite:  'FLASH_LITE',
+  mentor_flash: 'FLASH',
+  builder:      'PRO',
+  image_gen:    'IMAGE_GEN',
+  live_audio:   'LIVE_AUDIO',
+  tts:          'FLASH_TTS',
+  video_15s:    'VIDEO_FAST',
 };
 
+// ── Supabase ─────────────────────────────────────────────────────────────────
+function getSupabase() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+}
+
+// ── GenAI ────────────────────────────────────────────────────────────────────
 let _genAI: GoogleGenerativeAI | null = null;
 export function getGenAI() {
   if (!_genAI) {
@@ -33,13 +69,54 @@ export function getGenAI() {
   return _genAI;
 }
 
-function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
+// ── Kota + Plan kontrolü ─────────────────────────────────────────────────────
+export async function checkAccess(userId: string, feature: FeatureKey): Promise<{
+  allowed: boolean;
+  reason?: string;
+  credits_remaining?: number;
+  plan?: string;
+}> {
+  const sb = getSupabase();
+  const { data } = await sb
+    .from('user_quotas')
+    .select('credits_remaining, plan_id, is_active, plan_expires_at')
+    .eq('user_id', userId)
+    .single();
+
+  if (!data || !data.is_active) {
+    return { allowed: false, reason: 'no_plan' };
+  }
+
+  // Plan süresi dolmuş mu?
+  if (data.plan_expires_at && new Date(data.plan_expires_at) < new Date()) {
+    return { allowed: false, reason: 'plan_expired' };
+  }
+
+  // Bu özellik plana dahil mi?
+  const plan = data.plan_id ?? 'starter';
+  const allowed_features = PLAN_FEATURES[plan] ?? [];
+  if (!allowed_features.includes(feature)) {
+    return { allowed: false, reason: 'upgrade_required', plan };
+  }
+
+  // Kredi yeterli mi?
+  const cost = CREDIT_COSTS[feature];
+  if ((data.credits_remaining ?? 0) < cost) {
+    return { allowed: false, reason: 'insufficient_credits', credits_remaining: data.credits_remaining };
+  }
+
+  return { allowed: true, credits_remaining: data.credits_remaining, plan };
 }
 
+// ── Kredi düş ────────────────────────────────────────────────────────────────
+export async function deductCredits(userId: string, feature: FeatureKey): Promise<boolean> {
+  const cost = CREDIT_COSTS[feature];
+  const sb = getSupabase();
+  const { data } = await sb.rpc('deduct_credits', { uid: userId, amount: cost });
+  return data === true;
+}
+
+// ── Cache ────────────────────────────────────────────────────────────────────
 function hashPrompt(prompt: string, model: string) {
   return crypto.createHash('sha256').update(`${model}:${prompt}`).digest('hex');
 }
@@ -57,84 +134,85 @@ async function getCache(hash: string): Promise<string | null> {
 
 async function setCache(hash: string, model: string, text: string) {
   try {
-    await getSupabase().from('ai_cache').upsert({ prompt_hash: hash, model, response: { text } });
+    await getSupabase().from('ai_cache').upsert({
+      prompt_hash: hash, model, response: { text }
+    });
   } catch { /* devam */ }
 }
 
-export async function checkQuota(userId: string) {
-  try {
-    const { data } = await getSupabase()
-      .from('user_quotas')
-      .select('credits_remaining, tier, is_active')
-      .eq('user_id', userId)
-      .single();
-    if (!data || !data.is_active) return { allowed: false, tier: 'free', remaining: 0 };
-    return { allowed: data.credits_remaining > 0, tier: data.tier ?? 'free', remaining: data.credits_remaining ?? 0 };
-  } catch { return { allowed: true, tier: 'free', remaining: 10 }; }
-}
-
-async function logUsage(userId: string, model: ModelTier, inputTokens: number, outputTokens: number) {
-  try {
-    const cost = inputTokens * COST[model].input + outputTokens * COST[model].output;
-    const sb = getSupabase();
-    await sb.from('ai_usage').insert({ user_id: userId, model: MODELS[model], input_tokens: inputTokens, output_tokens: outputTokens, cost });
-    await sb.from('user_quotas').update({ credits_remaining: sb.rpc('decrement_credits', { uid: userId, amount: 1 }) as never }).eq('user_id', userId);
-  } catch { /* devam */ }
-}
-
-export async function generateWithRouting(opts: {
+// ── Ana üretim fonksiyonu ────────────────────────────────────────────────────
+export async function generateText(opts: {
   prompt: string;
   systemInstruction?: string;
-  category: keyof typeof CATEGORY_TIERS;
-  userId?: string;
+  feature: FeatureKey;
+  userId: string;
   useCache?: boolean;
-}) {
-  const { primary, fallback } = CATEGORY_TIERS[opts.category];
+}): Promise<{ text: string; cached: boolean }> {
 
+  // Erişim kontrolü
+  const access = await checkAccess(opts.userId, opts.feature);
+  if (!access.allowed) {
+    throw new Error(access.reason ?? 'access_denied');
+  }
+
+  const modelKey = FEATURE_MODEL[opts.feature];
+  const modelId = MODELS[modelKey];
+
+  // Cache kontrolü
   if (opts.useCache !== false) {
-    const hash = hashPrompt(opts.prompt, MODELS[primary]);
+    const hash = hashPrompt(opts.prompt, modelId);
     const cached = await getCache(hash);
-    if (cached) return { text: cached, cached: true, model: primary };
+    if (cached) return { text: cached, cached: true };
   }
 
-  for (const key of [primary, fallback] as ModelTier[]) {
-    try {
-      const model = getGenAI().getGenerativeModel({
-        model: MODELS[key],
-        ...(opts.systemInstruction ? { systemInstruction: opts.systemInstruction } : {}),
-      });
-      const result = await model.generateContent(opts.prompt);
-      const text = result.response.text();
-      const usage = result.response.usageMetadata;
+  // Üret
+  const model = getGenAI().getGenerativeModel({
+    model: modelId,
+    ...(opts.systemInstruction ? { systemInstruction: opts.systemInstruction } : {}),
+  });
 
-      if (opts.useCache !== false) {
-        await setCache(hashPrompt(opts.prompt, MODELS[key]), MODELS[key], text);
-      }
-      if (opts.userId) {
-        await logUsage(opts.userId, key, usage?.promptTokenCount ?? 0, usage?.candidatesTokenCount ?? 0);
-      }
-      return { text, cached: false, model: key };
-    } catch (err) {
-      if (key === fallback) throw err;
-      console.warn(`${MODELS[key]} başarısız, fallback deneniyor...`);
-    }
+  const result = await model.generateContent(opts.prompt);
+  const text = result.response.text();
+
+  // Cache yaz
+  if (opts.useCache !== false) {
+    await setCache(hashPrompt(opts.prompt, modelId), modelId, text);
   }
-  throw new Error('Tüm modeller başarısız');
+
+  // Kredi düş
+  await deductCredits(opts.userId, opts.feature);
+
+  // Kullanım logla
+  const usage = result.response.usageMetadata;
+  await getSupabase().from('ai_usage').insert({
+    user_id: opts.userId,
+    model: modelId,
+    input_tokens: usage?.promptTokenCount ?? 0,
+    output_tokens: usage?.candidatesTokenCount ?? 0,
+    cost: 0,
+  }).catch(() => {});
+
+  return { text, cached: false };
 }
 
-export async function* generateStream(opts: {
+// ── Streaming (mentor için) ──────────────────────────────────────────────────
+export async function* streamText(opts: {
   messages: { role: 'user' | 'model'; content: string }[];
   systemInstruction: string;
-  category: keyof typeof CATEGORY_TIERS;
-  userId?: string;
-}) {
-  const { primary } = CATEGORY_TIERS[opts.category];
+  feature: FeatureKey;
+  userId: string;
+}): AsyncGenerator<string> {
+
+  const access = await checkAccess(opts.userId, opts.feature);
+  if (!access.allowed) throw new Error(access.reason);
+
+  const modelKey = FEATURE_MODEL[opts.feature];
   const model = getGenAI().getGenerativeModel({
-    model: MODELS[primary],
+    model: MODELS[modelKey],
     systemInstruction: opts.systemInstruction,
   });
 
-  const history = opts.messages.slice(0, -1).map((m) => ({
+  const history = opts.messages.slice(0, -1).map(m => ({
     role: m.role,
     parts: [{ text: m.content }],
   }));
@@ -143,14 +221,10 @@ export async function* generateStream(opts: {
   const last = opts.messages[opts.messages.length - 1];
   const result = await chat.sendMessageStream(last.content);
 
-  let outputTokens = 0;
   for await (const chunk of result.stream) {
-    const text = chunk.text();
-    outputTokens += text.split(' ').length;
-    yield text;
+    yield chunk.text();
   }
 
-  if (opts.userId) {
-    await logUsage(opts.userId, primary, 0, outputTokens);
-  }
-}
+  // Kredi düş
+  await deductCredits(opts.userId, opts.feature);
+      }
