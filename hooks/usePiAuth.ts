@@ -26,7 +26,17 @@ export function usePiAuth() {
     setError(null);
 
     try {
-      const auth = await window.Pi.authenticate(['username'], async () => {});
+      // payments scope ile authenticate
+      const auth = await window.Pi.authenticate(
+        ['username', 'payments'],
+        async (payment) => {
+          await fetch('/api/payments/complete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paymentId: payment.identifier }),
+          });
+        }
+      );
 
       if (!auth?.accessToken || !auth?.user?.uid || !auth?.user?.username) {
         throw new Error('Pi auth bilgisi eksik geldi');
@@ -51,7 +61,6 @@ export function usePiAuth() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setUser(data as any);
 
-      // Plan varsa dashboard, yoksa plan seçim sayfasına
       if (data?.plan_id) {
         router.push('/dashboard');
       } else {
