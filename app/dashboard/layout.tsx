@@ -1,8 +1,27 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUserStore } from '@/store/userStore';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Topbar } from '@/components/layout/Topbar';
 import { MobileNav } from '@/components/layout/MobileNav';
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const router = useRouter();
+  const user = useUserStore((s) => s.user);
+
+  useEffect(() => {
+    // Plan yoksa plan seçim sayfasına yönlendir
+    if (user && !user.plan_id) {
+      router.push('/plans');
+    }
+  }, [user, router]);
+
   return (
     <div className="flex min-h-screen bg-[#060608]">
       {/* Desktop Sidebar */}
