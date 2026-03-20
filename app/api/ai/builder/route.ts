@@ -1,37 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { checkQuota, generateWithRouting } from '@/lib/gemini/client';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+export const runtime = 'nodejs';
 
 export async function POST(req: NextRequest) {
-  const { prompt, techStack } = await req.json();
+  const { prompt, techStack, userId } = await req.json();
 
-  if (!prompt) {
-    return NextResponse.json({ error: 'Prompt required' }, { status: 400 });
+  if (!prompt) return NextResponse.json({ error: 'Prompt required' }, { status: 400 });
+
+  if (userId) {
+    const quota = await checkQuota(userId);
+    if (!quota.allowed) return NextResponse.json({ error: 'quota_exceeded' }, { status: 429 });
+    if (quota.tier === 'free') return NextResponse.json({ error: 'pro_required' }, { status: 403 });
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const fullPrompt = `
+Kullanıcı isteği: "${prompt}"
+Tech stack: ${techStack?.join(', ') ?? 'Next.js 14, TypeScript, Tailwind, Supabase, Pi SDK'}
 
-  const systemPrompt = `
-    Sen bir AI uygulama üreticisisin. Kullanıcının isteğine göre çalışır kod üret.
-    Tech stack: ${techStack?.join(', ') || 'Next.js, React, TypeScript, Tailwind CSS'}
-    
-    Kurallar:
-    - Tam çalışır kod üret
-    - Her dosyayı ayrı code block içinde ver
-    - Pi Network ile entegrasyon noktalarını belirt
-    - TypeScript kullan
-    - Tailwind CSS ile stil ver
-    
-    İstek: ${prompt}
-  `;
+Aşağıdaki JSON formatında yanıt ver, başka hiçbir şey yazma:
+{
+  "title": "Proje adı",
+  "description": "Ne yaptığı",
+  "files": [
+    { "path": "app/page.tsx", "content": "tam içerik" }
+  ],
+  "setup_instructions": "Kurulum adımları",
+  "env_variables": ["NEXT_PUBLIC_PI_APP_ID"],
+  "pi_features": ["Pi Auth", "Pi Payment"]
+}
+`.trim();
 
   try {
-    const result = await model.generateContent(systemPrompt);
-    const text = result.response.text();
+    const { text, cached, model } = await generateWithRouting({
+      prompt: fullPrompt,
+      category: 'builder',
+      userId,
+      useCache: true,
+    });
 
-    return NextResponse.json({ code: text });
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return NextResponse.json({ error: 'Parse hatası' }, { status: 500 });
+
+    return NextResponse.json({ ...JSON.parse(jsonMatch[0]), _meta: { cached, model } });
   } catch {
-    return NextResponse.json({ error: 'AI generation failed' }, { status: 500 });
+    return NextResponse.json({ error: 'Üretim başarısız' }, { status: 500 });
   }
 }
