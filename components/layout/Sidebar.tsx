@@ -2,8 +2,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { clsx } from 'clsx';
+import { useUserStore } from '@/store/userStore';
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { href: '/dashboard', icon: '🏠', label: 'Dashboard' },
   { href: '/dashboard/learn', icon: '📚', label: 'Öğren' },
   { href: '/dashboard/university', icon: '🎓', label: 'Üniversite' },
@@ -15,6 +16,15 @@ const NAV_ITEMS = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const user = useUserStore((s) => s.user);
+
+  const navItems =
+    user?.role === 'admin'
+      ? [
+          ...BASE_NAV_ITEMS,
+          { href: '/dashboard/admin/payouts', icon: '🧾', label: 'Payouts' },
+        ]
+      : BASE_NAV_ITEMS;
 
   return (
     <nav className="flex h-full w-64 flex-col border-r border-[rgba(240,165,0,0.12)] bg-[#0C0C10] px-4 py-6">
@@ -24,8 +34,11 @@ export function Sidebar() {
       </Link>
 
       <div className="flex-1 space-y-1">
-        {NAV_ITEMS.map((item) => {
-          const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+        {navItems.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            (item.href !== '/dashboard' && pathname.startsWith(item.href));
+
           return (
             <Link
               key={item.href}
@@ -46,8 +59,12 @@ export function Sidebar() {
 
       <div className="border-t border-[rgba(240,165,0,0.12)] pt-4">
         <div className="rounded-xl bg-[rgba(240,165,0,0.05)] p-3">
-          <div className="text-xs font-medium text-[#F0A500]">Free Plan</div>
-          <div className="mt-1 text-xs text-[#4A4845]">100 kredi kaldı</div>
+          <div className="text-xs font-medium text-[#F0A500]">
+            {user?.plan_id ? `${user.plan_id} plan` : 'Free Plan'}
+          </div>
+          <div className="mt-1 text-xs text-[#4A4845]">
+            Admin payout takibi hazır
+          </div>
         </div>
       </div>
     </nav>
