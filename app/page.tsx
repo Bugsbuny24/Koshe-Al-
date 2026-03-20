@@ -10,7 +10,6 @@ export default function LandingPage() {
           Pi Network&apos;s AI Operating System
         </div>
         <h1 className="mb-4 text-5xl font-bold md:text-7xl" style={{ fontFamily: "'Syne', sans-serif" }}>
-        <h1 className="mb-4 text-5xl font-bold md:text-7xl">
           <span className="text-[#F0A500]">Koshei</span>
         </h1>
 
