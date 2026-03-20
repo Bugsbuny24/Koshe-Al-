@@ -8,16 +8,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
   }
 
-  // Sandbox modda Pi API doğrulamasını atla
-  const isSandbox = process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' || process.env.PI_SANDBOX === 'true';
+  const isSandbox =
+    process.env.NEXT_PUBLIC_PI_SANDBOX === 'true' ||
+    process.env.PI_SANDBOX === 'true';
 
-  
+  if (!isSandbox) {
     const piRes = await fetch('https://api.minepi.com/v2/me', {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
-    if (!piRes.ok) return NextResponse.json({ error: 'Invalid Pi token' }, { status: 401 });
+    if (!piRes.ok) {
+      return NextResponse.json({ error: 'Invalid Pi token' }, { status: 401 });
+    }
     const piUser = await piRes.json();
-    if (piUser.uid !== uid) return NextResponse.json({ error: 'UID mismatch' }, { status: 401 });
+    if (piUser.uid !== uid) {
+      return NextResponse.json({ error: 'UID mismatch' }, { status: 401 });
+    }
   }
 
   const supabase = createSupabaseServer();
@@ -25,13 +30,21 @@ export async function POST(req: NextRequest) {
   const { data: profile, error } = await supabase
     .from('profiles')
     .upsert(
-      { id: uid, username, full_name: username, role: 'pioneer', updated_at: new Date().toISOString() },
+      {
+        id: uid,
+        username,
+        full_name: username,
+        role: 'pioneer',
+        updated_at: new Date().toISOString(),
+      },
       { onConflict: 'id' }
     )
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 
   await supabase.from('wallets').upsert(
     { user_id: uid, balance: 0, pending_balance: 0, total_earned: 0, total_spent: 0, currency: 'Pi' },
