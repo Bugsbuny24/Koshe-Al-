@@ -5,10 +5,12 @@ import { cookies } from 'next/headers';
 export async function GET() {
   try {
     const supabase = createSupabaseServer();
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const userId = cookieStore.get('koshei-user-id')?.value;
 
-    if (!userId) return NextResponse.json({ credits_remaining: 0 });
+    if (!userId) {
+      return NextResponse.json({ credits_remaining: 0 });
+    }
 
     const { data } = await supabase
       .from('user_quotas')
