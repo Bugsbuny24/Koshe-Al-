@@ -1,30 +1,62 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
+function jsonError(message: string, status = 400, details?: unknown) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+      ...(details ? { details } : {}),
+    },
+    { status }
+  );
 }
+
+type ApproveBody = {
+  paymentId?: string;
+  userId?: string;
+  type?: string;
+  planId?: string | null;
+  packageId?: string | null;
+  amount?: number;
+  memo?: string | null;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json().catch(() => null);
-    if (!body || typeof body !== 'object') {
-      return jsonError('Invalid JSON body', 400);
+    const body = (await req.json()) as ApproveBody;
+
+    const paymentId = body.paymentId?.trim();
+    const userId = body.userId?.trim();
+    const type = body.type?.trim() || 'subscription';
+    const planId = body.planId ?? null;
+    const packageId = body.packageId ?? null;
+    const amount =
+      typeof body.amount === 'number' && Number.isFinite(body.amount)
+        ? body.amount
+        : null;
+    const memo =
+      typeof body.memo === 'string' && body.memo.trim().length > 0
+        ? body.memo.trim()
+        : null;
+
+    if (!paymentId) {
+      return jsonError('Missing paymentId', 400);
     }
 
-    const { paymentId, userId, type, planId, packageId, amount, memo } =
-      body as Record<string, unknown>;
+    if (!userId) {
+      return jsonError('Missing userId', 400);
+    }
 
-    if (!paymentId || typeof paymentId !== 'string') {
-      return jsonError('Missing or invalid paymentId', 400);
+    if (amount === null) {
+      return jsonError('Missing or invalid amount', 400);
     }
 
     const apiKey = process.env.PI_API_KEY;
     if (!apiKey) {
-      return jsonError('Server configuration error: missing PI_API_KEY', 500);
+      return jsonError('Missing PI_API_KEY', 500);
     }
 
-    // Approve payment on Pi Network
     const piRes = await fetch(
       `https://api.minepi.com/v2/payments/${paymentId}/approve`,
       {
@@ -43,38 +75,36 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Persist payment record only when a real userId is available
-    if (userId && typeof userId === 'string') {
-      const supabase = createSupabaseServer();
-      let referenceId: string | null = null;
-      if (typeof planId === 'string') referenceId = planId;
-      else if (typeof packageId === 'string') referenceId = packageId;
+    const supabase = createSupabaseServer();
 
-      const { error: upsertError } = await supabase
-        .from('pi_payments')
-        .upsert(
-          {
-            payment_id: paymentId,
-            status: 'approved',
-            user_id: userId,
-            amount: typeof amount === 'number' ? amount : 0,
-            memo: typeof memo === 'string' ? memo : null,
-            payment_type: typeof type === 'string' ? type : 'subscription',
-            reference_id: referenceId,
-          },
-          { onConflict: 'payment_id' }
-        );
-
-      if (upsertError) {
-        // Payment was approved on Pi side; log but do not block the response
-        console.error('Supabase upsert error during approve:', upsertError.message);
+    const { error: paymentError } = await supabase.from('pi_payments').upsert(
+      {
+        payment_id: paymentId,
+        user_id: userId,
+        payment_type: type,
+        plan_id: planId,
+        package_id: packageId,
+        amount,
+        memo,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+      },
+      {
+        onConflict: 'payment_id',
       }
+    );
+
+    if (paymentError) {
+      return jsonError(`Failed to save approved payment: ${paymentError.message}`, 500);
     }
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
+    return NextResponse.json({
+      success: true,
+      paymentId,
+    });
+  } catch (error) {
     return jsonError(
-      err instanceof Error ? err.message : 'Unexpected error during payment approval',
+      error instanceof Error ? error.message : 'Unexpected payment approve error',
       500
     );
   }
