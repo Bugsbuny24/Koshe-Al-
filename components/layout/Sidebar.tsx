@@ -63,7 +63,7 @@ export function Sidebar() {
             {user?.plan_id ? `${user.plan_id} plan` : 'Free Plan'}
           </div>
           <div className="mt-1 text-xs text-[#4A4845]">
-            Admin payout takibi hazır
+            Learn. Build. Earn.
           </div>
         </div>
       </div>
