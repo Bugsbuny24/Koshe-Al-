@@ -29,7 +29,6 @@ export interface Wallet {
 }
 
 export interface UserQuota {
-  id: string;
   user_id: string;
   tier: 'starter' | 'pro' | 'ultra';
   plan_id: string | null;
