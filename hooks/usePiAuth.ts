@@ -1,7 +1,13 @@
 'use client';
+
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
+
+type AuthApiResponse = {
+  error?: string;
+  [key: string]: unknown;
+};
 
 export function usePiAuth() {
   const [loading, setLoading] = useState(false);
@@ -14,19 +20,16 @@ export function usePiAuth() {
       setError('Pi Browser gerekli. Lütfen Pi Browser üzerinden açın.');
       return;
     }
+
     setLoading(true);
     setError(null);
+
     try {
-      const auth = await window.Pi.authenticate(
-        ['username', 'payments'],
-        async (payment) => {
-          await fetch('/api/payments/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId: payment.identifier }),
-          });
-        }
-      );
+      const auth = await window.Pi.authenticate(['username'], async () => {});
+
+      if (!auth?.accessToken || !auth?.user?.uid || !auth?.user?.username) {
+        throw new Error('Pi auth bilgisi eksik geldi');
+      }
 
       const res = await fetch('/api/auth/pi', {
         method: 'POST',
@@ -38,9 +41,13 @@ export function usePiAuth() {
         }),
       });
 
-      if (!res.ok) throw new Error('Auth failed');
-      const user = await res.json();
-      setUser(user);
+      const data: AuthApiResponse | null = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || 'Auth failed');
+      }
+
+      setUser(data as any);
       router.push('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Giriş başarısız');
