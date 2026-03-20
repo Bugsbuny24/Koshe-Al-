@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 
 type Plan = {
@@ -71,7 +70,6 @@ export default function PlansPage() {
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
-  const router = useRouter();
   const user = useUserStore((s) => s.user);
   const setUser = useUserStore((s) => s.setUser);
 
@@ -165,58 +163,79 @@ export default function PlansPage() {
         },
         {
           onReadyForServerApproval: async (paymentId) => {
-            const res = await fetch('/api/payments/approve', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                paymentId,
-                userId: user.id,
-                type: 'subscription',
-                planId: plan.id,
-                amount: plan.price,
-                memo: `Koshei ${plan.name} - Aylık Plan`,
-              }),
-            });
+            try {
+              const res = await fetch('/api/payments/approve', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  paymentId,
+                  userId: user.id,
+                  type: 'subscription',
+                  planId: plan.id,
+                  amount: plan.price,
+                  memo: `Koshei ${plan.name} - Aylık Plan`,
+                }),
+              });
 
-            const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
+              const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
 
-            if (!res.ok) {
-              throw new Error(data?.error || 'Payment approval failed');
+              if (!res.ok) {
+                throw new Error(data?.error || 'Payment approval failed');
+              }
+            } catch (approvalError) {
+              const msg =
+                approvalError instanceof Error
+                  ? approvalError.message
+                  : 'Ödeme onaylama sırasında hata oluştu';
+              console.error('onReadyForServerApproval error:', approvalError);
+              setError(msg);
+              setLoading(null);
+              throw approvalError;
             }
           },
 
           onReadyForServerCompletion: async (paymentId, txid) => {
-            const res = await fetch('/api/payments/complete', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                paymentId,
-                txid,
-                userId: user.id,
-                type: 'subscription',
-                planId: plan.id,
-                amount: plan.price,
-                memo: `Koshei ${plan.name} - Aylık Plan`,
-              }),
-            });
+            try {
+              const res = await fetch('/api/payments/complete', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  paymentId,
+                  txid,
+                  userId: user.id,
+                  type: 'subscription',
+                  planId: plan.id,
+                  amount: plan.price,
+                  memo: `Koshei ${plan.name} - Aylık Plan`,
+                }),
+              });
 
-            const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
+              const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
 
-            if (!res.ok) {
-              throw new Error(data?.error || 'Payment completion failed');
+              if (!res.ok) {
+                throw new Error(data?.error || 'Payment completion failed');
+              }
+
+              setUser({
+                ...user,
+                plan_id: plan.id,
+                is_premium: true,
+              });
+              setLoading(null);
+              window.location.href = '/dashboard';
+            } catch (completionError) {
+              const msg =
+                completionError instanceof Error
+                  ? completionError.message
+                  : 'Ödeme tamamlanırken hata oluştu';
+              console.error('onReadyForServerCompletion error:', completionError);
+              setError(msg);
+              setLoading(null);
             }
-
-            setUser({
-              ...user,
-              plan_id: plan.id,
-              is_premium: true,
-            });
-
-            router.push('/dashboard');
           },
 
           onCancel: () => {
@@ -378,4 +397,4 @@ export default function PlansPage() {
       </div>
     </main>
   );
-            }
+}
