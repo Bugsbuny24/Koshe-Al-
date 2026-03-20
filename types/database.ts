@@ -1,5 +1,7 @@
 export interface Profile {
   id: string;
+  pi_uid: string | null;
+  plan_id: string | null;
   full_name: string | null;
   username: string | null;
   email: string | null;
@@ -29,10 +31,13 @@ export interface Wallet {
 export interface UserQuota {
   id: string;
   user_id: string;
-  tier: 'free' | 'pro' | 'ultra';
-  plan: string;
+  tier: 'starter' | 'pro' | 'ultra';
+  plan_id: string | null;
+  plan: string | null;
   credits_remaining: number;
+  credits_total: number;
   is_active: boolean;
+  plan_expires_at: string | null;
 }
 
 export interface PiPayment {
@@ -89,6 +94,7 @@ export interface Teacher {
 
 export interface Certificate {
   id: string;
+  user_id: string;
   course_id: string;
   language_code: string;
   level: string;
