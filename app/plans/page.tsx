@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
+import { authenticateWithPiForPayment } from '@/lib/pi/sdk';
 
 const PLANS = [
   {
@@ -57,6 +58,7 @@ export default function PlansPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const user = useUserStore((s) => s.user);
+  const setUser = useUserStore((s) => s.setUser);
 
   const handlePurchase = async (plan: typeof PLANS[0]) => {
     if (!window?.Pi) {
@@ -64,43 +66,72 @@ export default function PlansPage() {
       return;
     }
 
+    if (!user?.id) {
+      setError('Önce giriş yapmalısın.');
+      return;
+    }
+
     setLoading(plan.id);
     setError(null);
 
     try {
+      await authenticateWithPiForPayment();
+
       window.Pi.createPayment(
         {
           amount: plan.price,
           memo: `Koshei ${plan.name} - Aylık Plan`,
           metadata: {
             planId: plan.id,
-            userId: user?.id,
+            userId: user.id,
             type: 'subscription',
           },
         },
         {
           onReadyForServerApproval: async (paymentId) => {
-            await fetch('/api/payments/approve', {
+            const res = await fetch('/api/payments/approve', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ paymentId }),
             });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              throw new Error(data?.error || 'Payment approval failed');
+            }
           },
           onReadyForServerCompletion: async (paymentId, txid) => {
-            await fetch('/api/payments/complete', {
+            const res = await fetch('/api/payments/complete', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 paymentId,
                 txid,
-                userId: user?.id,
+                userId: user.id,
                 type: 'subscription',
                 planId: plan.id,
               }),
             });
+
+            const data = await res.json().catch(() => null);
+
+            if (!res.ok) {
+              throw new Error(data?.error || 'Payment completion failed');
+            }
+
+            // Store içindeki kullanıcıyı da güncelle ki dashboard tekrar /plans'a atmasın
+            setUser({
+              ...user,
+              plan_id: plan.id,
+              is_premium: true,
+            });
+
+            setLoading(null);
             router.push('/dashboard');
           },
-          onCancel: () => setLoading(null),
+          onCancel: () => {
+            setLoading(null);
+          },
           onError: (err) => {
             setError(err.message);
             setLoading(null);
@@ -123,7 +154,6 @@ export default function PlansPage() {
         padding: '40px 20px',
       }}
     >
-      {/* Header */}
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>🚀</div>
         <h1
@@ -158,7 +188,6 @@ export default function PlansPage() {
         </div>
       )}
 
-      {/* Plans */}
       <div
         style={{
           display: 'flex',
@@ -173,158 +202,88 @@ export default function PlansPage() {
             key={plan.id}
             style={{
               background: '#111116',
-              border: `1px solid ${plan.color}33`,
-              borderRadius: 16,
+              border: `1px solid ${plan.color}55`,
+              borderRadius: 24,
               padding: 24,
-              position: 'relative',
-              overflow: 'hidden',
+              boxShadow: `0 0 0 1px ${plan.color}22 inset`,
             }}
           >
-            {/* Top accent */}
-            <div
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                height: 3,
-                background: plan.color,
-              }}
-            />
-
-            {/* Plan header */}
             <div
               style={{
                 display: 'flex',
                 justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 20,
+                alignItems: 'baseline',
+                marginBottom: 16,
               }}
             >
               <div>
-                <div
-                  style={{
-                    fontSize: 22,
-                    fontWeight: 800,
-                    color: plan.color,
-                    letterSpacing: '-0.02em',
-                  }}
-                >
-                  {plan.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: '#4A4845',
-                    fontFamily: "'DM Mono', monospace",
-                    marginTop: 2,
-                  }}
-                >
-                  {plan.credits} kredi/ay
-                </div>
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                <div
+                <h2
                   style={{
                     fontSize: 28,
                     fontWeight: 800,
+                    color: plan.color,
+                    marginBottom: 6,
+                  }}
+                >
+                  {plan.name}
+                </h2>
+                <p style={{ color: '#8A8680', fontSize: 14 }}>
+                  {plan.credits} kredi/ay
+                </p>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <div
+                  style={{
+                    fontSize: 26,
+                    fontWeight: 800,
                     color: '#F0EDE6',
-                    letterSpacing: '-0.02em',
                   }}
                 >
                   {plan.price} π
                 </div>
-                <div style={{ fontSize: 11, color: '#4A4845' }}>
-                  ≈ ${(plan.price * 0.1826).toFixed(2)}/ay
-                </div>
               </div>
             </div>
 
-            {/* Features */}
-            <div style={{ marginBottom: 20 }}>
-              {plan.features.map((f) => (
+            <div style={{ marginBottom: 24 }}>
+              {plan.features.map((feature) => (
                 <div
-                  key={f}
+                  key={feature}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '6px 0',
-                    fontSize: 13,
-                    color: '#8A8680',
-                    borderBottom: '1px solid rgba(255,255,255,0.04)',
+                    padding: '10px 0',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    color: '#D4D0C8',
+                    fontSize: 15,
                   }}
                 >
-                  <span style={{ color: plan.color, fontSize: 14 }}>✓</span>
-                  {f}
+                  ✓ {feature}
                 </div>
               ))}
             </div>
 
-            {/* Button */}
             <button
               onClick={() => handlePurchase(plan)}
               disabled={loading === plan.id}
               style={{
                 width: '100%',
-                padding: '14px',
-                background: loading === plan.id ? '#2A2A30' : plan.color,
-                color: loading === plan.id ? '#8A8680' : '#000',
                 border: 'none',
-                borderRadius: 10,
-                fontSize: 14,
-                fontWeight: 700,
-                fontFamily: "'Syne', sans-serif",
-                letterSpacing: '0.04em',
+                borderRadius: 16,
+                padding: '16px 20px',
+                background: plan.color,
+                color: '#060608',
+                fontWeight: 800,
+                fontSize: 18,
                 cursor: loading === plan.id ? 'not-allowed' : 'pointer',
-                transition: 'all 0.2s',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
+                opacity: loading === plan.id ? 0.7 : 1,
               }}
             >
-              {loading === plan.id ? (
-                <>
-                  <span
-                    style={{
-                      width: 14,
-                      height: 14,
-                      border: '2px solid #8A8680',
-                      borderTop: '2px solid transparent',
-                      borderRadius: '50%',
-                      animation: 'spin 0.8s linear infinite',
-                      display: 'inline-block',
-                    }}
-                  />
-                  İşleniyor...
-                </>
-              ) : (
-                `${plan.price} π ile Satın Al`
-              )}
+              {loading === plan.id
+                ? 'İşleniyor...'
+                : `${plan.price} π ile Satın Al`}
             </button>
           </div>
         ))}
       </div>
-
-      {/* Footer note */}
-      <p
-        style={{
-          textAlign: 'center',
-          color: '#4A4845',
-          fontSize: 12,
-          marginTop: 32,
-          fontFamily: "'DM Mono', monospace",
-        }}
-      >
-        Her ay otomatik yenilenmez. Dilediğinde iptal edebilirsin.
-      </p>
-
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </main>
   );
-            }
+}
