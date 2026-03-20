@@ -7,13 +7,58 @@ const PLAN_CREDITS: Record<string, number> = {
   ultra: 5000,
 };
 
-function jsonError(message: string, status = 400) {
-  return NextResponse.json({ error: message }, { status });
+const CREDIT_PACKAGES: Record<string, number> = {
+  pack_100: 100,
+  pack_500: 500,
+  pack_1000: 1000,
+};
+
+function jsonError(message: string, status = 400, details?: unknown) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: message,
+      ...(details ? { details } : {}),
+    },
+    { status }
+  );
 }
+
+type CompleteBody = {
+  paymentId?: string;
+  txid?: string | null;
+  userId?: string | null;
+  type?: string;
+  planId?: string | null;
+  packageId?: string | null;
+  amount?: number;
+  memo?: string | null;
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { paymentId, txid, userId, type, planId, packageId, amount, memo } = await req.json();
+    const body = (await req.json()) as CompleteBody;
+
+    const paymentId = body.paymentId?.trim();
+    const txid =
+      typeof body.txid === 'string' && body.txid.trim().length > 0
+        ? body.txid.trim()
+        : null;
+    const userId =
+      typeof body.userId === 'string' && body.userId.trim().length > 0
+        ? body.userId.trim()
+        : null;
+    const type = body.type?.trim() || 'unknown';
+    const planId = body.planId ?? null;
+    const packageId = body.packageId ?? null;
+    const amount =
+      typeof body.amount === 'number' && Number.isFinite(body.amount)
+        ? body.amount
+        : null;
+    const memo =
+      typeof body.memo === 'string' && body.memo.trim().length > 0
+        ? body.memo.trim()
+        : null;
 
     if (!paymentId) {
       return jsonError('Missing paymentId', 400);
@@ -26,6 +71,8 @@ export async function POST(req: NextRequest) {
 
     const supabase = createSupabaseServer();
 
+    const completePayload = txid ? { txid } : {};
+
     const piRes = await fetch(
       `https://api.minepi.com/v2/payments/${paymentId}/complete`,
       {
@@ -34,7 +81,7 @@ export async function POST(req: NextRequest) {
           Authorization: `Key ${apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ txid }),
+        body: JSON.stringify(completePayload),
       }
     );
 
@@ -46,19 +93,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    await supabase.from('pi_payments').upsert({
+    if (!userId) {
+      return jsonError(
+        'Payment was completed on Pi side but local userId is missing. Recovery data is insufficient.',
+        400
+      );
+    }
+
+    const paymentUpsertPayload = {
       payment_id: paymentId,
       txid,
-      status: 'completed',
-      completed_at: new Date().toISOString(),
       user_id: userId,
       payment_type: type,
-      amount: typeof amount === 'number' ? amount : 0,
-      memo: typeof memo === 'string' ? memo : null,
-    }, { onConflict: 'payment_id' });
+      plan_id: planId,
+      package_id: packageId,
+      amount: amount ?? 0,
+      memo,
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    };
 
-    if (type === 'subscription' && planId && userId) {
-      const credits = PLAN_CREDITS[planId] ?? 0;
+    const { error: paymentError } = await supabase.from('pi_payments').upsert(
+      paymentUpsertPayload,
+      {
+        onConflict: 'payment_id',
+      }
+    );
+
+    if (paymentError) {
+      return jsonError(`Failed to save completed payment: ${paymentError.message}`, 500);
+    }
+
+    if (type === 'subscription') {
+      if (!planId) {
+        return jsonError('Missing planId for subscription payment', 400);
+      }
+
+      const credits = PLAN_CREDITS[planId];
+      if (!credits) {
+        return jsonError(`Unknown subscription plan: ${planId}`, 400);
+      }
+
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       const { error: quotaError } = await supabase.from('user_quotas').upsert(
         {
@@ -69,12 +146,13 @@ export async function POST(req: NextRequest) {
           credits_total: credits,
           credits_remaining: credits,
           is_active: true,
-          plan_started_at: new Date().toISOString(),
-          plan_expires_at: new Date(
-            Date.now() + 30 * 24 * 60 * 60 * 1000
-          ).toISOString(),
+          plan_started_at: now.toISOString(),
+          plan_expires_at: expiresAt.toISOString(),
+          updated_at: now.toISOString(),
         },
-        { onConflict: 'user_id' }
+        {
+          onConflict: 'user_id',
+        }
       );
 
       if (quotaError) {
@@ -94,30 +172,47 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (type === 'credits' && packageId && userId) {
-      const PACKAGES: Record<string, number> = {
-        pack_100: 100,
-        pack_500: 500,
-        pack_1000: 1000,
-      };
+    if (type === 'credits') {
+      if (!packageId) {
+        return jsonError('Missing packageId for credit payment', 400);
+      }
 
-      const credits = PACKAGES[packageId] ?? 0;
+      const creditsToAdd = CREDIT_PACKAGES[packageId];
+      if (!creditsToAdd) {
+        return jsonError(`Unknown credit package: ${packageId}`, 400);
+      }
 
-      if (credits > 0) {
-        const { data: quota, error: quotaReadError } = await supabase
-          .from('user_quotas')
-          .select('credits_remaining')
-          .eq('user_id', userId)
-          .single();
+      const { data: existingQuota, error: quotaReadError } = await supabase
+        .from('user_quotas')
+        .select('user_id, credits_remaining, credits_total, plan_id, plan, tier, is_active')
+        .eq('user_id', userId)
+        .maybeSingle();
 
-        if (quotaReadError) {
-          return jsonError(`Quota read failed: ${quotaReadError.message}`, 500);
+      if (quotaReadError) {
+        return jsonError(`Quota read failed: ${quotaReadError.message}`, 500);
+      }
+
+      if (!existingQuota) {
+        const { error: quotaCreateError } = await supabase.from('user_quotas').upsert(
+          {
+            user_id: userId,
+            credits_total: creditsToAdd,
+            credits_remaining: creditsToAdd,
+            is_active: true,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' }
+        );
+
+        if (quotaCreateError) {
+          return jsonError(`Quota create failed: ${quotaCreateError.message}`, 500);
         }
-
+      } else {
         const { error: quotaUpdateError } = await supabase
           .from('user_quotas')
           .update({
-            credits_remaining: (quota?.credits_remaining ?? 0) + credits,
+            credits_total: Number(existingQuota.credits_total ?? 0) + creditsToAdd,
+            credits_remaining: Number(existingQuota.credits_remaining ?? 0) + creditsToAdd,
             updated_at: new Date().toISOString(),
           })
           .eq('user_id', userId);
@@ -128,11 +223,16 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true });
-  } catch (err) {
+    return NextResponse.json({
+      success: true,
+      paymentId,
+      txid,
+      appliedPlan: planId ?? null,
+    });
+  } catch (error) {
     return jsonError(
-      err instanceof Error ? err.message : 'Unexpected payment completion error',
+      error instanceof Error ? error.message : 'Unexpected payment completion error',
       500
     );
   }
-}
+  }
