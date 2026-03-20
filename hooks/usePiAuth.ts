@@ -6,6 +6,7 @@ import { useUserStore } from '@/store/userStore';
 
 type AuthApiResponse = {
   error?: string;
+  plan_id?: string | null;
   [key: string]: unknown;
 };
 
@@ -47,8 +48,15 @@ export function usePiAuth() {
         throw new Error(data?.error || 'Auth failed');
       }
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setUser(data as any);
-      router.push('/dashboard');
+
+      // Plan varsa dashboard, yoksa plan seçim sayfasına
+      if (data?.plan_id) {
+        router.push('/dashboard');
+      } else {
+        router.push('/plans');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Giriş başarısız');
     } finally {
