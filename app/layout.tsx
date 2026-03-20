@@ -4,20 +4,18 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Koshei — Learn. Build. Earn.',
   description: "Pi Network's AI Operating System",
-  manifest: '/manifest.json',
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <head>
-        <script src="https://sdk.minepi.com/pi-sdk.js" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+        <script src="https://sdk.minepi.com/pi-sdk.js" async></script>
       </head>
-      <body className="bg-[#060608] text-[#F0EDE6] font-sans antialiased">
+      <body style={{ fontFamily: "'Syne', sans-serif" }}>
         {children}
       </body>
     </html>
