@@ -27,34 +27,52 @@ export async function POST(req: NextRequest) {
 
   const supabase = createSupabaseServer();
 
-  const { data: profile, error } = await supabase
+  // Önce pi_uid ile mevcut profili ara
+  const { data: existing } = await supabase
     .from('profiles')
-    .upsert(
-      {
-        id: uid,
-        username,
-        full_name: username,
-        role: 'pioneer',
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    )
-    .select()
-    .single();
+    .select('id')
+    .eq('pi_uid', uid)
+    .maybeSingle();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  let profileId: string;
+
+  if (existing) {
+    // Mevcut kullanıcı — güncelle
+    profileId = existing.id;
+    await supabase
+      .from('profiles')
+      .update({ username, full_name: username, updated_at: new Date().toISOString() })
+      .eq('id', profileId);
+  } else {
+    // Yeni kullanıcı — oluştur
+    const { data: newProfile, error } = await supabase
+      .from('profiles')
+      .insert({ pi_uid: uid, username, full_name: username, role: 'pioneer' })
+      .select('id')
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    profileId = newProfile.id;
   }
 
+  // Wallet ve quota oluştur
   await supabase.from('wallets').upsert(
-    { user_id: uid, balance: 0, pending_balance: 0, total_earned: 0, total_spent: 0, currency: 'Pi' },
+    { user_id: profileId, balance: 0, pending_balance: 0, total_earned: 0, total_spent: 0, currency: 'Pi' },
     { onConflict: 'user_id' }
   );
 
   await supabase.from('user_quotas').upsert(
-    { user_id: uid, tier: 'starter', plan_id: 'starter', credits_remaining: 50, is_active: true },
+    { user_id: profileId, tier: 'starter', plan_id: 'starter', credits_remaining: 50, is_active: true },
     { onConflict: 'user_id' }
   );
 
-  return NextResponse.json(profile);
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', profileId)
+    .single();
+
+  return NextResponse.json({ ...profile, _pi_uid: uid });
 }
