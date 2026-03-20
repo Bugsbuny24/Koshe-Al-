@@ -1,5 +1,7 @@
 'use client';
+
 import { useState, useCallback } from 'react';
+import { authenticateWithPiForPayment } from '@/lib/pi/sdk';
 
 interface PaymentOptions {
   amount: number;
@@ -17,34 +19,61 @@ export function usePiPayment() {
       options.onError?.(new Error('Pi Browser gerekli'));
       return;
     }
+
     setLoading(true);
 
-    window.Pi.createPayment(
-      { amount: options.amount, memo: options.memo, metadata: options.metadata },
-      {
-        onReadyForServerApproval: async (paymentId) => {
-          await fetch('/api/payments/approve', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId }),
-          });
+    try {
+      await authenticateWithPiForPayment();
+
+      window.Pi.createPayment(
+        {
+          amount: options.amount,
+          memo: options.memo,
+          metadata: options.metadata,
         },
-        onReadyForServerCompletion: async (paymentId, txid) => {
-          await fetch('/api/payments/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ paymentId, txid }),
-          });
-          options.onSuccess?.(txid);
-          setLoading(false);
-        },
-        onCancel: () => setLoading(false),
-        onError: (err) => {
-          options.onError?.(err);
-          setLoading(false);
-        },
-      }
-    );
+        {
+          onReadyForServerApproval: async (paymentId) => {
+            const res = await fetch('/api/payments/approve', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId }),
+            });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              throw new Error(data?.error || 'Payment approval failed');
+            }
+          },
+          onReadyForServerCompletion: async (paymentId, txid) => {
+            const res = await fetch('/api/payments/complete', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentId, txid }),
+            });
+
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              throw new Error(data?.error || 'Payment completion failed');
+            }
+
+            options.onSuccess?.(txid);
+            setLoading(false);
+          },
+          onCancel: () => {
+            setLoading(false);
+          },
+          onError: (err) => {
+            options.onError?.(err);
+            setLoading(false);
+          },
+        }
+      );
+    } catch (err) {
+      options.onError?.(
+        err instanceof Error ? err : new Error('Payment auth failed')
+      );
+      setLoading(false);
+    }
   }, []);
 
   return { pay, loading };
