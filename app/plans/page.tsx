@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserStore } from '@/store/userStore';
 
@@ -61,43 +61,81 @@ const PLANS: Plan[] = [
   },
 ];
 
+type ApiErrorResponse = {
+  success?: boolean;
+  error?: string;
+};
+
 export default function PlansPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+
   const router = useRouter();
   const user = useUserStore((s) => s.user);
   const setUser = useUserStore((s) => s.setUser);
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !window?.Pi) {
-      setReady(true);
-      return;
-    }
-    window.Pi.authenticate(
-      ['username', 'payments'],
-      async (incompletePmt) => {
-        try {
-          const meta = (incompletePmt.metadata ?? {}) as Record<string, unknown>;
-          await fetch('/api/payments/complete', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              paymentId: incompletePmt.identifier,
-              txid: incompletePmt.transaction?.txid ?? null,
-              userId: typeof meta.userId === 'string' ? meta.userId : (user?.id ?? null),
-              type: typeof meta.type === 'string' ? meta.type : 'subscription',
-              planId: typeof meta.planId === 'string' ? meta.planId : null,
-              packageId: typeof meta.packageId === 'string' ? meta.packageId : null,
-            }),
-          });
-        } catch {
-          // sessizce devam
-        }
+    let mounted = true;
+
+    const bootstrapPi = async () => {
+      if (typeof window === 'undefined' || !window?.Pi) {
+        if (mounted) setReady(true);
+        return;
       }
-    )
-      .then(() => setReady(true))
-      .catch(() => setReady(true));
+
+      try {
+        await window.Pi.authenticate(
+          ['username', 'payments'],
+          async (incompletePayment) => {
+            try {
+              const res = await fetch('/api/payments/complete', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  paymentId: incompletePayment.identifier,
+                  txid: incompletePayment.transaction?.txid ?? null,
+                  userId: user?.id ?? null,
+                  type: 'subscription',
+                  planId:
+                    typeof incompletePayment.metadata?.planId === 'string'
+                      ? incompletePayment.metadata.planId
+                      : null,
+                  amount:
+                    typeof incompletePayment.amount === 'number'
+                      ? incompletePayment.amount
+                      : undefined,
+                  memo:
+                    typeof incompletePayment.memo === 'string'
+                      ? incompletePayment.memo
+                      : null,
+                }),
+              });
+
+              const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
+
+              if (!res.ok) {
+                console.error('Incomplete payment recovery failed:', data?.error || res.statusText);
+              }
+            } catch (recoveryError) {
+              console.error('Incomplete payment recovery request failed:', recoveryError);
+            }
+          }
+        );
+      } catch (authError) {
+        console.error('Pi authenticate on plans page failed:', authError);
+      } finally {
+        if (mounted) setReady(true);
+      }
+    };
+
+    bootstrapPi();
+
+    return () => {
+      mounted = false;
+    };
   }, [user?.id]);
 
   const handlePurchase = async (plan: Plan) => {
@@ -105,6 +143,7 @@ export default function PlansPage() {
       setError('Pi Browser gerekli.');
       return;
     }
+
     if (!user?.id) {
       setError('Önce giriş yapmalısın.');
       return;
@@ -118,13 +157,19 @@ export default function PlansPage() {
         {
           amount: plan.price,
           memo: `Koshei ${plan.name} - Aylık Plan`,
-          metadata: { planId: plan.id, userId: user.id, type: 'subscription' },
+          metadata: {
+            planId: plan.id,
+            userId: user.id,
+            type: 'subscription',
+          },
         },
         {
           onReadyForServerApproval: async (paymentId) => {
             const res = await fetch('/api/payments/approve', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+              },
               body: JSON.stringify({
                 paymentId,
                 userId: user.id,
@@ -134,83 +179,197 @@ export default function PlansPage() {
                 memo: `Koshei ${plan.name} - Aylık Plan`,
               }),
             });
+
+            const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
+
             if (!res.ok) {
-              const data = await res.json().catch(() => null);
               throw new Error(data?.error || 'Payment approval failed');
             }
           },
+
           onReadyForServerCompletion: async (paymentId, txid) => {
             const res = await fetch('/api/payments/complete', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: {
+                'Content-Type': 'application/json',
+              },
               body: JSON.stringify({
                 paymentId,
                 txid,
                 userId: user.id,
                 type: 'subscription',
                 planId: plan.id,
+                amount: plan.price,
+                memo: `Koshei ${plan.name} - Aylık Plan`,
               }),
             });
-            const data = await res.json().catch(() => null);
-            if (!res.ok) throw new Error(data?.error || 'Payment completion failed');
-            setUser({ ...user, plan_id: plan.id, is_premium: true });
-            setLoading(null);
+
+            const data = (await res.json().catch(() => null)) as ApiErrorResponse | null;
+
+            if (!res.ok) {
+              throw new Error(data?.error || 'Payment completion failed');
+            }
+
+            setUser({
+              ...user,
+              plan_id: plan.id,
+              is_premium: true,
+            });
+
             router.push('/dashboard');
           },
-          onCancel: () => setLoading(null),
-          onError: (err) => {
-            setError(err?.message || 'Ödeme sırasında hata oluştu');
+
+          onCancel: () => {
+            setLoading(null);
+          },
+
+          onError: (piError) => {
+            setError(piError?.message || 'Ödeme sırasında hata oluştu');
             setLoading(null);
           },
         }
       );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Hata oluştu');
+    } catch (purchaseError) {
+      setError(
+        purchaseError instanceof Error ? purchaseError.message : 'Hata oluştu'
+      );
       setLoading(null);
     }
   };
 
   return (
-    <main style={{ minHeight: '100vh', background: '#060608', color: '#F0EDE6', fontFamily: "'Syne', sans-serif", padding: '40px 20px' }}>
+    <main
+      style={{
+        minHeight: '100vh',
+        background: '#060608',
+        color: '#F0EDE6',
+        fontFamily: "'Syne', sans-serif",
+        padding: '40px 20px',
+      }}
+    >
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div style={{ fontSize: 32, marginBottom: 8 }}>🚀</div>
-        <h1 style={{ fontSize: 32, fontWeight: 800, letterSpacing: '-0.03em', marginBottom: 8 }}>Plan Seç</h1>
+        <h1
+          style={{
+            fontSize: 32,
+            fontWeight: 800,
+            letterSpacing: '-0.03em',
+            marginBottom: 8,
+          }}
+        >
+          Plan Seç
+        </h1>
         <p style={{ color: '#8A8680', fontSize: 15 }}>Pi ile öde, hemen başla</p>
       </div>
 
       {!ready && (
-        <div style={{ textAlign: 'center', color: '#8A8680', marginBottom: 24 }}>
+        <div
+          style={{
+            textAlign: 'center',
+            color: '#8A8680',
+            marginBottom: 24,
+          }}
+        >
           Hazırlanıyor...
         </div>
       )}
 
       {error && (
-        <div style={{ background: 'rgba(255,100,100,0.1)', border: '1px solid rgba(255,100,100,0.3)', borderRadius: 12, padding: '12px 16px', marginBottom: 24, color: '#ff6464', fontSize: 14, textAlign: 'center', maxWidth: 480, marginInline: 'auto' }}>
+        <div
+          style={{
+            background: 'rgba(255,100,100,0.1)',
+            border: '1px solid rgba(255,100,100,0.3)',
+            borderRadius: 12,
+            padding: '12px 16px',
+            marginBottom: 24,
+            color: '#ff6464',
+            fontSize: 14,
+            textAlign: 'center',
+            maxWidth: 480,
+            marginInline: 'auto',
+          }}
+        >
           {error}
         </div>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 480, margin: '0 auto', opacity: ready ? 1 : 0.5, pointerEvents: ready ? 'auto' : 'none' }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          maxWidth: 480,
+          margin: '0 auto',
+          opacity: ready ? 1 : 0.5,
+          pointerEvents: ready ? 'auto' : 'none',
+        }}
+      >
         {PLANS.map((plan) => (
-          <div key={plan.id} style={{ background: '#111116', border: `1px solid ${plan.color}55`, borderRadius: 24, padding: 24 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
+          <div
+            key={plan.id}
+            style={{
+              background: '#111116',
+              border: `1px solid ${plan.color}55`,
+              borderRadius: 24,
+              padding: 24,
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'baseline',
+                marginBottom: 16,
+              }}
+            >
               <div>
-                <h2 style={{ fontSize: 28, fontWeight: 800, color: plan.color, marginBottom: 6 }}>{plan.name}</h2>
-                <p style={{ color: '#8A8680', fontSize: 14 }}>{plan.credits} kredi/ay</p>
+                <h2
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 800,
+                    color: plan.color,
+                    marginBottom: 6,
+                  }}
+                >
+                  {plan.name}
+                </h2>
+                <p style={{ color: '#8A8680', fontSize: 14 }}>
+                  {plan.credits} kredi/ay
+                </p>
               </div>
               <div style={{ fontSize: 26, fontWeight: 800 }}>{plan.price} π</div>
             </div>
+
             <div style={{ marginBottom: 24 }}>
               {plan.features.map((feature) => (
-                <div key={feature} style={{ padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.06)', color: '#D4D0C8', fontSize: 15 }}>
+                <div
+                  key={feature}
+                  style={{
+                    padding: '10px 0',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    color: '#D4D0C8',
+                    fontSize: 15,
+                  }}
+                >
                   ✓ {feature}
                 </div>
               ))}
             </div>
+
             <button
               onClick={() => handlePurchase(plan)}
               disabled={loading === plan.id}
-              style={{ width: '100%', border: 'none', borderRadius: 16, padding: '16px 20px', background: loading === plan.id ? '#2A2A30' : plan.color, color: loading === plan.id ? '#8A8680' : '#060608', fontWeight: 800, fontSize: 18, cursor: loading === plan.id ? 'not-allowed' : 'pointer' }}
+              style={{
+                width: '100%',
+                border: 'none',
+                borderRadius: 16,
+                padding: '16px 20px',
+                background: loading === plan.id ? '#2A2A30' : plan.color,
+                color: loading === plan.id ? '#8A8680' : '#060608',
+                fontWeight: 800,
+                fontSize: 18,
+                cursor: loading === plan.id ? 'not-allowed' : 'pointer',
+              }}
             >
               {loading === plan.id ? 'İşleniyor...' : `${plan.price} π ile Satın Al`}
             </button>
@@ -219,4 +378,4 @@ export default function PlansPage() {
       </div>
     </main>
   );
-              }
+            }
