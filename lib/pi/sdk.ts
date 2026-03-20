@@ -10,7 +10,16 @@ export async function authenticateWithPi(): Promise<{
 } | null> {
   if (!isPiBrowser()) return null;
 
-  const auth = await window.Pi.authenticate(['username'], async () => {});
+  const auth = await window.Pi.authenticate(
+    ['username', 'payments'],
+    async (payment) => {
+      await fetch('/api/payments/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId: payment.identifier }),
+      });
+    }
+  );
 
   if (!auth?.accessToken || !auth?.user?.uid || !auth?.user?.username) {
     throw new Error('Pi auth incomplete');
