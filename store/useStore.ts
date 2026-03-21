@@ -10,7 +10,7 @@ export interface Profile {
 }
 
 export interface Quota {
-  plan_id: string;
+  plan_id: string | null;
   credits_remaining: number;
   is_active: boolean;
   plan_expires_at: string | null;

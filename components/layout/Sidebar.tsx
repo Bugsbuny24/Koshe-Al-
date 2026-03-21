@@ -143,7 +143,20 @@ export function Sidebar() {
     starter: 'text-slate-400',
     pro: 'text-accent-blue',
     ultra: 'text-pi-gold',
+    growth: 'text-accent-green',
+    studio: 'text-purple-400',
   };
+
+  const planMaxCredits: Record<string, number> = {
+    ultra: 5000,
+    pro: 1000,
+    growth: 300,
+    studio: 2000,
+  };
+
+  const safePlanId = quota?.plan_id ?? 'starter';
+  const safeCredits = quota && Number.isFinite(quota.credits_remaining) ? quota.credits_remaining : 0;
+  const planMax = planMaxCredits[safePlanId] ?? 100;
 
   return (
     <>
@@ -211,23 +224,18 @@ export function Sidebar() {
             <div className="bg-bg-card rounded-xl p-3">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-xs text-slate-500">Krediler</span>
-                <span className={cn('text-xs font-semibold', planColors[quota.plan_id] || 'text-slate-400')}>
-                  {quota.plan_id.toUpperCase()}
+                <span className={cn('text-xs font-semibold', planColors[safePlanId] || 'text-slate-400')}>
+                  {safePlanId.toUpperCase()}
                 </span>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className="text-lg font-bold text-white">{Math.floor(quota.credits_remaining)}</span>
+                <span className="text-lg font-bold text-white">{Math.floor(safeCredits)}</span>
                 <span className="text-xs text-slate-500">kredi kaldı</span>
               </div>
               <div className="mt-2 h-1.5 bg-bg-deep rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-accent-blue to-accent-green rounded-full transition-all"
-                  style={{
-                    width: `${Math.min(100, (quota.credits_remaining / (
-                      quota.plan_id === 'ultra' ? 5000 :
-                      quota.plan_id === 'pro' ? 1000 : 100
-                    )) * 100)}%`
-                  }}
+                  style={{ width: `${Math.min(100, (safeCredits / planMax) * 100)}%` }}
                 />
               </div>
             </div>
