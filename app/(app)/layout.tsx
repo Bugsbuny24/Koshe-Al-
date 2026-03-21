@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useStore } from '@/store/useStore';
@@ -11,8 +11,10 @@ export const dynamic = 'force-dynamic';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { setProfile, setQuota, sidebarOpen } = useStore();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const supabase = createSupabaseClient();
 
     const loadUser = async () => {
@@ -39,6 +41,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     return () => subscription.unsubscribe();
   }, [router, setProfile, setQuota]);
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-bg-void flex items-center justify-center">
+        <div
+          role="status"
+          aria-label="Yükleniyor"
+          className="w-8 h-8 border-2 border-accent-green border-t-transparent rounded-full animate-spin"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-bg-void">
