@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -29,6 +29,7 @@ export function EscrowPanel({ dealId, escrow, onUpdate }: Props) {
   const [releasedAmount, setReleasedAmount] = useState('');
   const [syncLoading, setSyncLoading] = useState(false);
   const [syncError, setSyncError] = useState('');
+  const [syncSuccess, setSyncSuccess] = useState(false);
 
   const handleLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +54,7 @@ export function EscrowPanel({ dealId, escrow, onUpdate }: Props) {
 
   const handleSync = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSyncLoading(true); setSyncError('');
+    setSyncLoading(true); setSyncError(''); setSyncSuccess(false);
     try {
       const res = await fetch(`/api/deals/${dealId}/escrow/sync`, {
         method: 'POST',
@@ -68,6 +69,7 @@ export function EscrowPanel({ dealId, escrow, onUpdate }: Props) {
       });
       const data = await res.json();
       if (!res.ok) { setSyncError(data.error || 'Hata oluştu'); return; }
+      setSyncSuccess(true);
       onUpdate();
     } catch {
       setSyncError('Bağlantı hatası');
@@ -75,6 +77,12 @@ export function EscrowPanel({ dealId, escrow, onUpdate }: Props) {
       setSyncLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!syncSuccess) return;
+    const t = setTimeout(() => setSyncSuccess(false), 4000);
+    return () => clearTimeout(t);
+  }, [syncSuccess]);
 
   return (
     <div className="space-y-6">
@@ -148,6 +156,11 @@ export function EscrowPanel({ dealId, escrow, onUpdate }: Props) {
                 </div>
               </div>
               {syncError && <p className="text-red-400 text-sm">{syncError}</p>}
+              {syncSuccess && (
+                <p className="text-green-400 text-sm flex items-center gap-1.5">
+                  <span>✓</span> Escrow durumu güncellendi
+                </p>
+              )}
               <Button type="submit" disabled={syncLoading}>{syncLoading ? 'Sync ediliyor...' : '🔄 Manuel Sync'}</Button>
             </form>
           </Card>

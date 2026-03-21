@@ -84,9 +84,15 @@ export function DeliveryPanel({ dealId, milestones, deliveries, onUpdate }: Prop
               <Card key={d.id} className="p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                       <Badge variant="blue">{d.delivery_type}</Badge>
-                      {ms && <span className="text-xs text-slate-400">{ms.title}</span>}
+                      {ms ? (
+                        <span className="text-xs font-medium text-slate-300 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                          📋 {ms.title}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500">Milestone bulunamadı</span>
+                      )}
                       <span className="text-xs text-slate-600 ml-auto">v{d.version}</span>
                     </div>
                     <a href={d.asset_url} target="_blank" rel="noreferrer" className="text-accent-blue text-sm hover:underline truncate block">{d.asset_url}</a>
