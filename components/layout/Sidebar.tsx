@@ -59,9 +59,9 @@ export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { sidebarOpen, setSidebarOpen, profile, quota } = useStore();
-  const supabase = createSupabaseClient();
 
   const handleLogout = async () => {
+    const supabase = createSupabaseClient();
     await supabase.auth.signOut();
     router.push('/login');
   };

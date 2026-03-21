@@ -134,7 +134,7 @@ export default function ProfilePage() {
                 style={{ width: `${Math.min(100, ((quota?.credits_remaining || 0) / 100) * 100)}%` }}
               />
             </div>
-            <p className="text-xs text-slate-600 mt-1">{quota?.credits_remaining?.toFixed(1)} / 100 kredi kullanıldı</p>
+            <p className="text-xs text-slate-600 mt-1">{quota?.credits_remaining?.toFixed(1)} / 100 kredi kaldı</p>
           </div>
         </Card>
       </motion.div>
