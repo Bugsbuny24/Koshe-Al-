@@ -24,8 +24,18 @@ export default function DealScopePage() {
 
   let acceptanceCriteria: string[] = [];
   let checklistSeed: string[] = [];
-  try { acceptanceCriteria = acceptanceCriteriaRaw ? (JSON.parse(acceptanceCriteriaRaw) as string[]) : []; } catch { /* ignore */ }
-  try { checklistSeed = checklistSeedRaw ? (JSON.parse(checklistSeedRaw) as string[]) : []; } catch { /* ignore */ }
+  try {
+    if (acceptanceCriteriaRaw) {
+      const parsed = JSON.parse(acceptanceCriteriaRaw);
+      if (Array.isArray(parsed)) acceptanceCriteria = parsed.filter((v): v is string => typeof v === 'string');
+    }
+  } catch { /* ignore */ }
+  try {
+    if (checklistSeedRaw) {
+      const parsed = JSON.parse(checklistSeedRaw);
+      if (Array.isArray(parsed)) checklistSeed = parsed.filter((v): v is string => typeof v === 'string');
+    }
+  } catch { /* ignore */ }
 
   const hasExecutionSeed = !!(scopeSeed || acceptanceCriteria.length || checklistSeed.length);
 

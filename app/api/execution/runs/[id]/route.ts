@@ -66,6 +66,14 @@ export async function PATCH(
     }
   }
 
+  // Validate status value if provided
+  const VALID_STATUSES: ExecutionRunStatus[] = [
+    'draft', 'analyzed', 'planned', 'ready_for_project', 'ready_for_deal', 'linked_to_project', 'linked_to_deal',
+  ];
+  if (patch.status !== undefined && !VALID_STATUSES.includes(patch.status as ExecutionRunStatus)) {
+    return NextResponse.json({ success: false, error: 'Geçersiz status değeri' }, { status: 400 });
+  }
+
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ success: false, error: 'Güncellenecek alan yok' }, { status: 400 });
   }

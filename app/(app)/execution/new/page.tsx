@@ -694,8 +694,7 @@ export default function ExecutionNewPage() {
   /** Save execution run to DB and return the run ID */
   const saveRunToDb = useCallback(async (): Promise<string | null> => {
     if (savedRunId) return savedRunId;
-    const milestoneMode =
-      tasks?.phases?.length === 1 ? 'fast' : tasks?.phases && tasks.phases.length >= 3 ? 'iterative' : 'standard';
+    const dealPayload = mapExecutionToDeal({ brief, requirement, tasks, checklist });
     const title = requirement?.project_type
       ? `${requirement.project_type} — ${new Date().toLocaleDateString('tr-TR')}`
       : brief.slice(0, 60).trim();
@@ -706,7 +705,7 @@ export default function ExecutionNewPage() {
         brief,
         templateId: selectedTemplate,
         title,
-        milestoneMode,
+        milestoneMode: dealPayload.milestone_mode,
         requirement,
         architecture,
         tasks,

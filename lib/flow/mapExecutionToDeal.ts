@@ -62,7 +62,7 @@ export function mapExecutionToDeal(data: ExecutionData): ExecutionToDealPayload 
     acceptance_criteria.push(...checklist.acceptance_checkpoints);
   }
 
-  // Milestone mode from template or task breakdown
+  // Milestone mode: single phase → fast delivery, 2 phases → standard, 3+ phases → iterative sprints
   let milestone_mode: 'standard' | 'fast' | 'iterative' = 'standard';
   if (templateRuntime?.default_milestone_mode) {
     milestone_mode = templateRuntime.default_milestone_mode;

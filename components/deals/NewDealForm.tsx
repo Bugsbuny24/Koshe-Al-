@@ -43,12 +43,18 @@ export function NewDealForm() {
 
     try {
       const ac = searchParams.get('acceptanceCriteria');
-      if (ac) setAcceptanceCriteria(JSON.parse(ac) as string[]);
+      if (ac) {
+        const parsed = JSON.parse(ac);
+        if (Array.isArray(parsed)) setAcceptanceCriteria(parsed.filter((v): v is string => typeof v === 'string'));
+      }
     } catch { /* ignore parse errors */ }
 
     try {
       const cs = searchParams.get('checklistSeed');
-      if (cs) setChecklistSeed(JSON.parse(cs) as string[]);
+      if (cs) {
+        const parsed = JSON.parse(cs);
+        if (Array.isArray(parsed)) setChecklistSeed(parsed.filter((v): v is string => typeof v === 'string'));
+      }
     } catch { /* ignore parse errors */ }
   }, [searchParams]);
 
@@ -76,8 +82,8 @@ export function NewDealForm() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ deal_id: dealId, status: 'linked_to_deal' }),
           });
-        } catch {
-          // non-fatal
+        } catch (linkErr) {
+          console.error('execution run back-link failed:', linkErr);
         }
       }
 

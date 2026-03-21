@@ -109,8 +109,8 @@ export function NewProjectForm() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ project_id: projectId, status: 'linked_to_project' }),
           });
-        } catch {
-          // non-fatal
+        } catch (linkErr) {
+          console.error('execution run back-link failed:', linkErr);
         }
       }
 
