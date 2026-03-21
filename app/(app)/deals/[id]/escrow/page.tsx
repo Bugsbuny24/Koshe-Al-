@@ -17,10 +17,16 @@ export default function DealEscrowPage() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const res = await fetch(`/api/deals/${id}`);
-    const d = await res.json();
-    if (d.deal) { setDeal(d.deal); setEscrow(d.escrow); }
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/deals/${id}`);
+      const d = await res.json();
+      if (d.deal) { setDeal(d.deal); setEscrow(d.escrow); }
+    } catch (err) {
+      console.error('Escrow page load error:', err);
+      // keep deal null so error state renders
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);

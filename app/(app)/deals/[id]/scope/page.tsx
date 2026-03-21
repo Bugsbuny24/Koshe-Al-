@@ -17,10 +17,16 @@ export default function DealScopePage() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const res = await fetch(`/api/deals/${id}`);
-    const d = await res.json();
-    if (d.deal) { setDeal(d.deal); setScope(d.scope); }
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/deals/${id}`);
+      const d = await res.json();
+      if (d.deal) { setDeal(d.deal); setScope(d.scope); }
+    } catch (err) {
+      console.error('Scope page load error:', err);
+      // keep deal null so error state renders
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);

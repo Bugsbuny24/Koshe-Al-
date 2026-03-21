@@ -18,13 +18,19 @@ export default function DealRevisionsPage() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const [dealRes, revisionsRes] = await Promise.all([
-      fetch(`/api/deals/${id}`).then((r) => r.json()),
-      fetch(`/api/deals/${id}/revisions`).then((r) => r.json()),
-    ]);
-    if (dealRes.deal) { setDeal(dealRes.deal); setMilestones(dealRes.milestones || []); }
-    if (revisionsRes.revisions) setRevisions(revisionsRes.revisions);
-    setLoading(false);
+    try {
+      const [dealRes, revisionsRes] = await Promise.all([
+        fetch(`/api/deals/${id}`).then((r) => r.json()),
+        fetch(`/api/deals/${id}/revisions`).then((r) => r.json()),
+      ]);
+      if (dealRes.deal) { setDeal(dealRes.deal); setMilestones(dealRes.milestones || []); }
+      if (revisionsRes.revisions) setRevisions(revisionsRes.revisions);
+    } catch (err) {
+      console.error('Revisions page load error:', err);
+      // keep deal null so error state renders
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);

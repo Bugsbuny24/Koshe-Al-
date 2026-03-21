@@ -20,19 +20,25 @@ export default function DealMilestonesPage() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const [dealRes, deliveriesRes, revisionsRes] = await Promise.all([
-      fetch(`/api/deals/${id}`).then((r) => r.json()),
-      fetch(`/api/deals/${id}/deliveries`).then((r) => r.json()),
-      fetch(`/api/deals/${id}/revisions`).then((r) => r.json()),
-    ]);
-    if (dealRes.deal) {
-      setDeal(dealRes.deal);
-      setMilestones(dealRes.milestones || []);
-      setApprovals(dealRes.approvals || []);
+    try {
+      const [dealRes, deliveriesRes, revisionsRes] = await Promise.all([
+        fetch(`/api/deals/${id}`).then((r) => r.json()),
+        fetch(`/api/deals/${id}/deliveries`).then((r) => r.json()),
+        fetch(`/api/deals/${id}/revisions`).then((r) => r.json()),
+      ]);
+      if (dealRes.deal) {
+        setDeal(dealRes.deal);
+        setMilestones(dealRes.milestones || []);
+        setApprovals(dealRes.approvals || []);
+      }
+      if (deliveriesRes.deliveries) setDeliveries(deliveriesRes.deliveries);
+      if (revisionsRes.revisions) setRevisions(revisionsRes.revisions);
+    } catch (err) {
+      console.error('Milestones page load error:', err);
+      // keep deal null so error state renders
+    } finally {
+      setLoading(false);
     }
-    if (deliveriesRes.deliveries) setDeliveries(deliveriesRes.deliveries);
-    if (revisionsRes.revisions) setRevisions(revisionsRes.revisions);
-    setLoading(false);
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
