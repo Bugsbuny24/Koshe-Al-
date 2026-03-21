@@ -76,7 +76,6 @@ create table if not exists public.orders (
   user_id uuid references auth.users(id) on delete cascade,
   plan_id text,
   status text default 'pending',
-  stripe_session_id text,
   created_at timestamptz default now()
 );
 
@@ -109,11 +108,6 @@ create table if not exists public.notifications (
   read boolean default false,
   created_at timestamptz default now()
 );
-
--- Add stripe_customer_id to user_quotas if not exists
-alter table public.user_quotas
-  add column if not exists stripe_customer_id text,
-  add column if not exists stripe_subscription_id text;
 
 -- RPC: add credits
 create or replace function public.add_credits(uid uuid, amount numeric)
