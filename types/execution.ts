@@ -76,10 +76,21 @@ export type TemplateRuntimeResult = {
   delivery_checklist_seed: string[];
 };
 
+export type ExecutionRunStatus =
+  | 'draft'
+  | 'analyzed'
+  | 'planned'
+  | 'ready_for_project'
+  | 'ready_for_deal'
+  | 'linked_to_project'
+  | 'linked_to_deal';
+
 export type ExecutionRun = {
   id: string;
   user_id: string | null;
   template_id: string | null;
+  /** Human-readable title set when saving the run */
+  title: string | null;
   brief: string;
   requirement_json: RequirementExtractionResult | null;
   architecture_json: ArchitecturePlanResult | null;
@@ -87,6 +98,12 @@ export type ExecutionRun = {
   checklist_json: DeliveryChecklistResult | null;
   project_id: string | null;
   deal_id: string | null;
+  /** Milestone mode forwarded from template or task breakdown */
+  milestone_mode: 'standard' | 'fast' | 'iterative' | null;
+  /** Lifecycle status of this execution run */
+  status: ExecutionRunStatus;
+  /** Latest revision notes json stored for back-link feedback loop */
+  revision_notes_json: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };

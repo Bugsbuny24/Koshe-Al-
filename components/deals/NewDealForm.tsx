@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 export function NewDealForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [title, setTitle] = useState('');
   const [buyerId, setBuyerId] = useState('');
   const [sellerId, setSellerId] = useState('');
@@ -15,6 +16,41 @@ export function NewDealForm() {
   const [currency, setCurrency] = useState('USD');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Execution seed state — stored, used after deal creation
+  const [executionRunId, setExecutionRunId] = useState<string | null>(null);
+  const [scopeSeed, setScopeSeed] = useState('');
+  const [milestoneMode, setMilestoneMode] = useState('standard');
+  const [acceptanceCriteria, setAcceptanceCriteria] = useState<string[]>([]);
+  const [checklistSeed, setChecklistSeed] = useState<string[]>([]);
+  const [fromExecution, setFromExecution] = useState(false);
+
+  useEffect(() => {
+    const execRunId = searchParams.get('executionRunId');
+    if (!execRunId) return;
+
+    setExecutionRunId(execRunId);
+    setFromExecution(true);
+
+    const paramTitle = searchParams.get('title');
+    if (paramTitle) setTitle(paramTitle);
+
+    const paramScope = searchParams.get('scopeSeed');
+    if (paramScope) setScopeSeed(paramScope);
+
+    const paramMilestone = searchParams.get('milestoneMode');
+    if (paramMilestone) setMilestoneMode(paramMilestone);
+
+    try {
+      const ac = searchParams.get('acceptanceCriteria');
+      if (ac) setAcceptanceCriteria(JSON.parse(ac) as string[]);
+    } catch { /* ignore parse errors */ }
+
+    try {
+      const cs = searchParams.get('checklistSeed');
+      if (cs) setChecklistSeed(JSON.parse(cs) as string[]);
+    } catch { /* ignore parse errors */ }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,7 +65,32 @@ export function NewDealForm() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Hata oluştu'); return; }
-      router.push(`/deals/${data.deal.id}`);
+
+      const dealId: string = data.deal.id;
+
+      // Back-link execution run to this deal
+      if (executionRunId) {
+        try {
+          await fetch(`/api/execution/runs/${executionRunId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ deal_id: dealId, status: 'linked_to_deal' }),
+          });
+        } catch {
+          // non-fatal
+        }
+      }
+
+      // Navigate to scope page with execution seed if available
+      if (scopeSeed) {
+        const params = new URLSearchParams({ scopeSeed });
+        if (acceptanceCriteria.length) params.set('acceptanceCriteria', JSON.stringify(acceptanceCriteria));
+        if (checklistSeed.length) params.set('checklistSeed', JSON.stringify(checklistSeed));
+        if (milestoneMode) params.set('milestoneMode', milestoneMode);
+        router.push(`/deals/${dealId}/scope?${params.toString()}`);
+      } else {
+        router.push(`/deals/${dealId}`);
+      }
     } catch {
       setError('Bağlantı hatası');
     } finally {
@@ -39,6 +100,18 @@ export function NewDealForm() {
 
   return (
     <Card className="p-6 max-w-xl mx-auto">
+      {fromExecution && (
+        <div className="flex items-start gap-3 bg-accent-blue/10 border border-accent-blue/20 rounded-xl px-4 py-3 mb-5">
+          <span className="text-lg shrink-0">⚡</span>
+          <div>
+            <p className="text-sm font-semibold text-accent-blue">Execution&apos;dan Yüklendi</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Başlık execution run sonucundan dolduruldu. Deal oluşturulduktan sonra scope sayfasına yönlendirileceksin.
+            </p>
+          </div>
+        </div>
+      )}
+
       <h2 className="text-lg font-semibold text-white mb-6">Yeni Deal Oluştur</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -73,6 +146,25 @@ export function NewDealForm() {
             </select>
           </div>
         </div>
+
+        {/* Execution seed summary */}
+        {fromExecution && checklistSeed.length > 0 && (
+          <div className="bg-white/5 border border-white/10 rounded-lg p-3">
+            <p className="text-xs text-slate-400 font-medium mb-2">Execution Checklist Seed ({checklistSeed.length} madde)</p>
+            <ul className="space-y-1">
+              {checklistSeed.slice(0, 4).map((item, i) => (
+                <li key={i} className="text-xs text-slate-300 flex gap-2">
+                  <span className="text-slate-600 shrink-0">•</span>
+                  {item}
+                </li>
+              ))}
+              {checklistSeed.length > 4 && (
+                <li className="text-xs text-slate-500">+{checklistSeed.length - 4} daha...</li>
+              )}
+            </ul>
+          </div>
+        )}
+
         {error && <p className="text-red-400 text-sm">{error}</p>}
         <Button type="submit" disabled={loading} className="w-full">
           {loading ? 'Oluşturuluyor...' : 'Deal Oluştur'}

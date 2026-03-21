@@ -45,6 +45,8 @@ export function NewProjectForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [fromTemplate, setFromTemplate] = useState('');
+  const [fromExecution, setFromExecution] = useState(false);
+  const [executionRunId, setExecutionRunId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>({
     title: '',
     description: '',
@@ -52,6 +54,24 @@ export function NewProjectForm() {
   });
 
   useEffect(() => {
+    // Check for execution run params first (higher priority)
+    const execTitle = searchParams.get('title');
+    const execDescription = searchParams.get('description');
+    const execTechStack = searchParams.get('tech_stack');
+    const execRunId = searchParams.get('executionRunId');
+
+    if (execRunId) {
+      setExecutionRunId(execRunId);
+      setFromExecution(true);
+      setForm({
+        title: execTitle ?? '',
+        description: execDescription ?? '',
+        tech_stack: execTechStack ?? '',
+      });
+      return;
+    }
+
+    // Fall back to template preset
     const templateId = searchParams.get('template');
     if (templateId && TEMPLATE_PRESETS[templateId]) {
       setForm(TEMPLATE_PRESETS[templateId]);
@@ -78,7 +98,23 @@ export function NewProjectForm() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Proje oluşturulamadı');
-      router.push(`/projects/${data.project.id}`);
+
+      const projectId: string = data.project.id;
+
+      // Back-link execution run to this project
+      if (executionRunId) {
+        try {
+          await fetch(`/api/execution/runs/${executionRunId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project_id: projectId, status: 'linked_to_project' }),
+          });
+        } catch {
+          // non-fatal
+        }
+      }
+
+      router.push(`/projects/${projectId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu');
     } finally {
@@ -88,8 +124,21 @@ export function NewProjectForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
+      {/* Execution source badge */}
+      {fromExecution && (
+        <div className="flex items-start gap-3 bg-accent-green/10 border border-accent-green/20 rounded-xl px-4 py-3">
+          <span className="text-lg shrink-0">⚡</span>
+          <div>
+            <p className="text-sm font-semibold text-accent-green">Execution&apos;dan Yüklendi</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Form alanları execution run sonuçlarından dolduruldu. İstediğin gibi düzenleyebilirsin.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Template banner */}
-      {fromTemplate && (
+      {fromTemplate && !fromExecution && (
         <div className="flex items-start gap-3 bg-accent-blue/10 border border-accent-blue/20 rounded-xl px-4 py-3">
           <span className="text-lg shrink-0">📋</span>
           <div>

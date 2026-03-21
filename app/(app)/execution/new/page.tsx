@@ -8,6 +8,8 @@ import type {
   TaskBreakdownResult,
   DeliveryChecklistResult,
 } from '@/types/execution';
+import { mapExecutionToProject } from '@/lib/flow/mapExecutionToProject';
+import { mapExecutionToDeal } from '@/lib/flow/mapExecutionToDeal';
 
 const TEMPLATES = [
   { id: 'hotel-landing', label: 'Hotel Landing Page', icon: '🏨' },
@@ -422,17 +424,21 @@ const CATEGORY_COLORS: Record<string, string> = {
 function Step5({
   data,
   onReset,
-  onSaveProject,
-  onStartDeal,
+  onSaveRun,
+  onUseForProject,
+  onUseForDeal,
   onShowJson,
   saving,
+  savedRunId,
 }: {
   data: DeliveryChecklistResult;
   onReset: () => void;
-  onSaveProject: () => void;
-  onStartDeal: () => void;
+  onSaveRun: () => void;
+  onUseForProject: () => void;
+  onUseForDeal: () => void;
   onShowJson: () => void;
   saving: boolean;
+  savedRunId: string | null;
 }) {
   const categories = [...new Set(data.items.map((i) => i.category))];
 
@@ -495,18 +501,27 @@ function Step5({
       <div className="grid grid-cols-2 gap-3 pt-2">
         <button
           type="button"
-          onClick={onSaveProject}
-          disabled={saving}
+          onClick={onSaveRun}
+          disabled={saving || !!savedRunId}
           className="bg-accent-green hover:bg-accent-green/90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
         >
-          {saving ? 'Kaydediliyor...' : '💾 Project Olarak Kaydet'}
+          {saving ? 'Kaydediliyor...' : savedRunId ? '✓ Kaydedildi' : '💾 Execution Run Kaydet'}
         </button>
         <button
           type="button"
-          onClick={onStartDeal}
-          className="bg-accent-blue hover:bg-accent-blue/90 text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+          onClick={onUseForProject}
+          disabled={saving}
+          className="bg-white/10 hover:bg-white/15 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
         >
-          🤝 Deal Başlat
+          🗂️ Project İçin Kullan
+        </button>
+        <button
+          type="button"
+          onClick={onUseForDeal}
+          disabled={saving}
+          className="bg-accent-blue hover:bg-accent-blue/90 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-xl transition-colors text-sm"
+        >
+          🤝 Deal İçin Kullan
         </button>
         <button
           type="button"
@@ -515,10 +530,12 @@ function Step5({
         >
           🔄 Tekrar Üret
         </button>
+      </div>
+      <div className="flex justify-end pt-1">
         <button
           type="button"
           onClick={onShowJson}
-          className="bg-white/5 hover:bg-white/10 text-slate-300 font-semibold py-3 rounded-xl transition-colors text-sm"
+          className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
         >
           {'{ }'} JSON Gör
         </button>
@@ -571,6 +588,7 @@ export default function ExecutionNewPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showJson, setShowJson] = useState(false);
+  const [savedRunId, setSavedRunId] = useState<string | null>(null);
 
   const [requirement, setRequirement] = useState<RequirementExtractionResult | null>(null);
   const [architecture, setArchitecture] = useState<ArchitecturePlanResult | null>(null);
@@ -586,6 +604,7 @@ export default function ExecutionNewPage() {
     setTasks(null);
     setChecklist(null);
     setError(null);
+    setSavedRunId(null);
   }, []);
 
   const handleExtractRequirements = useCallback(async () => {
@@ -672,63 +691,105 @@ export default function ExecutionNewPage() {
     }
   }, [requirement, architecture, tasks, loading]);
 
-  const handleSaveProject = useCallback(async () => {
-    if (saving) return;
+  /** Save execution run to DB and return the run ID */
+  const saveRunToDb = useCallback(async (): Promise<string | null> => {
+    if (savedRunId) return savedRunId;
+    const milestoneMode =
+      tasks?.phases?.length === 1 ? 'fast' : tasks?.phases && tasks.phases.length >= 3 ? 'iterative' : 'standard';
+    const title = requirement?.project_type
+      ? `${requirement.project_type} — ${new Date().toLocaleDateString('tr-TR')}`
+      : brief.slice(0, 60).trim();
+    const res = await fetch('/api/execution/runs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        brief,
+        templateId: selectedTemplate,
+        title,
+        milestoneMode,
+        requirement,
+        architecture,
+        tasks,
+        checklist,
+      }),
+    });
+    const json = await res.json();
+    if (json.success && json.data?.id) {
+      setSavedRunId(json.data.id);
+      return json.data.id as string;
+    }
+    return null;
+  }, [savedRunId, brief, selectedTemplate, requirement, architecture, tasks, checklist]);
+
+  const handleSaveRun = useCallback(async () => {
+    if (saving || savedRunId) return;
     setSaving(true);
     setError(null);
     try {
-      // Save execution run
-      await fetch('/api/execution/runs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          brief,
-          templateId: selectedTemplate,
-          requirement,
-          architecture,
-          tasks,
-          checklist,
-        }),
-      });
-
-      // Save to projects table
-      const title =
-        requirement?.project_type
-          ? `${requirement.project_type} — ${new Date().toLocaleDateString('tr-TR')}`
-          : brief.slice(0, 60);
-
-      const projectRes = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          description: requirement?.business_goal ?? brief,
-          prompt: brief,
-          tech_stack: requirement?.suggested_stack?.join(', ') ?? null,
-        }),
-      });
-      const projectJson = await projectRes.json();
-      if (projectJson.project?.id) {
-        router.push(`/projects/${projectJson.project.id}`);
-      }
+      await saveRunToDb();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Kaydetme hatası');
     } finally {
       setSaving(false);
     }
-  }, [saving, brief, selectedTemplate, requirement, architecture, tasks, checklist, router]);
+  }, [saving, savedRunId, saveRunToDb]);
 
-  const handleStartDeal = useCallback(() => {
-    const title = encodeURIComponent(
-      requirement?.project_type
-        ? `${requirement.project_type} — Execution`
-        : brief.slice(0, 60)
-    );
-    const scope = encodeURIComponent(
-      checklist?.checklist_title ?? requirement?.business_goal ?? ''
-    );
-    router.push(`/deals/new?title=${title}&scope=${scope}&milestoneMode=standard`);
-  }, [requirement, brief, checklist, router]);
+  const handleUseForProject = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const runId = await saveRunToDb();
+      const payload = mapExecutionToProject({
+        brief,
+        requirement,
+        architecture,
+        tasks,
+        checklist,
+        templateId: selectedTemplate,
+      });
+      const params = new URLSearchParams({
+        title: payload.title,
+        description: payload.description,
+        prompt: payload.prompt,
+        tech_stack: payload.tech_stack,
+      });
+      if (runId) params.set('executionRunId', runId);
+      router.push(`/projects/new?${params.toString()}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Hata oluştu');
+    } finally {
+      setSaving(false);
+    }
+  }, [saving, saveRunToDb, brief, requirement, architecture, tasks, checklist, selectedTemplate, router]);
+
+  const handleUseForDeal = useCallback(async () => {
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const runId = await saveRunToDb();
+      const payload = mapExecutionToDeal({
+        brief,
+        requirement,
+        tasks,
+        checklist,
+      });
+      const params = new URLSearchParams({
+        title: payload.title,
+        scopeSeed: payload.scope_seed,
+        milestoneMode: payload.milestone_mode,
+        acceptanceCriteria: JSON.stringify(payload.acceptance_criteria),
+        checklistSeed: JSON.stringify(payload.checklist_seed),
+      });
+      if (runId) params.set('executionRunId', runId);
+      router.push(`/deals/new?${params.toString()}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Hata oluştu');
+    } finally {
+      setSaving(false);
+    }
+  }, [saving, saveRunToDb, brief, requirement, tasks, checklist, router]);
 
   const jsonData = { brief, selectedTemplate, requirement, architecture, tasks, checklist };
 
@@ -810,10 +871,12 @@ export default function ExecutionNewPage() {
             <Step5
               data={checklist}
               onReset={reset}
-              onSaveProject={handleSaveProject}
-              onStartDeal={handleStartDeal}
+              onSaveRun={handleSaveRun}
+              onUseForProject={handleUseForProject}
+              onUseForDeal={handleUseForDeal}
               onShowJson={() => setShowJson(true)}
               saving={saving}
+              savedRunId={savedRunId}
             />
           )}
         </div>

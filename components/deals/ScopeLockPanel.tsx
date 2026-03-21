@@ -6,10 +6,10 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { DealScopeSnapshot } from '@/types/deals';
 
-type Props = { dealId: string; scope: DealScopeSnapshot | null; onUpdate: () => void };
+type Props = { dealId: string; scope: DealScopeSnapshot | null; onUpdate: () => void; scopeSeed?: string };
 
-export function ScopeLockPanel({ dealId, scope, onUpdate }: Props) {
-  const [rawText, setRawText] = useState('');
+export function ScopeLockPanel({ dealId, scope, onUpdate, scopeSeed }: Props) {
+  const [rawText, setRawText] = useState(scopeSeed ?? '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
