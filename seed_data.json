@@ -1,0 +1,25 @@
+{
+  "plans": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "credits": 100,
+      "price": 0,
+      "currency": "TRY"
+    },
+    {
+      "id": "pro",
+      "name": "Pro",
+      "credits": 1000,
+      "price": 299,
+      "currency": "TRY"
+    },
+    {
+      "id": "ultra",
+      "name": "Ultra",
+      "credits": 5000,
+      "price": 799,
+      "currency": "TRY"
+    }
+  ]
+}
