@@ -56,20 +56,57 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
     }
 
-    const { title, language, code, prompt } = await req.json();
+    const body = await req.json();
+    const { clientName, brandName, niche, serviceType, rawBrief, budget, deadline } = body;
 
-    if (!title?.trim() || !code?.trim()) {
-      return NextResponse.json({ error: 'Başlık ve kod gerekli' }, { status: 400 });
+    if (!clientName?.trim()) {
+      return NextResponse.json({ error: 'Müşteri adı gerekli' }, { status: 400 });
+    }
+    if (!rawBrief?.trim()) {
+      return NextResponse.json({ error: 'Ham brief gerekli' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
+    // Try to find or create client
+    let clientId: string | null = null;
+    const { data: existingClient } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('user_id', userId)
+      .ilike('name', clientName.trim())
+      .maybeSingle();
+
+    if (existingClient?.id) {
+      clientId = existingClient.id;
+    } else {
+      const { data: newClient } = await supabase
+        .from('clients')
+        .insert({
+          user_id: userId,
+          name: clientName.trim(),
+          brand_name: brandName?.trim() || clientName.trim(),
+          niche: niche || 'hotel',
+        })
+        .select('id')
+        .single();
+      if (newClient?.id) clientId = newClient.id;
+    }
+
+    // Create project
+    const title = `${brandName?.trim() || clientName.trim()} – ${serviceType || 'Proje'}`;
+    const { data: project, error } = await supabase
       .from('projects')
       .insert({
         user_id: userId,
-        title: title.trim().slice(0, 200),
-        language: language || 'python',
-        code: code.slice(0, 100000),
-        prompt: prompt?.trim().slice(0, 1000) || null,
+        client_id: clientId,
+        client_name: clientName.trim(),
+        brand_name: brandName?.trim() || null,
+        title,
+        niche: niche || 'hotel',
+        service_type: serviceType || 'landing-page',
+        raw_brief: rawBrief.trim(),
+        status: 'new',
+        budget: budget?.trim() || null,
+        deadline: deadline || null,
       })
       .select()
       .single();
@@ -78,7 +115,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ project: data }, { status: 201 });
+    return NextResponse.json({ project }, { status: 201 });
   } catch (err) {
     console.error('Projects POST error:', err);
     return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });

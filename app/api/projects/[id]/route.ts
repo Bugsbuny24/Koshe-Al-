@@ -23,6 +23,37 @@ async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSup
   return undefined;
 }
 
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const supabase = createSupabaseServer();
+    const userId = await getUserId(req, supabase);
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
+
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !project) {
+      return NextResponse.json({ error: 'Proje bulunamadı' }, { status: 404 });
+    }
+
+    return NextResponse.json({ project });
+  } catch (err) {
+    console.error('Project GET error:', err);
+    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+  }
+}
+
 export async function DELETE(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
