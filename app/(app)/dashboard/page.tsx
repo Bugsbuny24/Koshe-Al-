@@ -7,24 +7,7 @@ import { useStore } from '@/store/useStore';
 import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Project } from '@/types/freelancer';
-
-const STATUS_COLORS: Record<string, 'blue' | 'green' | 'gold' | 'red' | 'gray'> = {
-  new: 'blue',
-  in_progress: 'green',
-  revision: 'gold',
-  delivery: 'blue',
-  done: 'gray',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  new: 'Yeni',
-  in_progress: 'Devam Ediyor',
-  revision: 'Revizyon',
-  delivery: 'Teslim',
-  done: 'Tamamlandı',
-};
 
 export default function DashboardPage() {
   const { profile } = useStore();
@@ -41,10 +24,9 @@ export default function DashboardPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const active = projects.filter((p) => p.status === 'in_progress').length;
-  const revision = projects.filter((p) => p.status === 'revision').length;
-  const delivery = projects.filter((p) => p.status === 'delivery').length;
-  const todayDrafts = 0; // placeholder – computed from project_drafts if needed
+  const deployed = projects.filter((p) => p.is_deployed).length;
+  const published = projects.filter((p) => p.is_published).length;
+  const total = projects.length;
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -69,16 +51,16 @@ export default function DashboardPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-          <StatCard label="Aktif Projeler" value={active} icon="🚀" color="blue" />
+          <StatCard label="Toplam Proje" value={total} icon="🚀" color="blue" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
-          <StatCard label="Revizyon Bekleyen" value={revision} icon="🔄" color="gold" />
+          <StatCard label="Deployed" value={deployed} icon="🌐" color="green" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-          <StatCard label="Teslime Hazır" value={delivery} icon="📦" color="green" />
+          <StatCard label="Yayınlanan" value={published} icon="📦" color="gold" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <StatCard label="Bugünkü Taslaklar" value={todayDrafts} icon="✍️" color="blue" />
+          <StatCard label="Aktif Deal" value={0} icon="🤝" color="blue" />
         </motion.div>
       </div>
 
@@ -117,19 +99,23 @@ export default function DashboardPage() {
                   <Card hover className="p-4 flex items-center justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-white truncate">{project.title}</p>
-                      <p className="text-sm text-slate-500 mt-0.5">
-                        {project.client_name || 'Müşteri'} · {project.service_type}
-                      </p>
+                      {project.description && (
+                        <p className="text-sm text-slate-500 mt-0.5 truncate">{project.description}</p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                      {project.deadline && (
-                        <span className="text-xs text-slate-500 hidden md:block">
-                          {new Date(project.deadline).toLocaleDateString('tr-TR')}
+                      {project.tech_stack && (
+                        <span className="text-xs text-slate-400 hidden md:block">{project.tech_stack}</span>
+                      )}
+                      {project.is_deployed && (
+                        <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-green">
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                          Deployed
                         </span>
                       )}
-                      <Badge variant={STATUS_COLORS[project.status] ?? 'gray'}>
-                        {STATUS_LABELS[project.status] ?? project.status}
-                      </Badge>
+                      <span className="text-xs text-slate-500 hidden md:block">
+                        {new Date(project.created_at).toLocaleDateString('tr-TR')}
+                      </span>
                     </div>
                   </Card>
                 </Link>

@@ -76,13 +76,15 @@ export default function ProjectOverviewPage() {
           </div>
         </div>
 
-        {/* Brief Preview */}
+        {/* Description / Brief Preview */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <Card className="p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ham Brief</h3>
-            <p className="text-sm text-slate-300 line-clamp-6 leading-relaxed">
-              {project.raw_brief || <span className="text-slate-600 italic">Brief henüz eklenmemiş</span>}
-            </p>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Açıklama / Brief</h3>
+            {project.description ? (
+              <p className="text-sm text-slate-300 line-clamp-6 leading-relaxed">{project.description}</p>
+            ) : (
+              <span className="text-slate-600 italic text-sm">Açıklama henüz eklenmemiş</span>
+            )}
             <Link href={`/projects/${id}/brief`}>
               <Button variant="ghost" size="sm" className="mt-3 px-0 text-accent-blue">
                 Brief&apos;e git →
@@ -91,31 +93,35 @@ export default function ProjectOverviewPage() {
           </Card>
 
           <Card className="p-5">
-            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Temizlenmiş Brief</h3>
-            {project.cleaned_brief ? (
-              <p className="text-sm text-slate-300 line-clamp-6 leading-relaxed">{project.cleaned_brief}</p>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-xs text-slate-600 mb-3">Henüz oluşturulmadı</p>
-                <Link href={`/projects/${id}/brief`}>
-                  <Button size="sm" variant="outline">✨ Brief Oluştur</Button>
-                </Link>
+            <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Proje Detayları</h3>
+            <div className="space-y-2">
+              {project.tech_stack && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Tür:</span>
+                  <span className="text-slate-200">{project.tech_stack}</span>
+                </div>
+              )}
+              {project.deploy_url && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-slate-500">Deploy URL:</span>
+                  <a href={project.deploy_url} target="_blank" rel="noopener noreferrer" className="text-accent-blue text-xs truncate max-w-[180px]">{project.deploy_url}</a>
+                </div>
+              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Yayınlandı:</span>
+                <span className={project.is_published ? 'text-accent-green' : 'text-slate-600'}>{project.is_published ? 'Evet' : 'Hayır'}</span>
               </div>
-            )}
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-500">Deployed:</span>
+                <span className={project.is_deployed ? 'text-accent-green' : 'text-slate-600'}>{project.is_deployed ? 'Evet' : 'Hayır'}</span>
+              </div>
+            </div>
           </Card>
         </div>
 
         {/* Meta */}
         <Card className="p-5">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Niş</p>
-              <p className="text-sm font-medium text-white capitalize">{project.niche}</p>
-            </div>
-            <div>
-              <p className="text-xs text-slate-500 mb-1">Hizmet</p>
-              <p className="text-sm font-medium text-white">{project.service_type}</p>
-            </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <p className="text-xs text-slate-500 mb-1">Oluşturulma</p>
               <p className="text-sm font-medium text-white">
@@ -128,6 +134,12 @@ export default function ProjectOverviewPage() {
                 {new Date(project.updated_at).toLocaleDateString('tr-TR')}
               </p>
             </div>
+            {project.price_pi != null && project.price_pi > 0 && (
+              <div>
+                <p className="text-xs text-slate-500 mb-1">Fiyat</p>
+                <p className="text-sm font-medium text-white">π {project.price_pi}</p>
+              </div>
+            )}
           </div>
         </Card>
       </div>

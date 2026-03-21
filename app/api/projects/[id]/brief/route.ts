@@ -45,7 +45,7 @@ export async function POST(
 
     const { data: project, error: pErr } = await supabase
       .from('projects')
-      .select('raw_brief, niche, service_type')
+      .select('description, prompt, title, tech_stack')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
@@ -54,11 +54,12 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Proje bulunamadı' }, { status: 404 });
     }
 
-    if (!project.raw_brief?.trim()) {
+    const rawBrief = project.prompt || project.description || '';
+    if (!rawBrief.trim()) {
       return NextResponse.json({ success: false, error: 'Ham brief boş olamaz' }, { status: 400 });
     }
 
-    const prompt = buildBriefCleanerPrompt(project.raw_brief, project.niche, project.service_type);
+    const prompt = buildBriefCleanerPrompt(rawBrief);
 
     let result: AiBriefResult;
     try {
@@ -69,24 +70,24 @@ export async function POST(
         project_id: id,
         user_id: userId,
         run_type: 'brief',
-        input: project.raw_brief,
+        input: rawBrief,
         output: JSON.stringify({ error: errMsg }),
       });
       return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
     }
 
-    // Persist cleaned brief to project
+    // Persist cleaned brief to project description
     const cleanedBrief = `${result.suggested_title ? `[${result.suggested_title}]\n\n` : ''}${result.summary}`;
     await supabase
       .from('projects')
-      .update({ cleaned_brief: cleanedBrief, updated_at: new Date().toISOString() })
+      .update({ description: cleanedBrief, updated_at: new Date().toISOString() })
       .eq('id', id);
 
     await logAiRun(supabase, {
       project_id: id,
       user_id: userId,
       run_type: 'brief',
-      input: project.raw_brief,
+      input: rawBrief,
       output: JSON.stringify(result),
     });
 

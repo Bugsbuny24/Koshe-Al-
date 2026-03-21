@@ -1,36 +1,33 @@
+// Client interface — requires 'clients' table (not yet in DB, schema expansion needed)
 export interface Client {
   id: string;
-  workspace_id: string;
+  workspace_id?: string;
   name: string;
   brand_name: string;
-  niche: string;
+  niche?: string;
   website?: string;
   notes?: string;
   created_at: string;
 }
 
+// Project interface — matches the current public.projects schema
 export interface Project {
   id: string;
-  workspace_id?: string;
-  client_id?: string;
+  user_id: string;
   title: string;
-  niche: string;
-  service_type: string;
-  raw_brief: string;
-  cleaned_brief?: string;
-  status: 'new' | 'in_progress' | 'revision' | 'delivery' | 'done';
-  budget?: string;
-  deadline?: string;
+  description: string | null;
+  prompt: string | null;
+  generated_code: string | null;
+  tech_stack: string | null;
+  deploy_url: string | null;
+  price_pi: number | null;
+  is_published: boolean;
+  is_deployed: boolean;
   created_at: string;
   updated_at: string;
-  // joined client info
-  client?: Client;
-  // user_id for existing projects table compat
-  user_id?: string;
-  client_name?: string;
-  brand_name?: string;
 }
 
+// ProjectScope — requires 'project_scope' table (not yet in DB, schema expansion needed)
 export interface ProjectScope {
   id: string;
   project_id: string;
@@ -44,6 +41,7 @@ export interface ProjectScope {
   created_at: string;
 }
 
+// ProjectDraft — requires 'project_drafts' table (not yet in DB, schema expansion needed)
 export interface ProjectDraft {
   id: string;
   project_id: string;
@@ -54,6 +52,7 @@ export interface ProjectDraft {
   created_at: string;
 }
 
+// ProjectRevision — requires 'project_revisions' table (not yet in DB, schema expansion needed)
 export interface ProjectRevision {
   id: string;
   project_id: string;
@@ -64,6 +63,7 @@ export interface ProjectRevision {
   created_at: string;
 }
 
+// ProjectDelivery — requires 'project_deliveries' table (not yet in DB, schema expansion needed)
 export interface ProjectDelivery {
   id: string;
   project_id: string;
