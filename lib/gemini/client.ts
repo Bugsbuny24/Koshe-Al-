@@ -121,18 +121,19 @@ export async function deductCredits(userId: string, feature: FeatureKey): Promis
   const cost = CREDIT_COSTS[feature];
   try {
     const sb = getSupabase();
+    const { data, error } = await sb
+      .from('user_quotas')
+      .select('credits_remaining')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !data) return false;
+    const current = typeof data.credits_remaining === 'number' ? data.credits_remaining : 0;
     await sb
       .from('user_quotas')
-      .update({
-        credits_remaining: sb
-          .from('user_quotas')
-          .select('credits_remaining')
-          .eq('user_id', userId) as never,
-      })
+      .update({ credits_remaining: Math.max(0, current - cost) })
       .eq('user_id', userId);
 
-    // RPC ile düş
-    await sb.rpc('deduct_credits' as never, { uid: userId, amount: cost } as never);
     return true;
   } catch {
     return false;

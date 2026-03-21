@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/Card';
@@ -56,10 +57,13 @@ export default function ProfilePage() {
           <div className="flex items-start gap-5">
             {/* Avatar */}
             <div className="relative">
-              <img
+              <Image
                 src={profile?.avatar_url || `https://api.dicebear.com/7.x/bottts/svg?seed=${profile?.id}`}
                 alt="Avatar"
-                className="w-20 h-20 rounded-2xl border-2 border-accent-blue/30"
+                width={80}
+                height={80}
+                className="rounded-2xl border-2 border-accent-blue/30"
+                unoptimized
               />
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-accent-green rounded-full border-2 border-bg-void flex items-center justify-center">
                 <div className="w-2 h-2 bg-white rounded-full" />

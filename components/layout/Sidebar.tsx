@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -199,7 +200,7 @@ export function Sidebar() {
           {/* User + Logout */}
           <div className="flex items-center gap-3">
             {profile?.avatar_url && (
-              <img src={profile.avatar_url} alt="" className="w-8 h-8 rounded-lg" />
+              <Image src={profile.avatar_url} alt="" width={32} height={32} className="rounded-lg" unoptimized />
             )}
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-white truncate">{profile?.full_name || 'Kullanıcı'}</p>
