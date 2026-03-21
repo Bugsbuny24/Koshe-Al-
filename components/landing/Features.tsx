@@ -4,53 +4,56 @@ import { motion } from 'framer-motion';
 
 const features = [
   {
-    icon: '🧠',
-    title: 'AI Mentor',
-    desc: 'Gemini 2.5 destekli kişisel AI öğretmeninizle her konuyu anlayın. Soru sorun, derinlemesine öğrenin.',
+    icon: '💬',
+    title: 'AI Intake Chat',
+    desc: 'İşini anlat, Koschei doğru akışı kursun. İsteği anlayan, sınıflandıran ve doğru modüle yönlendiren giriş katmanı.',
     color: 'accent-blue',
-    badge: 'Starter',
+    badge: 'Intake',
   },
   {
     icon: '⚡',
-    title: 'Kod Üretici',
-    desc: 'Doğal dil ile kod yazın. Python, JavaScript, TypeScript ve daha fazla dil desteği.',
+    title: 'Execution Core',
+    desc: 'Gereksinim çıkarımı, mimari plan, görev kırılımı ve teslim checklist. Her iş tipi için tam planlama motoru.',
     color: 'accent-green',
-    badge: 'Pro',
+    badge: 'Planning',
   },
   {
-    icon: '🎙️',
-    title: 'Ses Eğitimi',
-    desc: 'Metinden ses üretin. Ders materyallerinizi dinleyerek öğrenin, istediğiniz yerde.',
-    color: 'pi-gold',
-    badge: 'Starter',
-  },
-  {
-    icon: '🎨',
-    title: 'Görsel Üretici',
-    desc: 'Imagen 4 ile eğitim materyalleri, diyagramlar ve görsel içerikler oluşturun.',
+    icon: '🗂️',
+    title: 'Workspace / Jobs',
+    desc: 'Scope yönetimi, faz takibi, teslim ve revizyon. Her işi başından sonuna kadar izle ve teslim et.',
     color: 'accent-blue',
-    badge: 'Pro',
+    badge: 'Delivery',
   },
   {
-    icon: '🎬',
-    title: 'Video Üretimi',
-    desc: 'Veo 3 teknolojisiyle 15 saniyelik eğitim videoları oluşturun. Konseptleri görselleştirin.',
+    icon: '🔧',
+    title: 'Builder',
+    desc: 'Doğal dil ile kod üret. Python, JavaScript, TypeScript ve daha fazlası. Chat ve Execution tarafından beslenebilir.',
     color: 'accent-green',
-    badge: 'Ultra',
+    badge: 'Production',
   },
   {
-    icon: '🔴',
-    title: 'Canlı Ses',
-    desc: 'Gerçek zamanlı ses ile AI ile konuşun. Sözlü pratik yapın, anında geri bildirim alın.',
+    icon: '🧠',
+    title: 'AI Mentor',
+    desc: 'Öğrenme, rehberlik ve skill development akışları. Gemini 2.5 destekli kişisel AI mentor ile her konuyu kavra.',
     color: 'pi-gold',
-    badge: 'Pro',
+    badge: 'Learning',
+  },
+  {
+    icon: '📋',
+    title: 'Templates',
+    desc: 'Landing page, teklif sayfası, WhatsApp akışı ve daha fazlası için hızlı başlangıç preset\'leri.',
+    color: 'pi-gold',
+    badge: 'Quick Start',
   },
 ];
 
 const badgeColors: Record<string, string> = {
-  Starter: 'bg-slate-700/50 text-slate-300',
-  Pro: 'bg-accent-blue/20 text-accent-blue',
-  Ultra: 'bg-pi-gold/20 text-pi-gold',
+  Intake: 'bg-accent-blue/20 text-accent-blue',
+  Planning: 'bg-accent-green/20 text-accent-green',
+  Delivery: 'bg-accent-blue/20 text-accent-blue',
+  Production: 'bg-accent-green/20 text-accent-green',
+  Learning: 'bg-pi-gold/20 text-pi-gold',
+  'Quick Start': 'bg-pi-gold/20 text-pi-gold',
 };
 
 const borderColors: Record<string, string> = {
@@ -77,13 +80,13 @@ export function Features() {
           className="text-center mb-16"
         >
           <span className="text-accent-blue text-sm font-semibold tracking-widest uppercase mb-3 block">
-            Özellikler
+            Modüller
           </span>
           <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
-            Her şey bir arada
+            Bir araç değil, iş üreten sistem
           </h2>
           <p className="text-slate-400 text-lg max-w-xl mx-auto">
-            En güçlü AI modellerini tek platformda kullanarak öğrenme deneyiminizi dönüştürün.
+            Giriş katmanından teslime, planlama motorundan üretime — her modül birbiriyle bağlı ve birbirini besler.
           </p>
         </motion.div>
 

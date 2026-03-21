@@ -88,7 +88,7 @@ export function Hero() {
         >
           <span className="inline-flex items-center gap-2 bg-accent-blue/10 border border-accent-blue/20 text-accent-blue text-xs font-semibold px-4 py-1.5 rounded-full tracking-widest uppercase">
             <span className="w-1.5 h-1.5 bg-accent-blue rounded-full animate-pulse" />
-            Yapay Zeka Destekli Dijital Üniversite
+            Tüm İş Dünyası İçin AI Work Operator
           </span>
         </motion.div>
 
@@ -99,9 +99,9 @@ export function Hero() {
           transition={{ delay: 0.3 }}
           className="text-6xl md:text-8xl font-black tracking-tight mb-6 leading-none"
         >
-          <span className="gradient-text">GELECEĞİN</span>
+          <span className="gradient-text">İŞİNİ ANLAT,</span>
           <br />
-          <span className="text-white">EĞİTİMİ</span>
+          <span className="text-white">KOSCHEI ÜRETSİN</span>
         </motion.h1>
 
         {/* Subheading */}
@@ -111,8 +111,8 @@ export function Hero() {
           transition={{ delay: 0.4 }}
           className="text-lg md:text-xl text-slate-400 max-w-2xl mx-auto mb-10"
         >
-          AI Mentor&apos;unla öğren, kod üret, ses ve görsel içerikler yarat.
-          Kişiselleştirilmiş yapay zeka eğitimi ile sınırları aş.
+          Fikirden scope&apos;a, execution&apos;dan teslimata. Tek bir araç değil,
+          iş dünyasının farklı taleplerini karşılayan AI work operator.
         </motion.p>
 
         {/* CTA */}
@@ -150,9 +150,9 @@ export function Hero() {
           className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto"
         >
           {[
-            { label: 'Aktif Öğrenci', value: '10K+' },
-            { label: 'AI Özelliği', value: '7' },
-            { label: 'Memnuniyet', value: '98%' },
+            { label: 'İş Tipi Desteği', value: '10+' },
+            { label: 'AI Modülü', value: '6' },
+            { label: 'Teslim Hızı', value: '↑3x' },
           ].map((stat) => (
             <div key={stat.label} className="text-center">
               <div className="text-2xl font-black text-white">{stat.value}</div>

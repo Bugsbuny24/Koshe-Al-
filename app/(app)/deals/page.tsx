@@ -31,8 +31,8 @@ export default function DealsPage() {
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">İşler / Workspace</h1>
-          <p className="text-slate-400 text-sm mt-1">Proje işlerini ve teslim süreçlerini yönet</p>
+          <h1 className="text-2xl font-bold text-white">Workspace / Jobs</h1>
+          <p className="text-slate-400 text-sm mt-1">İşlerini takip et — scope, fazlar, teslim ve revizyon</p>
         </div>
         <Link href="/deals/new">
           <Button>+ Yeni İş</Button>
@@ -49,10 +49,10 @@ export default function DealsPage() {
 
       {!loading && !error && deals.length === 0 && (
         <div className="text-center py-16">
-          <div className="text-4xl mb-4">🤝</div>
-          <p className="text-slate-400 mb-4">Henüz iş yok.</p>
+          <div className="text-4xl mb-4">🗂️</div>
+          <p className="text-slate-400 mb-4">Henüz aktif iş yok.</p>
           <Link href="/deals/new">
-            <Button>İlk İşi Oluştur</Button>
+            <Button>İlk İşi Başlat</Button>
           </Link>
         </div>
       )}

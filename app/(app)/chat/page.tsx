@@ -26,7 +26,7 @@ export default function ChatPage() {
         <div className="flex items-center gap-6 mt-4 text-xs text-slate-600">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-accent-blue" />
-            Intake → Analiz
+            Intake → Sınıflandırma
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-accent-green" />
@@ -34,7 +34,7 @@ export default function ChatPage() {
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-purple-500" />
-            Teslim Yönetimi
+            Teslim &amp; Workspace
           </div>
         </div>
       </motion.div>

@@ -34,9 +34,9 @@ export default function DashboardPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-3xl font-black text-white">
-            Merhaba, {profile?.full_name?.split(' ')[0] || 'Freelancer'} 👋
+            Merhaba, {profile?.full_name?.split(' ')[0] || 'Kullanıcı'} 👋
           </h1>
-          <p className="text-slate-400 mt-1">Koschei Freelancer OS — müşteri brief&apos;inden teslime.</p>
+          <p className="text-slate-400 mt-1">Koschei AI Work Operator — işini anlat, doğru akışa yönlenelim.</p>
         </div>
         <div className="flex items-center gap-3">
           <Link href="/templates">
@@ -60,7 +60,7 @@ export default function DashboardPage() {
           <StatCard label="Yayınlanan" value={published} icon="📦" color="gold" />
         </motion.div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
-          <StatCard label="Aktif Deal" value={0} icon="🤝" color="blue" />
+          <StatCard label="Aktif İş" value={0} icon="🗂️" color="blue" />
         </motion.div>
       </div>
 
@@ -81,7 +81,7 @@ export default function DashboardPage() {
           <Card className="p-10 text-center">
             <p className="text-4xl mb-3">📁</p>
             <h3 className="text-white font-bold mb-2">Henüz proje yok</h3>
-            <p className="text-slate-500 text-sm mb-5">İlk projen ile müşteri brief&apos;ini dakikalar içinde yapılandırılmış projeye çevir.</p>
+            <p className="text-slate-500 text-sm mb-5">İlk işini başlat — brief&apos;inden scope&apos;a, execution&apos;dan teslimata Koschei halleder.</p>
             <Link href="/projects/new">
               <Button size="sm">⚡ İlk Projeyi Oluştur</Button>
             </Link>
