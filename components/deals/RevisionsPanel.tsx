@@ -75,10 +75,20 @@ export function RevisionsPanel({ dealId, milestones, revisions, onUpdate }: Prop
           <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Revizyon Geçmişi</h3>
           {revisions.map((r) => {
             const parsed = r.parsed_feedback_json;
+            const linkedMs = milestones.find((m) => m.id === r.milestone_id);
             return (
               <Card key={r.id} className="p-4 space-y-3">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant={scopeStatusVariant[r.scope_status] || 'gray'}>{scopeStatusLabel[r.scope_status] || r.scope_status}</Badge>
+                  {linkedMs ? (
+                    <span className="text-xs font-medium text-slate-300 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                      📋 {linkedMs.title}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-500 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                      🌐 Genel revizyon
+                    </span>
+                  )}
                   <span className="text-xs text-slate-600 ml-auto">{new Date(r.created_at).toLocaleDateString('tr-TR')}</span>
                 </div>
                 {parsed?.summary && <p className="text-sm text-slate-300">{parsed.summary}</p>}

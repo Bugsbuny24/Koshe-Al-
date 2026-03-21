@@ -19,15 +19,30 @@ const eventIcons: Record<string, string> = {
 const eventLabels: Record<string, string> = {
   deal_created: 'Deal oluşturuldu',
   scope_locked: 'Scope kilitlendi',
-  milestones_created: 'Milestone planı oluşturuldu',
+  milestones_created: "Milestone'lar oluşturuldu",
   milestone_updated: 'Milestone güncellendi',
-  delivery_uploaded: 'Teslim yüklendi',
-  revision_requested: 'Revizyon talep edildi',
-  milestone_approved: 'Milestone onaylandı',
-  milestone_rejected: 'Milestone reddedildi',
+  delivery_uploaded: 'Teslim eklendi',
+  revision_requested: 'Revizyon oluşturuldu',
+  milestone_approved: 'Onay kararı verildi',
+  milestone_rejected: 'Revizyon talep edildi',
   escrow_linked: 'Escrow bağlandı',
-  escrow_synced: 'Escrow senkronize edildi',
+  escrow_synced: 'Escrow durumu güncellendi',
 };
+
+function formatActivityTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMins < 1) return 'Az önce';
+  if (diffMins < 60) return `${diffMins}dk önce`;
+  if (diffHours < 24) return `${diffHours}sa önce`;
+  if (diffDays < 7) return `${diffDays}g önce`;
+  return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
+}
 
 export function ActivityLogPanel({ activity }: Props) {
   if (activity.length === 0) {
@@ -38,18 +53,23 @@ export function ActivityLogPanel({ activity }: Props) {
     );
   }
   return (
-    <div className="space-y-2">
+    <div className="space-y-1">
       {activity.map((log) => (
-        <div key={log.id} className="flex items-start gap-3 py-2 border-b border-white/5 last:border-0">
-          <span className="text-lg flex-shrink-0 mt-0.5">{eventIcons[log.event_type] || '📌'}</span>
+        <div key={log.id} className="flex items-start gap-3 py-2.5 border-b border-white/5 last:border-0">
+          <div className="w-7 h-7 rounded-full bg-white/5 flex items-center justify-center text-sm flex-shrink-0 mt-0.5">
+            {eventIcons[log.event_type] || '📌'}
+          </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-slate-300">{eventLabels[log.event_type] || log.event_type}</p>
+            <p className="text-sm text-slate-200">{eventLabels[log.event_type] || log.event_type}</p>
             {log.actor_type === 'user' && log.actor_id && (
-              <p className="text-xs text-slate-600 font-mono">{log.actor_id.slice(0, 8)}…</p>
+              <p className="text-xs text-slate-600 font-mono mt-0.5">{log.actor_id.slice(0, 8)}…</p>
             )}
           </div>
-          <span className="text-xs text-slate-600 flex-shrink-0">
-            {new Date(log.created_at).toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' })}
+          <span
+            className="text-xs text-slate-500 flex-shrink-0 mt-0.5"
+            title={new Date(log.created_at).toLocaleString('tr-TR')}
+          >
+            {formatActivityTime(log.created_at)}
           </span>
         </div>
       ))}
