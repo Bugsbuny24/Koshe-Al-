@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import ReactMarkdown from 'react-markdown';
 import rehypeHighlight from 'rehype-highlight';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,12 +19,20 @@ const featureOptions = [
 
 export default function MentorPage() {
   const { messages, addMessage, updateLastMessage, setMessages, quota, setQuota } = useStore();
+  const searchParams = useSearchParams();
   const [input, setInput] = useState('');
   const [feature, setFeature] = useState<Feature>('mentor_lite');
   const [streaming, setStreaming] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Pre-fill from chat intake
+  const fromChat = searchParams.get('source') === 'chat';
+  useEffect(() => {
+    const topic = searchParams.get('topic');
+    if (topic) setInput(decodeURIComponent(topic));
+  }, [searchParams]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -134,7 +143,14 @@ export default function MentorPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-black text-white">AI Mentor</h1>
+          <div className="flex items-center gap-2 mb-0.5">
+            <h1 className="text-2xl font-black text-white">AI Mentor</h1>
+            {fromChat && (
+              <span className="text-xs font-semibold bg-purple-500/15 text-purple-400 border border-purple-500/20 px-2 py-0.5 rounded-lg">
+                Chat&apos;ten yönlendirildi
+              </span>
+            )}
+          </div>
           <p className="text-slate-500 text-sm">Yapay zeka öğretmeninizle sohbet edin</p>
         </div>
         <div className="flex items-center gap-2">

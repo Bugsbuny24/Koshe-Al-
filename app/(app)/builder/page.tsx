@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, lazy, Suspense, useCallback } from 'react';
+import { useState, lazy, Suspense, useCallback, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -23,6 +24,7 @@ const LANGUAGES = [
 
 export default function BuilderPage() {
   const { quota, setQuota } = useStore();
+  const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState('');
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState('# Kod burada görünecek\n');
@@ -30,6 +32,18 @@ export default function BuilderPage() {
   const [error, setError] = useState('');
   const [guardType, setGuardType] = useState<'auth' | 'credits' | 'plan' | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Pre-fill from chat intake
+  const fromChat = searchParams.get('source') === 'chat';
+  useEffect(() => {
+    const chatPrompt = searchParams.get('prompt');
+    const chatLang = searchParams.get('lang');
+    if (chatPrompt) setPrompt(decodeURIComponent(chatPrompt));
+    if (chatLang) {
+      const matchedLang = LANGUAGES.find((l) => l.id === chatLang);
+      if (matchedLang) setLanguage(matchedLang.id);
+    }
+  }, [searchParams]);
 
   const refreshQuota = useCallback(async () => {
     try {
@@ -114,7 +128,14 @@ export default function BuilderPage() {
     <div className="max-w-7xl mx-auto">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white">Kod Üretici</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-black text-white">Kod Üretici</h1>
+            {fromChat && (
+              <span className="text-xs font-semibold bg-accent-blue/15 text-accent-blue border border-accent-blue/20 px-2 py-0.5 rounded-lg">
+                Chat&apos;ten yönlendirildi
+              </span>
+            )}
+          </div>
           <p className="text-slate-500 text-sm">Gemini Pro ile kod üretin — 5 kredi/istek</p>
         </div>
         {quota && (

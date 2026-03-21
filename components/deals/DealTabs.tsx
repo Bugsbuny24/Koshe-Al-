@@ -7,12 +7,12 @@ import { cn } from '@/lib/utils';
 type Props = { dealId: string };
 
 const tabs = [
-  { label: 'Genel Bakış', href: '' },
-  { label: 'Scope', href: '/scope' },
-  { label: 'Milestones', href: '/milestones' },
-  { label: 'Teslimler', href: '/deliveries' },
-  { label: 'Revizyonlar', href: '/revisions' },
-  { label: 'Escrow', href: '/escrow' },
+  { label: 'Genel Bakış', href: '', secondary: false },
+  { label: 'Proje Kapsamı', href: '/scope', secondary: false },
+  { label: 'Aşamalar', href: '/milestones', secondary: false },
+  { label: 'Teslimler', href: '/deliveries', secondary: false },
+  { label: 'Revizyonlar', href: '/revisions', secondary: false },
+  { label: 'Ödeme (Escrow)', href: '/escrow', secondary: true },
 ];
 
 export function DealTabs({ dealId }: Props) {
@@ -32,6 +32,8 @@ export function DealTabs({ dealId }: Props) {
               'px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors',
               isActive
                 ? 'border-accent-blue text-accent-blue'
+                : tab.secondary
+                ? 'border-transparent text-slate-600 hover:text-slate-400'
                 : 'border-transparent text-slate-400 hover:text-white'
             )}
           >
