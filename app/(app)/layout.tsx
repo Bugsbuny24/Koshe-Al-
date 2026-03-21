@@ -18,19 +18,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const supabase = createSupabaseClient();
 
     const loadUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        router.push('/login');
-        return;
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        const [profileRes, quotaRes] = await Promise.all([
+          supabase.from('profiles').select('*').eq('id', user.id).single(),
+          supabase.from('user_quotas').select('*').eq('user_id', user.id).maybeSingle(),
+        ]);
+
+        if (profileRes.data) setProfile(profileRes.data);
+        if (quotaRes.data) {
+          setQuota(quotaRes.data);
+        } else {
+          setQuota({ plan_id: null, credits_remaining: 0, is_active: false, plan_expires_at: null });
+        }
+      } catch (err) {
+        console.error('AppLayout loadUser error:', err);
       }
-
-      const [profileRes, quotaRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('id', user.id).single(),
-        supabase.from('user_quotas').select('*').eq('user_id', user.id).single(),
-      ]);
-
-      if (profileRes.data) setProfile(profileRes.data);
-      if (quotaRes.data) setQuota(quotaRes.data);
     };
 
     loadUser();
