@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type {
   RequirementExtractionResult,
   ArchitecturePlanResult,
@@ -580,6 +580,7 @@ function JsonModal({
 
 export default function ExecutionNewPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [step, setStep] = useState<Step>(1);
   const [brief, setBrief] = useState('');
@@ -594,6 +595,15 @@ export default function ExecutionNewPage() {
   const [architecture, setArchitecture] = useState<ArchitecturePlanResult | null>(null);
   const [tasks, setTasks] = useState<TaskBreakdownResult | null>(null);
   const [checklist, setChecklist] = useState<DeliveryChecklistResult | null>(null);
+
+  // Pre-fill from chat intake
+  const fromChat = !!searchParams.get('intakeIntent');
+  useEffect(() => {
+    const chatBrief = searchParams.get('brief');
+    const chatTemplate = searchParams.get('template');
+    if (chatBrief) setBrief(decodeURIComponent(chatBrief));
+    if (chatTemplate) setSelectedTemplate(chatTemplate);
+  }, [searchParams]);
 
   const reset = useCallback(() => {
     setStep(1);
@@ -799,7 +809,14 @@ export default function ExecutionNewPage() {
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-black text-white">Execution Core</h1>
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-2xl font-black text-white">Execution Core</h1>
+            {fromChat && (
+              <span className="text-xs font-semibold bg-accent-blue/15 text-accent-blue border border-accent-blue/20 px-2 py-0.5 rounded-lg">
+                Chat&apos;ten yönlendirildi
+              </span>
+            )}
+          </div>
           <p className="text-slate-400 mt-1 text-sm">
             Brief&apos;ten teknik plana, görev kırılımına ve teslim checklist&apos;ine.
           </p>

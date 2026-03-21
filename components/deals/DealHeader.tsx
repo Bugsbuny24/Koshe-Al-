@@ -20,16 +20,6 @@ export function DealHeader({ deal }: Props) {
         </span>
         <span>·</span>
         <span>Oluşturulma: {new Date(deal.created_at).toLocaleDateString('tr-TR')}</span>
-        {deal.buyer_id && (
-          <span>
-            · Buyer: <span className="text-slate-300 font-mono text-xs">{deal.buyer_id.slice(0, 8)}…</span>
-          </span>
-        )}
-        {deal.seller_id && (
-          <span>
-            · Seller: <span className="text-slate-300 font-mono text-xs">{deal.seller_id.slice(0, 8)}…</span>
-          </span>
-        )}
       </div>
     </div>
   );
