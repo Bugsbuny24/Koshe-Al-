@@ -5,24 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Badge } from '@/components/ui/Badge';
 import { Project } from '@/types/freelancer';
-
-const STATUS_COLORS: Record<string, 'blue' | 'green' | 'gold' | 'red' | 'gray'> = {
-  new: 'blue',
-  in_progress: 'green',
-  revision: 'gold',
-  delivery: 'blue',
-  done: 'gray',
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  new: 'Yeni',
-  in_progress: 'Devam Ediyor',
-  revision: 'Revizyon',
-  delivery: 'Teslim',
-  done: 'Tamamlandı',
-};
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -41,7 +24,7 @@ export default function ProjectsPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black text-white">Projeler</h1>
-          <p className="text-slate-400 mt-1 text-sm">Tüm müşteri projelerini yönet.</p>
+          <p className="text-slate-400 mt-1 text-sm">Tüm projelerini yönet.</p>
         </div>
         <Link href="/projects/new">
           <Button size="sm">⚡ New Project</Button>
@@ -74,22 +57,23 @@ export default function ProjectsPage() {
                 <Card hover className="p-4 flex items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-white truncate">{project.title}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      {project.client_name || 'Müşteri'} · {project.service_type} · {project.niche}
-                    </p>
+                    {project.description && (
+                      <p className="text-sm text-slate-500 mt-0.5 truncate">{project.description}</p>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
-                    {project.budget && (
-                      <span className="text-xs font-medium text-slate-400 hidden md:block">{project.budget}</span>
+                    {project.tech_stack && (
+                      <span className="text-xs font-medium text-slate-400 hidden md:block">{project.tech_stack}</span>
                     )}
-                    {project.deadline && (
-                      <span className="text-xs text-slate-500 hidden md:block">
-                        {new Date(project.deadline).toLocaleDateString('tr-TR')}
+                    {project.is_deployed && (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-green">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent-green" />
+                        Deployed
                       </span>
                     )}
-                    <Badge variant={STATUS_COLORS[project.status] ?? 'gray'}>
-                      {STATUS_LABELS[project.status] ?? project.status}
-                    </Badge>
+                    <span className="text-xs text-slate-500 hidden md:block">
+                      {new Date(project.created_at).toLocaleDateString('tr-TR')}
+                    </span>
                   </div>
                 </Card>
               </Link>

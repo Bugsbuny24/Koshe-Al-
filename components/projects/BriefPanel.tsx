@@ -31,7 +31,8 @@ export function BriefPanel({ project, onUpdate }: BriefPanelProps) {
     }
   };
 
-  const cleaned = project.cleaned_brief;
+  // prompt holds the raw brief; description may be updated with the AI-cleaned version
+  const rawBrief = project.prompt || project.description;
 
   return (
     <div className="space-y-5">
@@ -49,16 +50,10 @@ export function BriefPanel({ project, onUpdate }: BriefPanelProps) {
       )}
 
       {/* Raw Brief */}
-      <div className="bg-bg-card border border-white/5 rounded-xl p-5">
-        <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ham Brief</h3>
-        <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{project.raw_brief}</p>
-      </div>
-
-      {/* Cleaned Brief (from DB) */}
-      {cleaned && !result && (
-        <div className="bg-bg-card border border-accent-blue/20 rounded-xl p-5">
-          <h3 className="text-xs font-semibold text-accent-blue uppercase tracking-wider mb-3">Temizlenmiş Brief</h3>
-          <p className="text-sm text-slate-200 whitespace-pre-wrap leading-relaxed">{cleaned}</p>
+      {rawBrief && (
+        <div className="bg-bg-card border border-white/5 rounded-xl p-5">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Ham Brief / Açıklama</h3>
+          <p className="text-sm text-slate-300 whitespace-pre-wrap leading-relaxed">{rawBrief}</p>
         </div>
       )}
 
@@ -137,11 +132,20 @@ export function BriefPanel({ project, onUpdate }: BriefPanelProps) {
         </>
       )}
 
-      {!cleaned && !result && !error && (
+      {!rawBrief && !result && !error && (
+        <div className="bg-bg-card border border-white/5 rounded-xl p-8 text-center">
+          <p className="text-slate-500 text-sm mb-4">Henüz brief eklenmemiş.</p>
+          <Button onClick={handleGenerate} loading={loading} size="sm">
+            ✨ Brief Oluştur
+          </Button>
+        </div>
+      )}
+
+      {rawBrief && !result && !error && (
         <div className="bg-bg-card border border-white/5 rounded-xl p-8 text-center">
           <p className="text-slate-500 text-sm mb-4">Henüz brief analizi yapılmamış.</p>
           <Button onClick={handleGenerate} loading={loading} size="sm">
-            ✨ Brief Oluştur
+            ✨ Brief Analizi Yap
           </Button>
         </div>
       )}

@@ -5,16 +5,9 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-const NICHE_OPTIONS = [
-  { value: 'hotel', label: 'Hotel / Konaklama' },
-  { value: 'restaurant', label: 'Restoran / F&B' },
-  { value: 'spa', label: 'SPA / Wellness' },
-  { value: 'travel', label: 'Seyahat Acentesi' },
-  { value: 'other', label: 'Diğer' },
-];
-
-const SERVICE_OPTIONS = [
-  { value: 'landing-page', label: 'Landing Page Kopya' },
+const TECH_STACK_OPTIONS = [
+  { value: '', label: 'Belirtme' },
+  { value: 'landing-page', label: 'Landing Page' },
   { value: 'social-media', label: 'Sosyal Medya İçeriği' },
   { value: 'email-campaign', label: 'E-posta Kampanyası' },
   { value: 'whatsapp-script', label: 'WhatsApp Scripti' },
@@ -23,13 +16,9 @@ const SERVICE_OPTIONS = [
 ];
 
 interface FormData {
-  clientName: string;
-  brandName: string;
-  niche: string;
-  serviceType: string;
-  rawBrief: string;
-  budget: string;
-  deadline: string;
+  title: string;
+  description: string;
+  tech_stack: string;
 }
 
 export function NewProjectForm() {
@@ -37,13 +26,9 @@ export function NewProjectForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [form, setForm] = useState<FormData>({
-    clientName: '',
-    brandName: '',
-    niche: 'hotel',
-    serviceType: 'landing-page',
-    rawBrief: '',
-    budget: '',
-    deadline: '',
+    title: '',
+    description: '',
+    tech_stack: '',
   });
 
   const set = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -54,8 +39,7 @@ export function NewProjectForm() {
     e.preventDefault();
     setError('');
 
-    if (!form.clientName.trim()) return setError('Müşteri adı gerekli');
-    if (!form.rawBrief.trim()) return setError('Proje brief\'i gerekli');
+    if (!form.title.trim()) return setError('Proje başlığı gerekli');
 
     setLoading(true);
     try {
@@ -76,50 +60,27 @@ export function NewProjectForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
-      {/* Client Info */}
+      {/* Project Info */}
       <div className="bg-bg-card border border-white/5 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Müşteri Bilgileri</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Müşteri Adı *"
-            placeholder="Ahmet Yılmaz"
-            value={form.clientName}
-            onChange={set('clientName')}
-            required
-          />
-          <Input
-            label="Marka Adı"
-            placeholder="Grand Hotel Bosphorus"
-            value={form.brandName}
-            onChange={set('brandName')}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Niş</label>
-            <select
-              value={form.niche}
-              onChange={set('niche')}
-              className="w-full bg-bg-deep border border-white/10 rounded-lg px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-accent-blue/50"
-            >
-              {NICHE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5">Hizmet Tipi</label>
-            <select
-              value={form.serviceType}
-              onChange={set('serviceType')}
-              className="w-full bg-bg-deep border border-white/10 rounded-lg px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-accent-blue/50"
-            >
-              {SERVICE_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </div>
+        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Proje Bilgileri</h2>
+        <Input
+          label="Proje Başlığı *"
+          placeholder="Grand Hotel – Landing Page Projesi"
+          value={form.title}
+          onChange={set('title')}
+          required
+        />
+        <div>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">Hizmet / Tür</label>
+          <select
+            value={form.tech_stack}
+            onChange={set('tech_stack')}
+            className="w-full bg-bg-deep border border-white/10 rounded-lg px-4 py-2.5 text-slate-100 text-sm focus:outline-none focus:border-accent-blue/50"
+          >
+            {TECH_STACK_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -127,33 +88,13 @@ export function NewProjectForm() {
       <div className="bg-bg-card border border-white/5 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Proje Brief</h2>
         <div>
-          <label className="block text-sm font-medium text-slate-300 mb-1.5">Ham Brief *</label>
+          <label className="block text-sm font-medium text-slate-300 mb-1.5">Ham Brief / Açıklama</label>
           <textarea
-            value={form.rawBrief}
-            onChange={set('rawBrief')}
+            value={form.description}
+            onChange={set('description')}
             rows={6}
             placeholder="Müşterinin sana ilettiği mesajı, isteği veya talebi buraya yapıştır..."
             className="w-full bg-bg-deep border border-white/10 rounded-lg px-4 py-2.5 text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:border-accent-blue/50 resize-none"
-            required
-          />
-        </div>
-      </div>
-
-      {/* Budget & Deadline */}
-      <div className="bg-bg-card border border-white/5 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Proje Detayları</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Bütçe"
-            placeholder="₺5.000"
-            value={form.budget}
-            onChange={set('budget')}
-          />
-          <Input
-            label="Deadline"
-            type="date"
-            value={form.deadline}
-            onChange={set('deadline')}
           />
         </div>
       </div>

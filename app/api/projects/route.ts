@@ -57,56 +57,46 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { clientName, brandName, niche, serviceType, rawBrief, budget, deadline } = body;
+    // Support both simplified fields (title/description/tech_stack) and legacy form fields
+    const {
+      title: rawTitle,
+      description: rawDescription,
+      tech_stack: rawTechStack,
+      prompt: rawPrompt,
+      // Legacy form fields
+      clientName,
+      brandName,
+      niche,
+      serviceType,
+      rawBrief,
+    } = body;
 
-    if (!clientName?.trim()) {
-      return NextResponse.json({ error: 'Müşteri adı gerekli' }, { status: 400 });
-    }
-    if (!rawBrief?.trim()) {
-      return NextResponse.json({ error: 'Ham brief gerekli' }, { status: 400 });
-    }
+    // Build title from available fields
+    const trimmedTitle = rawTitle?.trim();
+    const trimmedBrand = brandName?.trim();
+    const trimmedClient = clientName?.trim();
+    const title = trimmedTitle ||
+      (trimmedBrand || trimmedClient
+        ? `${trimmedBrand || trimmedClient}${serviceType ? ' – ' + serviceType : ''}`
+        : null);
 
-    // Try to find or create client
-    let clientId: string | null = null;
-    const { data: existingClient } = await supabase
-      .from('clients')
-      .select('id')
-      .eq('user_id', userId)
-      .ilike('name', clientName.trim())
-      .maybeSingle();
-
-    if (existingClient?.id) {
-      clientId = existingClient.id;
-    } else {
-      const { data: newClient } = await supabase
-        .from('clients')
-        .insert({
-          user_id: userId,
-          name: clientName.trim(),
-          brand_name: brandName?.trim() || clientName.trim(),
-          niche: niche || 'hotel',
-        })
-        .select('id')
-        .single();
-      if (newClient?.id) clientId = newClient.id;
+    if (!title) {
+      return NextResponse.json({ error: 'Başlık gerekli' }, { status: 400 });
     }
 
-    // Create project
-    const title = `${brandName?.trim() || clientName.trim()} – ${serviceType || 'Proje'}`;
+    const description = rawDescription?.trim() || rawBrief?.trim() || null;
+    const prompt = rawPrompt?.trim() || rawBrief?.trim() || rawDescription?.trim() || null;
+    const tech_stack = rawTechStack?.trim() ||
+      (serviceType && niche ? `${serviceType} | ${niche}` : serviceType || niche || null);
+
     const { data: project, error } = await supabase
       .from('projects')
       .insert({
         user_id: userId,
-        client_id: clientId,
-        client_name: clientName.trim(),
-        brand_name: brandName?.trim() || null,
         title,
-        niche: niche || 'hotel',
-        service_type: serviceType || 'landing-page',
-        raw_brief: rawBrief.trim(),
-        status: 'new',
-        budget: budget?.trim() || null,
-        deadline: deadline || null,
+        description,
+        prompt,
+        tech_stack,
       })
       .select()
       .single();
