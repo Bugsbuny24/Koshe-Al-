@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -21,15 +21,43 @@ interface FormData {
   tech_stack: string;
 }
 
+const TEMPLATE_PRESETS: Record<string, FormData> = {
+  'hotel-landing': {
+    title: 'Hotel Landing Page Pack',
+    description: 'Rezervasyon odaklı landing page için hazır kopya yapısı, CTA haritası ve başlık seti. Misafirleri rezervasyona yönlendiren ikna edici sayfa içeriği oluştur.',
+    tech_stack: 'landing-page',
+  },
+  'hotel-whatsapp': {
+    title: 'Hotel WhatsApp Booking Pack',
+    description: 'WhatsApp üzerinden rezervasyon dönüşümü için script ve takip mesajları. Potansiyel misafirlerle etkili iletişim kurarak rezervasyona dönüştür.',
+    tech_stack: 'whatsapp-script',
+  },
+  'hotel-offer': {
+    title: 'Hotel Offer Pack',
+    description: 'Özel teklif ve kampanya sayfaları için metin şablonları ve aciliyet kopyaları. Sezonluk kampanyalar ve özel paketler için ikna edici içerik üret.',
+    tech_stack: 'offer-pack',
+  },
+};
+
 export function NewProjectForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [fromTemplate, setFromTemplate] = useState('');
   const [form, setForm] = useState<FormData>({
     title: '',
     description: '',
     tech_stack: '',
   });
+
+  useEffect(() => {
+    const templateId = searchParams.get('template');
+    if (templateId && TEMPLATE_PRESETS[templateId]) {
+      setForm(TEMPLATE_PRESETS[templateId]);
+      setFromTemplate(templateId);
+    }
+  }, [searchParams]);
 
   const set = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -60,6 +88,19 @@ export function NewProjectForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
+      {/* Template banner */}
+      {fromTemplate && (
+        <div className="flex items-start gap-3 bg-accent-blue/10 border border-accent-blue/20 rounded-xl px-4 py-3">
+          <span className="text-lg shrink-0">📋</span>
+          <div>
+            <p className="text-sm font-semibold text-accent-blue">Şablondan Yüklendi</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Form alanları <strong className="text-slate-300">{TEMPLATE_PRESETS[fromTemplate]?.title}</strong> şablonuna göre dolduruldu. İstediğin gibi düzenleyebilirsin.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Project Info */}
       <div className="bg-bg-card border border-white/5 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Proje Bilgileri</h2>

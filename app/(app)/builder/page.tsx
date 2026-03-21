@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, lazy, Suspense, useCallback } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
@@ -27,6 +28,7 @@ export default function BuilderPage() {
   const [code, setCode] = useState('# Kod burada görünecek\n');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [guardType, setGuardType] = useState<'auth' | 'credits' | 'plan' | null>(null);
   const [copied, setCopied] = useState(false);
 
   const refreshQuota = useCallback(async () => {
@@ -49,6 +51,7 @@ export default function BuilderPage() {
     if (!prompt.trim()) return;
     setLoading(true);
     setError('');
+    setGuardType(null);
 
     try {
       const res = await fetch('/api/builder', {
@@ -60,7 +63,21 @@ export default function BuilderPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Kod üretimi başarısız');
+        const status = res.status;
+        const msg = data.error || 'Kod üretimi başarısız';
+        if (status === 401) {
+          setGuardType('auth');
+        } else if (status === 403) {
+          if (msg.includes('kredi') || msg.includes('Yetersiz')) {
+            setGuardType('credits');
+          } else if (msg.includes('plan') || msg.includes('Plan')) {
+            setGuardType('plan');
+          } else {
+            setError(msg);
+          }
+        } else {
+          setError(msg);
+        }
         return;
       }
 
@@ -151,6 +168,36 @@ export default function BuilderPage() {
             {error && (
               <div className="mt-3 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2.5 text-red-400 text-sm">
                 {error}
+              </div>
+            )}
+
+            {guardType === 'auth' && (
+              <div className="mt-3 bg-orange-500/10 border border-orange-500/20 rounded-lg px-3 py-3 text-sm">
+                <p className="text-orange-300 font-semibold mb-2">🔒 Kimlik doğrulaması gerekli</p>
+                <Link href="/login" className="inline-flex items-center gap-1.5 text-xs text-accent-blue hover:underline">
+                  Giriş yap →
+                </Link>
+              </div>
+            )}
+
+            {(guardType === 'credits' || guardType === 'plan') && (
+              <div className="mt-3 bg-pi-gold/10 border border-pi-gold/20 rounded-lg px-3 py-3 text-sm">
+                <p className="text-pi-gold font-semibold mb-1">
+                  {guardType === 'credits' ? '⚡ Yetersiz kredi' : '📦 Aktif plan yok'}
+                </p>
+                <p className="text-slate-400 text-xs mb-2">
+                  {guardType === 'credits'
+                    ? 'Kod üretmek için yeterli krediniz yok.'
+                    : 'Aktif planınız yok veya süresi dolmuş.'}
+                </p>
+                <div className="flex gap-2">
+                  <Link href="/plans" className="inline-flex items-center gap-1 text-xs bg-accent-blue text-white px-3 py-1.5 rounded-lg hover:opacity-90 transition-opacity">
+                    Planını yükselt →
+                  </Link>
+                  <Link href="/plans" className="inline-flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors">
+                    Kredini kontrol et
+                  </Link>
+                </div>
               </div>
             )}
 
