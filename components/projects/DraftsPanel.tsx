@@ -24,13 +24,19 @@ export function DraftsPanel({ projectId, drafts: initialDrafts = [], onUpdate }:
   const [loading, setLoading] = useState(false);
   const [drafts, setDrafts] = useState<ProjectDraft[]>(initialDrafts);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGenerate = async () => {
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/projects/${projectId}/drafts`, { method: 'POST' });
       const data = await res.json();
-      if (data.drafts) setDrafts(data.drafts);
+      if (data.success) {
+        if (data.data?.drafts) setDrafts(data.data.drafts);
+      } else {
+        setError(data.error ?? 'Bilinmeyen hata');
+      }
       if (onUpdate) onUpdate();
     } finally {
       setLoading(false);
@@ -52,6 +58,12 @@ export function DraftsPanel({ projectId, drafts: initialDrafts = [], onUpdate }:
           ✨ Generate Drafts
         </Button>
       </div>
+
+      {error && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+          <p className="text-sm text-red-400">{error}</p>
+        </div>
+      )}
 
       {drafts.length === 0 ? (
         <div className="bg-bg-card border border-white/5 rounded-xl p-8 text-center">

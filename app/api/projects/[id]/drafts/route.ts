@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { generateJson } from '@/lib/ai/gemini';
+import { buildDraftGeneratorPrompt } from '@/lib/ai/prompts';
+import { AiDraftResult } from '@/types/freelancer';
+
+const DEFAULT_DELIVERABLES = [
+  'landing-page-copy',
+  'headlines',
+  'cta-map',
+  'whatsapp-script',
+];
 
 async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSupabaseServer>): Promise<string | undefined> {
   const authHeader = req.headers.get('authorization');
@@ -19,6 +29,15 @@ async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSup
   return undefined;
 }
 
+async function logAiRun(
+  supabase: ReturnType<typeof createSupabaseServer>,
+  data: Record<string, unknown>
+) {
+  try {
+    await supabase.from('ai_runs').insert(data);
+  } catch { /* ignore logging errors */ }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,7 +46,9 @@ export async function GET(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: drafts } = await supabase
       .from('project_drafts')
@@ -35,10 +56,10 @@ export async function GET(
       .eq('project_id', id)
       .order('created_at', { ascending: false });
 
-    return NextResponse.json({ drafts: drafts ?? [] });
+    return NextResponse.json({ success: true, data: drafts ?? [] });
   } catch (err) {
     console.error('Drafts GET error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
@@ -50,7 +71,9 @@ export async function POST(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: project, error: pErr } = await supabase
       .from('projects')
@@ -59,45 +82,85 @@ export async function POST(
       .eq('user_id', userId)
       .single();
 
-    if (pErr || !project) return NextResponse.json({ error: 'Proje bulunamadı' }, { status: 404 });
+    if (pErr || !project) {
+      return NextResponse.json({ success: false, error: 'Proje bulunamadı' }, { status: 404 });
+    }
 
-    // Stub drafts – replace with real AI call when ready
-    const stubDrafts = [
-      {
-        project_id: id,
-        draft_type: 'landing-page-copy',
-        title: 'Ana Landing Page Kopyası',
-        content: `# ${project.title}\n\nSizin için özel hazırlanmış, dönüşüm odaklı landing page kopyası.\n\n## Hero Bölümü\n\nKonaklamanın en seçkin adresi. Rezervasyonunuzu hemen yapın.\n\n## Neden Biz?\n\n✓ Eşsiz konum\n✓ Üstün hizmet kalitesi\n✓ En iyi fiyat garantisi`,
-        version: 1,
-      },
-      {
-        project_id: id,
-        draft_type: 'headlines',
-        title: 'Başlık Varyasyonları',
-        content: `1. "Hayalinizin Tatilini Şimdi Rezerve Edin"\n2. "Lüks ve Konforun Buluşma Noktası"\n3. "Her Geceyi Unutulmaz Kılın"\n4. "En İyi Fiyat Garantisiyle Rezervasyon"\n5. "Ailenizle Unutulmaz Anlar Yaratın"`,
-        version: 1,
-      },
-      {
-        project_id: id,
-        draft_type: 'cta-map',
-        title: 'CTA Haritası',
-        content: `Hero CTA: "Şimdi Rezervasyon Yap →"\nOdalar Bölümü: "Müsaitliği Kontrol Et"\nGaleri: "Tüm Fotoğrafları Gör"\nTeklifler: "Özel Fırsatları Keşfet"\nİletişim: "Bize Yazın"`,
-        version: 1,
-      },
-    ];
+    // Get scope deliverables
+    const { data: scopeRow } = await supabase
+      .from('project_scope')
+      .select('deliverables_json')
+      .eq('project_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    const { data: drafts, error } = await supabase
+    const scopeDeliverables = scopeRow?.deliverables_json as string[] | null | undefined;
+    const deliverables: string[] =
+      Array.isArray(scopeDeliverables) && scopeDeliverables.length > 0
+        ? scopeDeliverables
+        : DEFAULT_DELIVERABLES;
+
+    const contextParts = [
+      project.title ? `Proje: ${project.title}` : '',
+      project.niche ? `Sektör: ${project.niche}` : '',
+      project.service_type ? `Hizmet: ${project.service_type}` : '',
+      project.cleaned_brief || project.raw_brief
+        ? `Brief:\n${project.cleaned_brief || project.raw_brief}`
+        : '',
+    ].filter(Boolean);
+    const projectContext = contextParts.join('\n');
+
+    const prompt = buildDraftGeneratorPrompt(projectContext, deliverables);
+
+    let result: AiDraftResult;
+    try {
+      result = await generateJson<AiDraftResult>(prompt);
+    } catch (aiErr) {
+      const errMsg = aiErr instanceof Error ? aiErr.message : 'AI hatası';
+      await logAiRun(supabase, {
+        project_id: id,
+        user_id: userId,
+        run_type: 'drafts',
+        input: projectContext,
+        output: JSON.stringify({ error: errMsg }),
+      });
+      return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
+    }
+
+    const draftRows = result.drafts.map((d) => ({
+      project_id: id,
+      draft_type: d.draft_type,
+      title: d.title,
+      content: d.content,
+      version: 1,
+    }));
+
+    const { data: drafts, error: insertErr } = await supabase
       .from('project_drafts')
-      .insert(stubDrafts)
+      .insert(draftRows)
       .select();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (insertErr) {
+      return NextResponse.json({ success: false, error: insertErr.message }, { status: 500 });
+    }
 
-    await supabase.from('projects').update({ status: 'in_progress', updated_at: new Date().toISOString() }).eq('id', id);
+    await supabase
+      .from('projects')
+      .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+      .eq('id', id);
 
-    return NextResponse.json({ drafts: drafts ?? [] });
+    await logAiRun(supabase, {
+      project_id: id,
+      user_id: userId,
+      run_type: 'drafts',
+      input: projectContext,
+      output: JSON.stringify(result),
+    });
+
+    return NextResponse.json({ success: true, data: { drafts: drafts ?? [], result } });
   } catch (err) {
     console.error('Drafts POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }

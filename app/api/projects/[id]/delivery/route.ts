@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { generateJson } from '@/lib/ai/gemini';
+import { buildDeliveryComposerPrompt } from '@/lib/ai/prompts';
+import { AiDeliveryResult } from '@/types/freelancer';
 
 async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSupabaseServer>): Promise<string | undefined> {
   const authHeader = req.headers.get('authorization');
@@ -19,6 +22,15 @@ async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSup
   return undefined;
 }
 
+async function logAiRun(
+  supabase: ReturnType<typeof createSupabaseServer>,
+  data: Record<string, unknown>
+) {
+  try {
+    await supabase.from('ai_runs').insert(data);
+  } catch { /* ignore logging errors */ }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,7 +39,9 @@ export async function GET(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: delivery } = await supabase
       .from('project_deliveries')
@@ -37,10 +51,10 @@ export async function GET(
       .limit(1)
       .maybeSingle();
 
-    return NextResponse.json({ delivery: delivery ?? null });
+    return NextResponse.json({ success: true, data: delivery ?? null });
   } catch (err) {
     console.error('Delivery GET error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
@@ -52,47 +66,102 @@ export async function POST(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: project, error: pErr } = await supabase
       .from('projects')
-      .select('title, client_name, service_type')
+      .select('title, client_name, service_type, niche, cleaned_brief, raw_brief')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
 
-    if (pErr || !project) return NextResponse.json({ error: 'Proje bulunamadı' }, { status: 404 });
+    if (pErr || !project) {
+      return NextResponse.json({ success: false, error: 'Proje bulunamadı' }, { status: 404 });
+    }
 
-    // Stub delivery package – replace with real AI call when ready
+    const { data: scopeRow } = await supabase
+      .from('project_scope')
+      .select('summary, deliverables_json')
+      .eq('project_id', id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: draftsRows } = await supabase
+      .from('project_drafts')
+      .select('draft_type, title, content')
+      .eq('project_id', id)
+      .order('created_at', { ascending: false });
+
+    const contextParts = [
+      project.title ? `Proje: ${project.title}` : '',
+      project.client_name ? `Müşteri: ${project.client_name}` : '',
+      project.niche ? `Sektör: ${project.niche}` : '',
+      project.service_type ? `Hizmet: ${project.service_type}` : '',
+      project.cleaned_brief || project.raw_brief
+        ? `Brief:\n${project.cleaned_brief || project.raw_brief}`
+        : '',
+      scopeRow?.summary ? `Scope özeti: ${scopeRow.summary}` : '',
+    ].filter(Boolean);
+    const projectContext = contextParts.join('\n');
+
+    const draftsText = (draftsRows ?? [])
+      .map((d) => `### ${d.title} (${d.draft_type})\n${d.content}`)
+      .join('\n\n');
+
+    const prompt = buildDeliveryComposerPrompt(projectContext, draftsText || 'Taslak yok.');
+
+    let result: AiDeliveryResult;
+    try {
+      result = await generateJson<AiDeliveryResult>(prompt);
+    } catch (aiErr) {
+      const errMsg = aiErr instanceof Error ? aiErr.message : 'AI hatası';
+      await logAiRun(supabase, {
+        project_id: id,
+        user_id: userId,
+        run_type: 'delivery',
+        input: projectContext,
+        output: JSON.stringify({ error: errMsg }),
+      });
+      return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
+    }
+
     const deliveryData = {
       project_id: id,
-      delivery_summary: `${project.title} projesi tamamlandı. Tüm deliverable'lar hazır ve teslime uygun durumda.`,
-      client_message: `Merhaba,\n\n${project.title} projesi tamamlandı. Aşağıda teslim paketini bulabilirsiniz.\n\nProjeyi inceleyin ve geri bildirimlerinizi bizimle paylaşın.\n\nİyi çalışmalar!`,
-      assets_json: [
-        'landing-page-copy-v1.docx',
-        'headline-variations.txt',
-        'cta-map.pdf',
-      ],
-      next_steps_json: [
-        'Dosyaları inceleyin ve onaylayın',
-        'Varsa son revizyonları bildirin',
-        'Tasarım ekibinize iletebilirsiniz',
-      ],
+      delivery_summary: result.delivery_summary,
+      client_message: result.client_message,
+      assets_json: result.assets,
+      next_steps_json: result.next_steps,
     };
 
-    const { data: delivery, error } = await supabase
+    const { data: delivery, error: insertErr } = await supabase
       .from('project_deliveries')
       .insert(deliveryData)
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (insertErr) {
+      return NextResponse.json({ success: false, error: insertErr.message }, { status: 500 });
+    }
 
-    await supabase.from('projects').update({ status: 'delivery', updated_at: new Date().toISOString() }).eq('id', id);
+    await supabase
+      .from('projects')
+      .update({ status: 'delivery', updated_at: new Date().toISOString() })
+      .eq('id', id);
 
-    return NextResponse.json({ delivery });
+    await logAiRun(supabase, {
+      project_id: id,
+      user_id: userId,
+      run_type: 'delivery',
+      input: projectContext,
+      output: JSON.stringify(result),
+    });
+
+    return NextResponse.json({ success: true, data: { delivery, result } });
   } catch (err) {
     console.error('Delivery POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }

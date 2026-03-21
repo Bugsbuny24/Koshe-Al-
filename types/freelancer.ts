@@ -40,7 +40,7 @@ export interface ProjectScope {
   exclusions_json?: string[];
   risks_json?: string[];
   questions_json?: string[];
-  estimated_timeline_json?: Record<string, string>;
+  estimated_timeline_json?: Record<string, string> | string[];
   created_at: string;
 }
 
@@ -58,12 +58,8 @@ export interface ProjectRevision {
   id: string;
   project_id: string;
   raw_feedback: string;
-  parsed_feedback_json?: {
-    in_scope: string[];
-    out_of_scope: string[];
-    notes: string[];
-  };
-  scope_status?: 'in_scope' | 'out_of_scope' | 'partial';
+  parsed_feedback_json?: AiRevisionResult;
+  scope_status?: 'in_scope' | 'partially_out_of_scope' | 'out_of_scope';
   action_items_json?: string[];
   created_at: string;
 }
@@ -79,11 +75,12 @@ export interface ProjectDelivery {
 }
 
 export interface AiBriefResult {
-  cleaned_brief: string;
-  missing_info: string[];
-  risks: string[];
+  summary: string;
   objectives: string[];
   deliverables: string[];
+  missing_information: string[];
+  risks: string[];
+  suggested_title: string;
 }
 
 export interface AiScopeResult {
@@ -91,8 +88,9 @@ export interface AiScopeResult {
   objectives: string[];
   deliverables: string[];
   exclusions: string[];
+  risks: string[];
   questions: string[];
-  estimated_timeline: Record<string, string>;
+  estimated_timeline: string[];
 }
 
 export interface AiDraftResult {
@@ -104,13 +102,12 @@ export interface AiDraftResult {
 }
 
 export interface AiRevisionResult {
-  parsed_feedback: {
-    in_scope: string[];
-    out_of_scope: string[];
-    notes: string[];
-  };
-  scope_status: 'in_scope' | 'out_of_scope' | 'partial';
+  summary: string;
+  scope_status: 'in_scope' | 'partially_out_of_scope' | 'out_of_scope';
+  requested_changes: string[];
+  affected_sections: string[];
   action_items: string[];
+  client_reply_suggestion: string;
 }
 
 export interface AiDeliveryResult {

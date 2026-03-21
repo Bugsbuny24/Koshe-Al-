@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { generateJson } from '@/lib/ai/gemini';
+import { buildScopeBuilderPrompt } from '@/lib/ai/prompts';
+import { AiScopeResult } from '@/types/freelancer';
 
 async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSupabaseServer>): Promise<string | undefined> {
   const authHeader = req.headers.get('authorization');
@@ -19,6 +22,15 @@ async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSup
   return undefined;
 }
 
+async function logAiRun(
+  supabase: ReturnType<typeof createSupabaseServer>,
+  data: Record<string, unknown>
+) {
+  try {
+    await supabase.from('ai_runs').insert(data);
+  } catch { /* ignore logging errors */ }
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,7 +39,9 @@ export async function GET(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: scope } = await supabase
       .from('project_scope')
@@ -37,10 +51,10 @@ export async function GET(
       .limit(1)
       .maybeSingle();
 
-    return NextResponse.json({ scope: scope ?? null });
+    return NextResponse.json({ success: true, data: scope ?? null });
   } catch (err) {
     console.error('Scope GET error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
@@ -52,47 +66,85 @@ export async function POST(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: project, error: pErr } = await supabase
       .from('projects')
-      .select('raw_brief, cleaned_brief, niche, service_type')
+      .select('raw_brief, cleaned_brief, niche, service_type, title')
       .eq('id', id)
       .eq('user_id', userId)
       .single();
 
-    if (pErr || !project) return NextResponse.json({ error: 'Proje bulunamadı' }, { status: 404 });
+    if (pErr || !project) {
+      return NextResponse.json({ success: false, error: 'Proje bulunamadı' }, { status: 404 });
+    }
 
-    // Stub scope result – replace with real AI call when ready
+    const contextParts = [
+      project.title ? `Proje: ${project.title}` : '',
+      project.niche ? `Sektör: ${project.niche}` : '',
+      project.service_type ? `Hizmet: ${project.service_type}` : '',
+      project.cleaned_brief || project.raw_brief
+        ? `Brief:\n${project.cleaned_brief || project.raw_brief}`
+        : '',
+    ].filter(Boolean);
+    const projectContext = contextParts.join('\n');
+
+    const prompt = buildScopeBuilderPrompt(projectContext);
+
+    let result: AiScopeResult;
+    try {
+      result = await generateJson<AiScopeResult>(prompt);
+    } catch (aiErr) {
+      const errMsg = aiErr instanceof Error ? aiErr.message : 'AI hatası';
+      await logAiRun(supabase, {
+        project_id: id,
+        user_id: userId,
+        run_type: 'scope',
+        input: projectContext,
+        output: JSON.stringify({ error: errMsg }),
+      });
+      return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
+    }
+
     const scopeData = {
       project_id: id,
-      summary: `${project.service_type} projesi için kapsamlı içerik ve pazarlama paketi.`,
-      objectives: ['Rezervasyon artışı', 'Marka bilinirliği', 'Dönüşüm optimizasyonu'],
-      deliverables_json: ['Landing page kopyası (TR/EN)', 'CTA haritası', '10 başlık varyasyonu'],
-      exclusions_json: ['Tasarım', 'Teknik geliştirme', 'Reklam bütçesi yönetimi'],
-      risks_json: ['Müşteri onay süreci uzayabilir', 'Görseller müşteriden temin edilmeli'],
-      questions_json: ['Hedef rezervasyon kanalı nedir?', 'Mevcut dönüşüm oranı biliyor musunuz?'],
-      estimated_timeline_json: {
-        'Brief & Scope': '1 gün',
-        'İlk Taslaklar': '2-3 gün',
-        'Revizyonlar': '1-2 gün',
-        'Teslim': '1 gün',
-      },
+      summary: result.summary,
+      objectives: result.objectives,
+      deliverables_json: result.deliverables,
+      exclusions_json: result.exclusions,
+      risks_json: result.risks,
+      questions_json: result.questions,
+      estimated_timeline_json: result.estimated_timeline,
     };
 
-    const { data: scope, error } = await supabase
+    const { data: scope, error: scopeErr } = await supabase
       .from('project_scope')
       .insert(scopeData)
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (scopeErr) {
+      return NextResponse.json({ success: false, error: scopeErr.message }, { status: 500 });
+    }
 
-    await supabase.from('projects').update({ updated_at: new Date().toISOString() }).eq('id', id);
+    await supabase
+      .from('projects')
+      .update({ updated_at: new Date().toISOString() })
+      .eq('id', id);
 
-    return NextResponse.json({ scope });
+    await logAiRun(supabase, {
+      project_id: id,
+      user_id: userId,
+      run_type: 'scope',
+      input: projectContext,
+      output: JSON.stringify(result),
+    });
+
+    return NextResponse.json({ success: true, data: { scope, result } });
   } catch (err) {
     console.error('Scope POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
