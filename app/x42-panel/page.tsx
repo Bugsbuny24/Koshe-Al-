@@ -31,8 +31,6 @@ interface Stats {
   }>;
 }
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || 'Koschei2024!';
-
 export default function AdminPanel() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -65,13 +63,23 @@ export default function AdminPanel() {
     }
   }, []);
 
-  const handleLogin = () => {
-    if (password === ADMIN_PASSWORD || password === (process.env.ADMIN_SECRET || 'Koschei2024!')) {
-      setAuthenticated(true);
-      setAdminKey(password);
-      setPasswordError('');
-    } else {
-      setPasswordError('Geçersiz şifre');
+  const handleLogin = async () => {
+    setPasswordError('');
+    try {
+      const res = await fetch('/api/admin/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        setAuthenticated(true);
+        setAdminKey(data.token);
+      } else {
+        setPasswordError(data.error || 'Geçersiz şifre');
+      }
+    } catch {
+      setPasswordError('Bağlantı hatası');
     }
   };
 
@@ -180,7 +188,7 @@ export default function AdminPanel() {
 
         <div className="p-3 border-t border-white/5">
           <button
-            onClick={() => { setAuthenticated(false); setPassword(''); }}
+            onClick={() => { setAuthenticated(false); setPassword(''); setAdminKey(''); }}
             className="w-full text-left px-3 py-2 rounded-lg text-xs text-slate-600 hover:text-red-400 transition-colors"
           >
             Çıkış Yap

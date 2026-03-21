@@ -3,7 +3,8 @@ import { createSupabaseServer } from '@/lib/supabase/server';
 
 function checkAdminKey(req: NextRequest): boolean {
   const key = req.headers.get('x-admin-key');
-  const expected = process.env.ADMIN_SECRET || 'Koschei2024!';
+  const expected = process.env.ADMIN_SECRET;
+  if (!expected || !key) return false;
   return key === expected;
 }
 
@@ -28,7 +29,6 @@ export async function GET(req: NextRequest) {
       0
     );
 
-    // Recent usage
     const { data: recentUsage } = await supabase
       .from('ai_usage')
       .select('*')
