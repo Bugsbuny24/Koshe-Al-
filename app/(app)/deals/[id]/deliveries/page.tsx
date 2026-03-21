@@ -18,13 +18,19 @@ export default function DealDeliveriesPage() {
 
   const load = useCallback(async () => {
     if (!id) return;
-    const [dealRes, deliveriesRes] = await Promise.all([
-      fetch(`/api/deals/${id}`).then((r) => r.json()),
-      fetch(`/api/deals/${id}/deliveries`).then((r) => r.json()),
-    ]);
-    if (dealRes.deal) { setDeal(dealRes.deal); setMilestones(dealRes.milestones || []); }
-    if (deliveriesRes.deliveries) setDeliveries(deliveriesRes.deliveries);
-    setLoading(false);
+    try {
+      const [dealRes, deliveriesRes] = await Promise.all([
+        fetch(`/api/deals/${id}`).then((r) => r.json()),
+        fetch(`/api/deals/${id}/deliveries`).then((r) => r.json()),
+      ]);
+      if (dealRes.deal) { setDeal(dealRes.deal); setMilestones(dealRes.milestones || []); }
+      if (deliveriesRes.deliveries) setDeliveries(deliveriesRes.deliveries);
+    } catch (err) {
+      console.error('Deliveries page load error:', err);
+      // keep deal null so error state renders
+    } finally {
+      setLoading(false);
+    }
   }, [id]);
 
   useEffect(() => { load(); }, [load]);
