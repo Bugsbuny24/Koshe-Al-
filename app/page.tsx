@@ -19,7 +19,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-bg-void">
       {/* Announcement Banner */}
       <div className="bg-gradient-to-r from-accent-blue/20 to-accent-green/20 border-b border-white/5 py-2.5 text-center text-sm text-white">
-        🎉 Koshei v1.0 çıktı! İlk 100 kullanıcıya %50 indirim —{' '}
+        🎉 Koschei v1.0 çıktı! İlk 100 kullanıcıya %50 indirim —{' '}
         <Link href="/register" className="font-bold underline hover:text-accent-blue transition-colors">
           Hemen Kaydol
         </Link>
