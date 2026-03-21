@@ -31,7 +31,7 @@ export default function DealsPage() {
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">Workspace / İşler</h1>
+          <h1 className="text-2xl font-bold text-white">İşler / Workspace</h1>
           <p className="text-slate-400 text-sm mt-1">Proje işlerini ve teslim süreçlerini yönet</p>
         </div>
         <Link href="/deals/new">

@@ -14,10 +14,6 @@ export function FlowRecommendationCard({ result, onReset }: FlowRecommendationCa
   const router = useRouter();
 
   const handleContinue = () => {
-    const brief = encodeURIComponent(result.auto_scope_seed ?? result.raw_user_request);
-    const intent = encodeURIComponent(result.detected_intent);
-    const title = encodeURIComponent(result.business_goal.slice(0, 80));
-
     if (result.recommended_flow === 'execution') {
       const params = new URLSearchParams({
         brief: result.auto_scope_seed ?? result.raw_user_request,
@@ -39,8 +35,6 @@ export function FlowRecommendationCard({ result, onReset }: FlowRecommendationCa
       });
       router.push(`/mentor?${params.toString()}`);
     }
-
-    void brief; void intent; void title;
   };
 
   const FLOW_CONFIG = {
