@@ -16,11 +16,18 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/register') ||
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/terms') ||
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/favicon')
+    pathname.startsWith('/favicon') ||
+    pathname.startsWith('/sitemap') ||
+    pathname.startsWith('/robots') ||
+    pathname.startsWith('/manifest')
   ) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    addSecurityHeaders(res);
+    return res;
   }
 
   // Protect app routes
@@ -28,7 +35,8 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/builder') || pathname.startsWith('/plans') ||
       pathname.startsWith('/profile') || pathname.startsWith('/courses') ||
       pathname.startsWith('/deploy') || pathname.startsWith('/marketplace') ||
-      pathname.startsWith('/community')) {
+      pathname.startsWith('/community') || pathname.startsWith('/create') ||
+      pathname.startsWith('/settings') || pathname.startsWith('/learning-path')) {
     let response = NextResponse.next({ request });
 
     const supabase = createServerClient(
@@ -56,12 +64,23 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    addSecurityHeaders(response);
     return response;
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  addSecurityHeaders(res);
+  return res;
+}
+
+function addSecurityHeaders(response: NextResponse) {
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
 }
 
 export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 };
+

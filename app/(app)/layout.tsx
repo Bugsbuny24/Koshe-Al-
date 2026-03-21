@@ -1,14 +1,29 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { useStore } from '@/store/useStore';
 import { createSupabaseClient } from '@/lib/supabase/client';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { ToastProvider, useToast } from '@/components/ui/Toast';
 
 export const dynamic = 'force-dynamic';
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+function PlanActivationHandler() {
+  const searchParams = useSearchParams();
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    if (searchParams?.get('plan_activated') === 'true') {
+      showToast('Plan aktivasyonu başarılı! 🎉', 'success');
+    }
+  }, [searchParams, showToast]);
+
+  return null;
+}
+
+function AppLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { setProfile, setQuota, sidebarOpen } = useStore();
 
@@ -43,6 +58,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-bg-void">
       <Sidebar />
+      <Suspense fallback={null}>
+        <PlanActivationHandler />
+      </Suspense>
       <main
         className="transition-all duration-250 ease-in-out"
         style={{ marginLeft: sidebarOpen ? '256px' : '0' }}
@@ -65,3 +83,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ErrorBoundary>
+      <ToastProvider>
+        <AppLayoutInner>{children}</AppLayoutInner>
+      </ToastProvider>
+    </ErrorBoundary>
+  );
+}
+
+

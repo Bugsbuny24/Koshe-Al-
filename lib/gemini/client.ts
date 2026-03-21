@@ -34,9 +34,12 @@ export type FeatureKey = keyof typeof CREDIT_COSTS;
 
 // ── Plan limitleri ────────────────────────────────────────────────────────────
 export const PLAN_FEATURES: Record<string, FeatureKey[]> = {
-  starter: ['mentor_lite', 'mentor_flash', 'tts'],
-  pro:     ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio'],
-  ultra:   ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio', 'video_15s'],
+  starter:  ['mentor_lite', 'mentor_flash', 'tts'],
+  growth:   ['mentor_lite', 'mentor_flash', 'tts', 'builder'],
+  pro:      ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio'],
+  prestige: ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio', 'video_15s'],
+  // legacy alias
+  ultra:    ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio', 'video_15s'],
 };
 
 // ── Feature → Model routing ───────────────────────────────────────────────────
@@ -167,7 +170,7 @@ async function setCache(hash: string, model: string, text: string): Promise<void
   }
 }
 
-async function logUsage(userId: string, modelId: string, inputTokens: number, outputTokens: number, feature?: string): Promise<void> {
+export async function logUsage(userId: string, modelId: string, inputTokens: number, outputTokens: number, feature?: string): Promise<void> {
   try {
     await getSupabase().from('ai_usage').insert({
       user_id: userId,

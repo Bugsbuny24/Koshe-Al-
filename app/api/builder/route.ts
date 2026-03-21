@@ -12,6 +12,11 @@ function extractCode(text: string, language: string): string {
   return text.trim();
 }
 
+function isImageRequest(prompt: string): boolean {
+  const lower = prompt.toLowerCase();
+  return lower.includes('görsel') || lower.includes('resim') || lower.includes('image') || lower.includes('fotoğraf');
+}
+
 export async function POST(req: NextRequest) {
   try {
     const supabase = createSupabaseServer();
@@ -40,16 +45,35 @@ export async function POST(req: NextRequest) {
     }
 
     if (!userId) {
-      return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+      return NextResponse.json({ error: 'Oturum açmanız gerekiyor', code: 'UNAUTHENTICATED' }, { status: 401 });
     }
 
     const { prompt, language = 'python' } = await req.json();
 
     if (!prompt?.trim()) {
-      return NextResponse.json({ error: 'Prompt gerekli' }, { status: 400 });
+      return NextResponse.json({ error: 'Prompt gerekli', code: 'INVALID_INPUT' }, { status: 400 });
     }
 
-    // Check access
+    // Route image generation requests
+    if (isImageRequest(prompt)) {
+      const access = await checkAccess(userId, 'image_gen');
+      if (!access.allowed) {
+        return NextResponse.json(
+          { error: 'Görsel üretici için Pro veya Prestige plan gereklidir', code: 'ACCESS_DENIED' },
+          { status: 403 }
+        );
+      }
+      // Forward to image API
+      const imageRes = await fetch(new URL('/api/image', req.url), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(authHeader ? { Authorization: authHeader } : {}) },
+        body: JSON.stringify({ prompt, style: 'realistic' }),
+      });
+      const imageData = await imageRes.json();
+      return NextResponse.json({ ...imageData, type: 'image' }, { status: imageRes.status });
+    }
+
+    // Check access for code builder
     const access = await checkAccess(userId, 'builder');
     if (!access.allowed) {
       const msgs: Record<string, string> = {
@@ -58,7 +82,7 @@ export async function POST(req: NextRequest) {
         no_plan: 'Aktif planınız yok',
       };
       return NextResponse.json(
-        { error: msgs[access.reason || ''] || 'Erişim reddedildi' },
+        { error: msgs[access.reason || ''] || 'Erişim reddedildi', code: 'ACCESS_DENIED' },
         { status: 403 }
       );
     }
@@ -86,6 +110,6 @@ Kurallar:
   } catch (err) {
     console.error('Builder API error:', err);
     const message = err instanceof Error ? err.message : 'Sunucu hatası';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, code: 'SERVER_ERROR' }, { status: 500 });
   }
 }

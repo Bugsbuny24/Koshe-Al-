@@ -24,6 +24,28 @@ export interface ChatMessage {
   created_at?: string;
 }
 
+export interface GeneratedImage {
+  id: string;
+  url: string;
+  prompt: string;
+  created_at: string;
+}
+
+export interface AudioCache {
+  text: string;
+  audioUrl: string;
+}
+
+export interface LearningPath {
+  courses: string[];
+  preferences: Record<string, string>;
+}
+
+export interface DailyGoal {
+  target: number;
+  completed: number;
+}
+
 interface AppState {
   // User
   profile: Profile | null;
@@ -46,6 +68,23 @@ interface AppState {
   // Loading
   isLoading: boolean;
   setLoading: (v: boolean) => void;
+
+  // Generated Images
+  generatedImages: GeneratedImage[];
+  setGeneratedImages: (images: GeneratedImage[]) => void;
+  addGeneratedImage: (image: GeneratedImage) => void;
+
+  // TTS Audio Cache
+  audioCache: AudioCache[];
+  addAudioCache: (entry: AudioCache) => void;
+
+  // Learning Path
+  learningPath: LearningPath | null;
+  setLearningPath: (path: LearningPath | null) => void;
+
+  // Daily Goal
+  dailyGoal: DailyGoal;
+  setDailyGoal: (goal: DailyGoal) => void;
 }
 
 export const useStore = create<AppState>((set) => ({
@@ -71,4 +110,17 @@ export const useStore = create<AppState>((set) => ({
 
   isLoading: false,
   setLoading: (isLoading) => set({ isLoading }),
+
+  generatedImages: [],
+  setGeneratedImages: (generatedImages) => set({ generatedImages }),
+  addGeneratedImage: (image) => set((s) => ({ generatedImages: [image, ...s.generatedImages] })),
+
+  audioCache: [],
+  addAudioCache: (entry) => set((s) => ({ audioCache: [...s.audioCache, entry] })),
+
+  learningPath: null,
+  setLearningPath: (learningPath) => set({ learningPath }),
+
+  dailyGoal: { target: 30, completed: 0 },
+  setDailyGoal: (dailyGoal) => set({ dailyGoal }),
 }));

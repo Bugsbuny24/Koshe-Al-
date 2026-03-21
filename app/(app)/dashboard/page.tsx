@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useStore } from '@/store/useStore';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
+import { createSupabaseClient } from '@/lib/supabase/client';
 
 const quickActions = [
   {
@@ -24,6 +26,14 @@ const quickActions = [
     cost: '5 kredi',
   },
   {
+    href: '/create',
+    icon: '✨',
+    title: 'Oluştur',
+    desc: 'Görsel, ses, video',
+    color: 'gold' as const,
+    cost: '10+ kredi',
+  },
+  {
     href: '/plans',
     icon: '🚀',
     title: 'Planları Gör',
@@ -35,7 +45,9 @@ const quickActions = [
 
 const planInfo: Record<string, { label: string; color: 'blue' | 'green' | 'gold' }> = {
   starter: { label: 'Starter', color: 'blue' },
+  growth: { label: 'Growth', color: 'green' },
   pro: { label: 'Pro', color: 'blue' },
+  prestige: { label: 'Prestige', color: 'gold' },
   ultra: { label: 'Ultra', color: 'gold' },
 };
 
@@ -44,11 +56,107 @@ export default function DashboardPage() {
   const plan = planInfo[quota?.plan_id || 'starter'];
 
   const credits = quota?.credits_remaining ?? 0;
-  const planMax = quota?.plan_id === 'ultra' ? 5000 : quota?.plan_id === 'pro' ? 1000 : 100;
+  const planMax = quota?.plan_id === 'prestige' || quota?.plan_id === 'ultra' ? 5000 : quota?.plan_id === 'pro' ? 1000 : quota?.plan_id === 'growth' ? 500 : 100;
   const creditPercent = Math.min(100, (credits / planMax) * 100);
+
+  const [announcement, setAnnouncement] = useState<string | null>(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [streakDays, setStreakDays] = useState(0);
+
+  useEffect(() => {
+    // Fetch announcement
+    fetch('/api/admin/announcement')
+      .then((r) => r.json())
+      .then((d) => setAnnouncement(d.announcement))
+      .catch(() => {});
+
+    // Check onboarding and streak
+    const checkUserData = async () => {
+      const supabase = createSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('onboarding_completed')
+        .eq('id', user.id)
+        .single();
+
+      if (profileData && !profileData.onboarding_completed) {
+        setShowWelcome(true);
+      }
+
+      // Load streak
+      const { data: streakData } = await supabase
+        .from('user_streaks')
+        .select('streak_days')
+        .eq('user_id', user.id)
+        .single();
+
+      if (streakData) setStreakDays(streakData.streak_days || 0);
+
+      // Update streak on dashboard visit
+      try { await supabase.rpc('update_user_streak' as never, { uid: user.id } as never); } catch { /* ignore */ }
+    };
+    checkUserData();
+  }, []);
+
+  const handleDismissWelcome = async () => {
+    setShowWelcome(false);
+    const supabase = createSupabaseClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      await supabase.from('profiles').update({ onboarding_completed: true }).eq('id', user.id);
+    }
+  };
 
   return (
     <div className="max-w-6xl mx-auto">
+      {/* Welcome Modal */}
+      <AnimatePresence>
+        {showWelcome && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/70"
+              onClick={handleDismissWelcome}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="relative bg-bg-deep border border-white/10 rounded-2xl p-8 max-w-md w-full z-10 text-center"
+            >
+              <div className="text-5xl mb-4">🎉</div>
+              <h2 className="text-2xl font-black text-white mb-2">Hoş Geldin!</h2>
+              <p className="text-slate-400 mb-6">
+                Koschei&apos;e katıldığın için teşekkürler. AI Mentor, Kod Üretici ve daha fazlası seni bekliyor!
+              </p>
+              <button
+                onClick={handleDismissWelcome}
+                className="w-full bg-accent-blue hover:bg-accent-blue/80 text-white font-bold py-3 rounded-xl transition-colors"
+              >
+                Başlayalım! 🚀
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Announcement Banner */}
+      {announcement && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 bg-accent-blue/10 border border-accent-blue/20 rounded-xl px-4 py-3 flex items-center justify-between gap-4"
+        >
+          <p className="text-sm text-slate-200">📢 {announcement}</p>
+          <button onClick={() => setAnnouncement(null)} className="text-slate-500 hover:text-white text-xs shrink-0">✕</button>
+        </motion.div>
+      )}
+
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
         <h1 className="text-3xl font-black text-white">
@@ -106,19 +214,19 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
 
-        {/* Welcome Card */}
+        {/* Streak Card */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
           <Card glow="gold" className="p-5">
             <div className="flex items-start justify-between mb-3">
               <div>
-                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Durum</p>
-                <p className="text-2xl font-black text-white">Hazır</p>
+                <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mb-1">Seri</p>
+                <p className="text-2xl font-black text-white">{streakDays} gün</p>
               </div>
               <div className="w-10 h-10 rounded-xl bg-pi-gold/15 flex items-center justify-center text-xl">
-                🎓
+                🔥
               </div>
             </div>
-            <p className="text-xs text-slate-500">Tüm AI araçlarına erişimin var</p>
+            <p className="text-xs text-slate-500">Üst üste aktif gün sayısı</p>
           </Card>
         </motion.div>
       </div>
@@ -126,9 +234,9 @@ export default function DashboardPage() {
       {/* Quick Actions */}
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
         <h2 className="text-lg font-bold text-white mb-4">Hızlı Başlat</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {quickActions.map((action, i) => (
-            <motion.div key={action.href} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.1 }}>
+            <motion.div key={action.href + i} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 + i * 0.1 }}>
               <Link href={action.href}>
                 <Card hover glow={action.color} className="p-5 group">
                   <div className="text-3xl mb-3">{action.icon}</div>
@@ -159,7 +267,9 @@ export default function DashboardPage() {
             ].map((f) => {
               const planFeatures: Record<string, string[]> = {
                 starter: ['mentor_lite', 'mentor_flash', 'tts'],
+                growth: ['mentor_lite', 'mentor_flash', 'tts', 'builder'],
                 pro: ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio'],
+                prestige: ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio', 'video_15s'],
                 ultra: ['mentor_lite', 'mentor_flash', 'tts', 'builder', 'image_gen', 'live_audio', 'video_15s'],
               };
               const available = planFeatures[quota?.plan_id || 'starter']?.includes(f.key);

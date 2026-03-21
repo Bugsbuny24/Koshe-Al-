@@ -31,6 +31,8 @@ interface Stats {
   }>;
 }
 
+type Tab = 'dashboard' | 'users' | 'usage' | 'settings';
+
 export default function AdminPanel() {
   const [authenticated, setAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
@@ -39,9 +41,19 @@ export default function AdminPanel() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'usage'>('dashboard');
+  const [activeTab, setActiveTab] = useState<Tab>('dashboard');
   const [editUser, setEditUser] = useState<{ id: string; plan: string; credits: number } | null>(null);
   const [saveMsg, setSaveMsg] = useState('');
+  const [announcementText, setAnnouncementText] = useState('');
+  const [announcementSaving, setAnnouncementSaving] = useState(false);
+  const [bulkSelected, setBulkSelected] = useState<string[]>([]);
+  const [bulkCredits, setBulkCredits] = useState(100);
+  const [bulkSaving, setBulkSaving] = useState(false);
+
+  const featureUsage = stats?.recentUsage.reduce((acc: Record<string, number>, u) => {
+    if (u.feature) acc[u.feature] = (acc[u.feature] || 0) + 1;
+    return acc;
+  }, {}) || {};
 
   const fetchData = useCallback(async (key: string) => {
     setLoading(true);
@@ -60,6 +72,14 @@ export default function AdminPanel() {
       // ignore
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  const fetchAnnouncement = useCallback(async () => {
+    const res = await fetch('/api/admin/announcement');
+    if (res.ok) {
+      const data = await res.json();
+      setAnnouncementText(data.announcement || '');
     }
   }, []);
 
@@ -102,11 +122,56 @@ export default function AdminPanel() {
     }
   };
 
+  const handleSaveAnnouncement = async () => {
+    setAnnouncementSaving(true);
+    try {
+      const res = await fetch('/api/admin/announcement', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+        body: JSON.stringify({ message: announcementText }),
+      });
+      if (res.ok) setSaveMsg('Duyuru kaydedildi!');
+    } catch {
+      // ignore
+    } finally {
+      setAnnouncementSaving(false);
+      setTimeout(() => setSaveMsg(''), 3000);
+    }
+  };
+
+  const handleBulkAddCredits = async () => {
+    if (bulkSelected.length === 0) return;
+    setBulkSaving(true);
+    try {
+      await Promise.all(
+        bulkSelected.map((userId) =>
+          fetch('/api/admin/users', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', 'x-admin-key': adminKey },
+            body: JSON.stringify({
+              userId,
+              credits_add: bulkCredits,
+            }),
+          })
+        )
+      );
+      setSaveMsg(`${bulkSelected.length} kullanıcıya ${bulkCredits} kredi eklendi!`);
+      setBulkSelected([]);
+      fetchData(adminKey);
+    } catch {
+      // ignore
+    } finally {
+      setBulkSaving(false);
+      setTimeout(() => setSaveMsg(''), 4000);
+    }
+  };
+
   useEffect(() => {
     if (authenticated && adminKey) {
       fetchData(adminKey);
+      fetchAnnouncement();
     }
-  }, [authenticated, adminKey, fetchData]);
+  }, [authenticated, adminKey, fetchData, fetchAnnouncement]);
 
   if (!authenticated) {
     return (
@@ -171,7 +236,7 @@ export default function AdminPanel() {
         </div>
 
         <nav className="flex-1 p-3 space-y-1">
-          {(['dashboard', 'users', 'usage'] as const).map((tab) => (
+          {(['dashboard', 'users', 'usage', 'settings'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -181,7 +246,10 @@ export default function AdminPanel() {
                   : 'text-slate-500 hover:text-white hover:bg-white/5'
               }`}
             >
-              {tab === 'dashboard' ? '📊 Dashboard' : tab === 'users' ? '👥 Kullanıcılar' : '📝 Kullanım Logları'}
+              {tab === 'dashboard' ? '📊 Dashboard' :
+               tab === 'users' ? '👥 Kullanıcılar' :
+               tab === 'usage' ? '📝 Kullanım Logları' :
+               '⚙️ Ayarlar'}
             </button>
           ))}
         </nav>
@@ -229,6 +297,28 @@ export default function AdminPanel() {
               ))}
             </div>
 
+            {/* Feature Usage Breakdown */}
+            <h2 className="text-lg font-bold mb-4">Feature Kullanım Dağılımı</h2>
+            <div className="bg-[#111116] border border-white/8 rounded-xl p-5 mb-8">
+              <div className="space-y-3">
+                {Object.entries(featureUsage).map(([feature, count]) => {
+                  const maxCount = Math.max(...Object.values(featureUsage));
+                  return (
+                    <div key={feature} className="flex items-center gap-3">
+                      <span className="text-slate-400 text-xs w-24 shrink-0">{feature}</span>
+                      <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-red-500/60 rounded-full"
+                          style={{ width: `${(count / maxCount) * 100}%` }}
+                        />
+                      </div>
+                      <span className="text-slate-500 text-xs w-6">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             <h2 className="text-lg font-bold mb-4">Son Kullanımlar</h2>
             <div className="bg-[#111116] border border-white/8 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
@@ -268,10 +358,46 @@ export default function AdminPanel() {
               </button>
             </div>
 
+            {/* Bulk Operations */}
+            {bulkSelected.length > 0 && (
+              <div className="mb-4 bg-[#111116] border border-white/10 rounded-xl p-4 flex items-center gap-4">
+                <span className="text-sm text-slate-300">{bulkSelected.length} kullanıcı seçildi</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={bulkCredits}
+                    onChange={(e) => setBulkCredits(Number(e.target.value))}
+                    className="w-20 bg-[#0C0C10] border border-white/10 rounded px-2 py-1 text-white text-xs"
+                  />
+                  <button
+                    onClick={handleBulkAddCredits}
+                    disabled={bulkSaving}
+                    className="text-xs bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg transition-colors"
+                  >
+                    {bulkSaving ? '...' : 'Kredi Ekle'}
+                  </button>
+                  <button
+                    onClick={() => setBulkSelected([])}
+                    className="text-xs text-slate-500 hover:text-white px-2 py-1.5"
+                  >
+                    İptal
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="bg-[#111116] border border-white/8 rounded-xl overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-white/5">
+                    <th className="px-4 py-3 w-10">
+                      <input
+                        type="checkbox"
+                        onChange={(e) => setBulkSelected(e.target.checked ? users.map((u) => u.id) : [])}
+                        checked={bulkSelected.length === users.length && users.length > 0}
+                        className="rounded"
+                      />
+                    </th>
                     <th className="text-left px-4 py-3 text-xs text-slate-500 font-semibold">Kullanıcı</th>
                     <th className="text-left px-4 py-3 text-xs text-slate-500 font-semibold">Plan</th>
                     <th className="text-left px-4 py-3 text-xs text-slate-500 font-semibold">Kredi</th>
@@ -283,13 +409,25 @@ export default function AdminPanel() {
                   {users.map((u) => (
                     <tr key={u.id} className="border-b border-white/3 hover:bg-white/3">
                       <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={bulkSelected.includes(u.id)}
+                          onChange={(e) => setBulkSelected(e.target.checked
+                            ? [...bulkSelected, u.id]
+                            : bulkSelected.filter((id) => id !== u.id)
+                          )}
+                          className="rounded"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
                         <div className="font-medium text-white">{u.full_name || '-'}</div>
                         <div className="text-xs text-slate-500">{u.email}</div>
                       </td>
                       <td className="px-4 py-3">
                         <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                          u.quota?.plan_id === 'ultra' ? 'bg-yellow-500/20 text-yellow-400' :
+                          u.quota?.plan_id === 'prestige' || u.quota?.plan_id === 'ultra' ? 'bg-yellow-500/20 text-yellow-400' :
                           u.quota?.plan_id === 'pro' ? 'bg-blue-500/20 text-blue-400' :
+                          u.quota?.plan_id === 'growth' ? 'bg-green-500/20 text-green-400' :
                           'bg-white/10 text-slate-400'
                         }`}>
                           {u.quota?.plan_id?.toUpperCase() || 'STARTER'}
@@ -345,6 +483,33 @@ export default function AdminPanel() {
             </div>
           </motion.div>
         )}
+
+        {/* Settings Tab */}
+        {activeTab === 'settings' && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <h1 className="text-2xl font-black mb-6">Sistem Ayarları</h1>
+
+            {/* Announcement */}
+            <div className="bg-[#111116] border border-white/8 rounded-xl p-6 mb-6">
+              <h2 className="font-bold text-white mb-3">📢 Sistem Duyurusu</h2>
+              <p className="text-xs text-slate-500 mb-3">Bu mesaj tüm kullanıcılara dashboard&apos;da gösterilir. Boş bırakılırsa duyuru gizlenir.</p>
+              <textarea
+                value={announcementText}
+                onChange={(e) => setAnnouncementText(e.target.value)}
+                placeholder="Duyuru metnini buraya girin..."
+                rows={3}
+                className="w-full bg-[#0C0C10] border border-white/10 rounded-lg px-4 py-3 text-white text-sm focus:outline-none resize-none mb-3"
+              />
+              <button
+                onClick={handleSaveAnnouncement}
+                disabled={announcementSaving}
+                className="bg-red-600 hover:bg-red-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors"
+              >
+                {announcementSaving ? 'Kaydediliyor...' : 'Duyuruyu Kaydet'}
+              </button>
+            </div>
+          </motion.div>
+        )}
       </main>
 
       {/* Edit Modal */}
@@ -374,7 +539,9 @@ export default function AdminPanel() {
                     className="w-full bg-[#0C0C10] border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:outline-none"
                   >
                     <option value="starter">Starter</option>
+                    <option value="growth">Growth</option>
                     <option value="pro">Pro</option>
+                    <option value="prestige">Prestige</option>
                     <option value="ultra">Ultra</option>
                   </select>
                 </div>
