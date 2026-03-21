@@ -77,13 +77,25 @@ export function NewDealForm() {
       // Back-link execution run to this deal
       if (executionRunId) {
         try {
-          await fetch(`/api/execution/runs/${executionRunId}`, {
+          const patchRes = await fetch(`/api/execution/runs/${executionRunId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ deal_id: dealId, status: 'linked_to_deal' }),
           });
+          if (!patchRes.ok) {
+            let linkErrMsg = 'Execution run güncellenemedi';
+            try {
+              const patchData = await patchRes.json();
+              if (patchData?.error) linkErrMsg = patchData.error;
+            } catch { /* ignore parse error */ }
+            console.error('execution run back-link failed:', linkErrMsg);
+            setError(linkErrMsg);
+            return;
+          }
         } catch (linkErr) {
           console.error('execution run back-link failed:', linkErr);
+          setError('Execution run bağlantısı kurulamadı');
+          return;
         }
       }
 
