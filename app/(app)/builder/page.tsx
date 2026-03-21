@@ -1,30 +1,49 @@
 'use client';
 
-import { useState, lazy, Suspense } from 'react';
+import { useState, lazy, Suspense, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { useStore } from '@/store/useStore';
+import { createSupabaseClient } from '@/lib/supabase/client';
 
 const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 
 const LANGUAGES = [
-  { id: 'python', label: 'Python' },
-  { id: 'javascript', label: 'JavaScript' },
-  { id: 'typescript', label: 'TypeScript' },
-  { id: 'rust', label: 'Rust' },
-  { id: 'go', label: 'Go' },
-  { id: 'java', label: 'Java' },
-  { id: 'cpp', label: 'C++' },
-  { id: 'sql', label: 'SQL' },
+  { id: 'python', label: 'Python', ext: 'py' },
+  { id: 'javascript', label: 'JavaScript', ext: 'js' },
+  { id: 'typescript', label: 'TypeScript', ext: 'ts' },
+  { id: 'rust', label: 'Rust', ext: 'rs' },
+  { id: 'go', label: 'Go', ext: 'go' },
+  { id: 'java', label: 'Java', ext: 'java' },
+  { id: 'cpp', label: 'C++', ext: 'cpp' },
+  { id: 'sql', label: 'SQL', ext: 'sql' },
 ];
 
 export default function BuilderPage() {
+  const { quota, setQuota } = useStore();
   const [prompt, setPrompt] = useState('');
   const [language, setLanguage] = useState('python');
   const [code, setCode] = useState('# Kod burada görünecek\n');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const refreshQuota = useCallback(async () => {
+    try {
+      const supabase = createSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_quotas')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (data && setQuota) setQuota(data);
+    } catch {
+      // ignore
+    }
+  }, [setQuota]);
 
   const handleGenerate = async () => {
     if (!prompt.trim()) return;
@@ -46,6 +65,8 @@ export default function BuilderPage() {
       }
 
       setCode(data.code);
+      // Refresh credits after successful generation
+      await refreshQuota();
     } catch {
       setError('Bağlantı hatası. Lütfen tekrar deneyin.');
     } finally {
@@ -59,11 +80,35 @@ export default function BuilderPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = () => {
+    const lang = LANGUAGES.find((l) => l.id === language);
+    const ext = lang?.ext || language;
+    const filename = `koschei-output.${ext}`;
+    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-black text-white">Kod Üretici</h1>
-        <p className="text-slate-500 text-sm">Gemini Pro ile kod üretin — 5 kredi/istek</p>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-end justify-between">
+        <div>
+          <h1 className="text-2xl font-black text-white">Kod Üretici</h1>
+          <p className="text-slate-500 text-sm">Gemini Pro ile kod üretin — 5 kredi/istek</p>
+        </div>
+        {quota && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-card border border-white/5 text-xs text-slate-400">
+            <svg className="w-3 h-3 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span className="font-semibold text-white">{Math.floor(quota.credits_remaining)}</span>
+            <span>kredi kaldı</span>
+          </div>
+        )}
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-200px)]">
@@ -155,28 +200,42 @@ export default function BuilderPage() {
                 <div className="w-3 h-3 rounded-full bg-red-500/50" />
                 <div className="w-3 h-3 rounded-full bg-pi-gold/50" />
                 <div className="w-3 h-3 rounded-full bg-accent-green/50" />
-                <span className="ml-2 text-xs text-slate-500 font-mono">output.{language === 'python' ? 'py' : language === 'typescript' ? 'ts' : language === 'javascript' ? 'js' : language}</span>
+                <span className="ml-2 text-xs text-slate-500 font-mono">
+                  output.{LANGUAGES.find((l) => l.id === language)?.ext || language}
+                </span>
               </div>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors"
-              >
-                {copied ? (
-                  <>
-                    <svg className="w-3.5 h-3.5 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Kopyalandı!
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Kopyala
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleDownload}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors"
+                  title="Dosya olarak indir"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  İndir
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-white transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 text-accent-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Kopyalandı!
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Kopyala
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Monaco Editor */}

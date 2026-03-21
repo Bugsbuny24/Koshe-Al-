@@ -167,11 +167,12 @@ async function setCache(hash: string, model: string, text: string): Promise<void
   }
 }
 
-async function logUsage(userId: string, modelId: string, inputTokens: number, outputTokens: number): Promise<void> {
+async function logUsage(userId: string, modelId: string, inputTokens: number, outputTokens: number, feature?: string): Promise<void> {
   try {
     await getSupabase().from('ai_usage').insert({
       user_id: userId,
       model: modelId,
+      feature: feature ?? null,
       input_tokens: inputTokens,
       output_tokens: outputTokens,
       cost: 0,
@@ -225,7 +226,8 @@ export async function generateText(opts: {
     opts.userId,
     modelId,
     usage?.promptTokenCount ?? 0,
-    usage?.candidatesTokenCount ?? 0
+    usage?.candidatesTokenCount ?? 0,
+    opts.feature
   );
 
   return { text, cached: false };

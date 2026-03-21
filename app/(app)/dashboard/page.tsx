@@ -44,7 +44,8 @@ export default function DashboardPage() {
   const plan = planInfo[quota?.plan_id || 'starter'];
 
   const credits = quota?.credits_remaining ?? 0;
-  const creditPercent = Math.min(100, (credits / 100) * 100);
+  const planMax = quota?.plan_id === 'ultra' ? 5000 : quota?.plan_id === 'pro' ? 1000 : 100;
+  const creditPercent = Math.min(100, (credits / planMax) * 100);
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -78,7 +79,7 @@ export default function DashboardPage() {
                 style={{ width: `${creditPercent}%` }}
               />
             </div>
-            <p className="text-xs text-slate-500 mt-2">{credits.toFixed(1)} / 100 kredi</p>
+            <p className="text-xs text-slate-500 mt-2">{credits.toFixed(1)} / {planMax} kredi</p>
           </Card>
         </motion.div>
 

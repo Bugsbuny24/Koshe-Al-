@@ -149,7 +149,12 @@ export function Sidebar() {
               <div className="mt-2 h-1.5 bg-bg-deep rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-accent-blue to-accent-green rounded-full transition-all"
-                  style={{ width: `${Math.min(100, (quota.credits_remaining / 100) * 100)}%` }}
+                  style={{
+                    width: `${Math.min(100, (quota.credits_remaining / (
+                      quota.plan_id === 'ultra' ? 5000 :
+                      quota.plan_id === 'pro' ? 1000 : 100
+                    )) * 100)}%`
+                  }}
                 />
               </div>
             </div>
