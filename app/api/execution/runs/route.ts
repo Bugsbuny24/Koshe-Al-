@@ -14,6 +14,8 @@ export async function POST(req: NextRequest) {
     let body: {
       brief?: string;
       templateId?: string | null;
+      title?: string | null;
+      milestoneMode?: string | null;
       requirement?: RequirementExtractionResult | null;
       architecture?: ArchitecturePlanResult | null;
       tasks?: TaskBreakdownResult | null;
@@ -27,7 +29,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Geçersiz istek gövdesi' }, { status: 400 });
     }
 
-    const { brief, templateId, requirement, architecture, tasks, checklist, projectId, dealId } = body;
+    const { brief, templateId, title, milestoneMode, requirement, architecture, tasks, checklist, projectId, dealId } = body;
 
     if (!brief?.trim()) {
       return NextResponse.json({ success: false, error: 'Brief gerekli' }, { status: 400 });
@@ -47,6 +49,7 @@ export async function POST(req: NextRequest) {
       .insert({
         user_id: userId,
         template_id: templateId ?? null,
+        title: title ?? null,
         brief: brief.trim(),
         requirement_json: requirement ?? null,
         architecture_json: architecture ?? null,
@@ -54,6 +57,8 @@ export async function POST(req: NextRequest) {
         checklist_json: checklist ?? null,
         project_id: projectId ?? null,
         deal_id: dealId ?? null,
+        milestone_mode: milestoneMode ?? null,
+        status: 'draft',
       })
       .select()
       .single();
