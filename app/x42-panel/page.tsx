@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createSupabaseClient } from '@/lib/supabase/client';
 
+export const dynamic = 'force-dynamic';
+
 const ADMIN_PASSWORD = 'koshei_admin_2024';
 
 const PLAN_CREDITS: Record<string, number> = {
@@ -46,10 +48,9 @@ export default function AdminPanel() {
   const [saveMsg, setSaveMsg] = useState('');
   const [selectedPlans, setSelectedPlans] = useState<Record<string, string>>({});
 
-  const supabase = createSupabaseClient();
-
   const fetchUsers = useCallback(async () => {
     setLoading(true);
+    const supabase = createSupabaseClient();
     try {
       const { data: profiles } = await supabase
         .from('profiles')
@@ -94,13 +95,14 @@ export default function AdminPanel() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   const activatePlan = async (userId: string) => {
     const plan = selectedPlans[userId] || 'starter';
     const credits = PLAN_CREDITS[plan] ?? 100;
     const now = new Date();
     const expiresAt = new Date(now.getTime() + PLAN_DURATION_DAYS * 24 * 60 * 60 * 1000);
+    const supabase = createSupabaseClient();
 
     const { error } = await supabase.from('user_quotas').upsert(
       {
@@ -126,6 +128,7 @@ export default function AdminPanel() {
   const addCredits = async (userId: string, amount: number) => {
     const user = users.find((u) => u.id === userId);
     const current = user?.quota?.credits_remaining || 0;
+    const supabase = createSupabaseClient();
 
     const { error } = await supabase
       .from('user_quotas')
