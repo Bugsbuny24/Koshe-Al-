@@ -11,7 +11,7 @@ function StarField() {
     const container = containerRef.current;
     if (!container) return;
 
-    const stars = Array.from({ length: 120 }, (_, i) => {
+    const stars = Array.from({ length: 120 }, () => {
       const star = document.createElement('div');
       const size = Math.random() * 2 + 0.5;
       star.className = 'star';

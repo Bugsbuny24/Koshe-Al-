@@ -131,10 +131,20 @@ export default function ProfilePage() {
             <div className="h-2 bg-bg-deep rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-accent-blue to-accent-green rounded-full transition-all"
-                style={{ width: `${Math.min(100, ((quota?.credits_remaining || 0) / 100) * 100)}%` }}
+                style={{
+                  width: `${Math.min(100, ((quota?.credits_remaining || 0) / (
+                    quota?.plan_id === 'ultra' ? 5000 :
+                    quota?.plan_id === 'pro' ? 1000 : 100
+                  )) * 100)}%`
+                }}
               />
             </div>
-            <p className="text-xs text-slate-600 mt-1">{quota?.credits_remaining?.toFixed(1)} / 100 kredi kaldı</p>
+            <p className="text-xs text-slate-600 mt-1">
+              {quota?.credits_remaining?.toFixed(1)} / {
+                quota?.plan_id === 'ultra' ? '5.000' :
+                quota?.plan_id === 'pro' ? '1.000' : '100'
+              } kredi kaldı
+            </p>
           </div>
         </Card>
       </motion.div>

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useStore, ChatMessage } from '@/store/useStore';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { createSupabaseClient } from '@/lib/supabase/client';
 
 type Feature = 'mentor_lite' | 'mentor_flash';
 
@@ -16,7 +17,7 @@ const featureOptions = [
 ];
 
 export default function MentorPage() {
-  const { messages, addMessage, updateLastMessage, setMessages } = useStore();
+  const { messages, addMessage, updateLastMessage, setMessages, quota, setQuota } = useStore();
   const [input, setInput] = useState('');
   const [feature, setFeature] = useState<Feature>('mentor_lite');
   const [streaming, setStreaming] = useState(false);
@@ -27,6 +28,23 @@ export default function MentorPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Refresh quota after sending a message
+  const refreshQuota = useCallback(async () => {
+    try {
+      const supabase = createSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data } = await supabase
+        .from('user_quotas')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      if (data && setQuota) setQuota(data);
+    } catch {
+      // ignore
+    }
+  }, [setQuota]);
 
   const sendMessage = useCallback(async () => {
     if (!input.trim() || streaming) return;
@@ -81,12 +99,14 @@ export default function MentorPage() {
         accumulated += chunk;
         updateLastMessage(accumulated);
       }
-    } catch (err) {
+      // Refresh credits after successful response
+      await refreshQuota();
+    } catch {
       updateLastMessage('❌ Bağlantı hatası. Lütfen tekrar deneyin.');
     } finally {
       setStreaming(false);
     }
-  }, [input, streaming, feature, messages, sessionId, addMessage, updateLastMessage]);
+  }, [input, streaming, feature, messages, sessionId, addMessage, updateLastMessage, refreshQuota]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -104,6 +124,15 @@ export default function MentorPage() {
           <p className="text-slate-500 text-sm">Yapay zeka öğretmeninizle sohbet edin</p>
         </div>
         <div className="flex items-center gap-2">
+          {quota && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-card border border-white/5 text-xs text-slate-400">
+              <svg className="w-3 h-3 text-accent-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              <span className="font-semibold text-white">{Math.floor(quota.credits_remaining)}</span>
+              <span>kredi</span>
+            </div>
+          )}
           {featureOptions.map((opt) => (
             <button
               key={opt.id}

@@ -79,11 +79,13 @@ export async function POST(req: NextRequest) {
             userId,
           });
 
+          let fullResponse = '';
           for await (const chunk of generator) {
             controller.enqueue(new TextEncoder().encode(chunk));
+            fullResponse += chunk;
           }
 
-          // Save messages to DB
+          // Save both user message and AI response to DB
           if (sessionId) {
             const lastUserMsg = messages[messages.length - 1];
             await supabase.from('chat_messages').insert([
@@ -92,6 +94,13 @@ export async function POST(req: NextRequest) {
                 session_id: sessionId,
                 role: 'user',
                 content: lastUserMsg.content,
+                feature: selectedFeature,
+              },
+              {
+                user_id: userId,
+                session_id: sessionId,
+                role: 'model',
+                content: fullResponse,
                 feature: selectedFeature,
               },
             ]);

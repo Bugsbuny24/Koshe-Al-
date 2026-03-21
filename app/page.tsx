@@ -2,7 +2,6 @@ import { Navbar } from '@/components/layout/Navbar';
 import { Hero } from '@/components/landing/Hero';
 import { Features } from '@/components/landing/Features';
 import { Pricing } from '@/components/landing/Pricing';
-import Link from 'next/link';
 
 export default function LandingPage() {
   return (
