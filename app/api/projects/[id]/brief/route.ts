@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
+import { generateJson } from '@/lib/ai/gemini';
+import { buildBriefCleanerPrompt } from '@/lib/ai/prompts';
+import { AiBriefResult } from '@/types/freelancer';
 
 async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSupabaseServer>): Promise<string | undefined> {
   const authHeader = req.headers.get('authorization');
@@ -19,6 +22,15 @@ async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSup
   return undefined;
 }
 
+async function logAiRun(
+  supabase: ReturnType<typeof createSupabaseServer>,
+  data: Record<string, unknown>
+) {
+  try {
+    await supabase.from('ai_runs').insert(data);
+  } catch { /* ignore logging errors */ }
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -27,7 +39,9 @@ export async function POST(
     const { id } = await params;
     const supabase = createSupabaseServer();
     const userId = await getUserId(req, supabase);
-    if (!userId) return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    }
 
     const { data: project, error: pErr } = await supabase
       .from('projects')
@@ -36,39 +50,49 @@ export async function POST(
       .eq('user_id', userId)
       .single();
 
-    if (pErr || !project) return NextResponse.json({ error: 'Proje bulunamadı' }, { status: 404 });
+    if (pErr || !project) {
+      return NextResponse.json({ success: false, error: 'Proje bulunamadı' }, { status: 404 });
+    }
 
-    // Stub brief result – replace with real AI call when ready
-    const brief = {
-      cleaned_brief: `[AI Brief – ${project.service_type} / ${project.niche}]\n\n${project.raw_brief}`,
-      missing_info: ['Bütçe netleştirilmeli', 'Hedef kitle tanımı eksik'],
-      risks: ['Deadline dar olabilir'],
-      objectives: ['Rezervasyon artışı sağlamak', 'Marka bilinirliğini güçlendirmek'],
-      deliverables: ['Landing page kopyası', 'CTA haritası', 'Başlık seti'],
-    };
+    if (!project.raw_brief?.trim()) {
+      return NextResponse.json({ success: false, error: 'Ham brief boş olamaz' }, { status: 400 });
+    }
 
-    // Persist cleaned_brief back to project
-    await supabase
-      .from('projects')
-      .update({ cleaned_brief: brief.cleaned_brief, updated_at: new Date().toISOString() })
-      .eq('id', id);
+    const prompt = buildBriefCleanerPrompt(project.raw_brief, project.niche, project.service_type);
 
-    // Log AI run (best effort)
+    let result: AiBriefResult;
     try {
-      await supabase.from('ai_runs').insert({
+      result = await generateJson<AiBriefResult>(prompt);
+    } catch (aiErr) {
+      const errMsg = aiErr instanceof Error ? aiErr.message : 'AI hatası';
+      await logAiRun(supabase, {
         project_id: id,
         user_id: userId,
         run_type: 'brief',
         input: project.raw_brief,
-        output: JSON.stringify(brief),
+        output: JSON.stringify({ error: errMsg }),
       });
-    } catch {
-      // ignore logging errors
+      return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
     }
 
-    return NextResponse.json({ brief });
+    // Persist cleaned brief to project
+    const cleanedBrief = `${result.suggested_title ? `[${result.suggested_title}]\n\n` : ''}${result.summary}`;
+    await supabase
+      .from('projects')
+      .update({ cleaned_brief: cleanedBrief, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    await logAiRun(supabase, {
+      project_id: id,
+      user_id: userId,
+      run_type: 'brief',
+      input: project.raw_brief,
+      output: JSON.stringify(result),
+    });
+
+    return NextResponse.json({ success: true, data: result });
   } catch (err) {
     console.error('Brief POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
