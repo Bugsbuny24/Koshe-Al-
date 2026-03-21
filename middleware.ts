@@ -26,7 +26,9 @@ export async function middleware(request: NextRequest) {
   // Protect app routes
   if (pathname.startsWith('/dashboard') || pathname.startsWith('/mentor') ||
       pathname.startsWith('/builder') || pathname.startsWith('/plans') ||
-      pathname.startsWith('/profile')) {
+      pathname.startsWith('/profile') || pathname.startsWith('/courses') ||
+      pathname.startsWith('/deploy') || pathname.startsWith('/marketplace') ||
+      pathname.startsWith('/community')) {
     let response = NextResponse.next({ request });
 
     const supabase = createServerClient(
