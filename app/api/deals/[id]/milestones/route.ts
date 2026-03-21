@@ -2,25 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
 import { generateJson } from '@/lib/ai/gemini';
 import { buildMilestonePlanPrompt } from '@/lib/ai/prompts';
+import { buildMilestonesFromTemplate, isMilestoneTemplateKey } from '@/lib/deals/milestoneTemplates';
 import { AiMilestonePlanResult } from '@/types/deals';
-
-const TEMPLATES: Record<string, { title: string; description: string; pct: number }[]> = {
-  standard: [
-    { title: 'Başlangıç', description: 'Proje başlangıç ödemesi', pct: 20 },
-    { title: 'Orta Teslim', description: 'Ara teslim ödemesi', pct: 40 },
-    { title: 'Final Teslim', description: 'Final teslim ödemesi', pct: 40 },
-  ],
-  fast: [
-    { title: 'Ön Ödeme', description: 'Proje başlangıç ödemesi', pct: 50 },
-    { title: 'Teslim Ödemesi', description: 'Final teslim ödemesi', pct: 50 },
-  ],
-  iterative: [
-    { title: 'Sprint 1', description: '1. sprint ödemesi', pct: 25 },
-    { title: 'Sprint 2', description: '2. sprint ödemesi', pct: 25 },
-    { title: 'Sprint 3', description: '3. sprint ödemesi', pct: 25 },
-    { title: 'Sprint 4', description: '4. sprint ödemesi', pct: 25 },
-  ],
-};
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -32,11 +15,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .eq('deal_id', id)
       .order('sort_order');
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ milestones: milestones || [] });
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, milestones: milestones || [] });
   } catch (err) {
     console.error('Milestones GET error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
@@ -44,12 +27,32 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const supabase = createSupabaseServer();
-    const body = await req.json();
-    const { mode, rawPlanText, milestones: manualMilestones, template } = body;
 
-    const { data: deal } = await supabase.from('deals').select('total_amount').eq('id', id).single();
-    const totalAmount = deal?.total_amount || 0;
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Geçersiz istek gövdesi' }, { status: 400 });
+    }
 
+    const { mode, rawPlanText, milestones: manualMilestones, template } = body as {
+      mode?: string;
+      rawPlanText?: string;
+      milestones?: { title: string; description?: string; amount?: number; sort_order?: number }[];
+      template?: string;
+    };
+
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('total_amount, status')
+      .eq('id', id)
+      .single();
+
+    if (dealError || !deal) {
+      return NextResponse.json({ success: false, error: 'Deal bulunamadı' }, { status: 404 });
+    }
+
+    const totalAmount = deal.total_amount || 0;
     let milestonesToInsert: { title: string; description: string; amount: number; sort_order: number }[] = [];
 
     if (mode === 'ai') {
@@ -59,7 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         .eq('deal_id', id)
         .order('version', { ascending: false })
         .limit(1);
-      const summary = scope?.[0]?.summary || rawPlanText || '';
+      const summary = scope?.[0]?.summary || (rawPlanText as string) || '';
       const prompt = buildMilestonePlanPrompt(summary, totalAmount, 'standard');
       const aiResult = await generateJson<AiMilestonePlanResult>(prompt);
       milestonesToInsert = (aiResult?.milestones || []).map((m) => ({
@@ -68,28 +71,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         amount: m.amount,
         sort_order: m.sort_order,
       }));
-    } else if (template && TEMPLATES[template]) {
-      milestonesToInsert = TEMPLATES[template].map((t, i) => ({
-        title: t.title,
-        description: t.description,
-        amount: Math.round((totalAmount * t.pct) / 100),
-        sort_order: i + 1,
-      }));
+    } else if (template && isMilestoneTemplateKey(template)) {
+      milestonesToInsert = buildMilestonesFromTemplate(template, totalAmount);
     } else if (manualMilestones && Array.isArray(manualMilestones)) {
       milestonesToInsert = manualMilestones.map((m, i) => ({
-        title: m.title,
+        title: m.title || `Milestone ${i + 1}`,
         description: m.description || '',
         amount: m.amount || 0,
         sort_order: m.sort_order || i + 1,
       }));
     } else {
-      return NextResponse.json({ error: 'Geçersiz mod' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Geçersiz mod veya şablon' }, { status: 400 });
     }
 
-    const inserts = milestonesToInsert.map((m) => ({ ...m, deal_id: id, status: 'pending' }));
+    if (milestonesToInsert.length === 0) {
+      return NextResponse.json({ success: false, error: 'Oluşturulacak milestone bulunamadı' }, { status: 400 });
+    }
+
+    const inserts = milestonesToInsert.map((m) => ({ ...m, deal_id: id, status: 'in_progress' }));
     const { data: created, error } = await supabase.from('deal_milestones').insert(inserts).select();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+
+    // Advance deal to in_progress when milestones are created (if still at scoped/draft)
+    if (deal.status === 'scoped' || deal.status === 'draft') {
+      const { error: statusError } = await supabase
+        .from('deals')
+        .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+        .eq('id', id);
+      if (statusError) {
+        console.error('Deal status update error:', statusError);
+      }
+    }
 
     await supabase.from('deal_activity_logs').insert({
       deal_id: id,
@@ -98,9 +111,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       payload_json: { count: created?.length, mode: mode || template },
     });
 
-    return NextResponse.json({ milestones: created }, { status: 201 });
+    return NextResponse.json({ success: true, milestones: created }, { status: 201 });
   } catch (err) {
     console.error('Milestones POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }

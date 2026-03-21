@@ -13,11 +13,11 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       .select('*')
       .eq('deal_id', id)
       .order('created_at', { ascending: false });
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ revisions: data || [] });
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true, revisions: data || [] });
   } catch (err) {
     console.error('Revisions GET error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
 
@@ -25,11 +25,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const supabase = createSupabaseServer();
-    const body = await req.json();
-    const { milestoneId, rawFeedback } = body;
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Geçersiz istek gövdesi' }, { status: 400 });
+    }
+
+    const { milestoneId, rawFeedback } = body as { milestoneId?: string; rawFeedback?: string };
 
     if (!rawFeedback?.trim()) {
-      return NextResponse.json({ error: 'Geri bildirim gerekli' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Geri bildirim gerekli' }, { status: 400 });
     }
 
     const { data: scope } = await supabase
@@ -48,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .insert({
         deal_id: id,
         milestone_id: milestoneId || null,
-        raw_feedback: rawFeedback,
+        raw_feedback: rawFeedback.trim(),
         parsed_feedback_json: aiResult,
         scope_status: aiResult?.scope_status || 'in_scope',
         action_items_json: aiResult?.action_items || [],
@@ -57,10 +64,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
 
     if (milestoneId) {
-      await supabase.from('deal_milestones').update({ status: 'revision_requested', updated_at: new Date().toISOString() }).eq('id', milestoneId);
+      await supabase
+        .from('deal_milestones')
+        .update({ status: 'revision_requested', updated_at: new Date().toISOString() })
+        .eq('id', milestoneId);
     }
 
     await supabase.from('deal_activity_logs').insert({
@@ -70,9 +80,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       payload_json: { milestone_id: milestoneId, scope_status: aiResult?.scope_status },
     });
 
-    return NextResponse.json({ revision, aiResult }, { status: 201 });
+    return NextResponse.json({ success: true, revision, aiResult }, { status: 201 });
   } catch (err) {
     console.error('Revisions POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }

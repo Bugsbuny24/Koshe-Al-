@@ -5,11 +5,38 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const supabase = createSupabaseServer();
-    const body = await req.json();
-    const { milestoneId, decision, note, approvedBy } = body;
 
-    if (!milestoneId || !decision) {
-      return NextResponse.json({ error: 'Milestone ve karar gerekli' }, { status: 400 });
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Geçersiz istek gövdesi' }, { status: 400 });
+    }
+
+    const { milestoneId, decision, note, approvedBy } = body as {
+      milestoneId?: string;
+      decision?: string;
+      note?: string;
+      approvedBy?: string;
+    };
+
+    if (!milestoneId) {
+      return NextResponse.json({ success: false, error: 'Milestone ID gerekli' }, { status: 400 });
+    }
+    if (!decision || !['approved', 'rejected'].includes(decision)) {
+      return NextResponse.json({ success: false, error: 'Karar "approved" veya "rejected" olmalı' }, { status: 400 });
+    }
+
+    // Verify milestone belongs to this deal
+    const { data: milestone, error: msError } = await supabase
+      .from('deal_milestones')
+      .select('id, status')
+      .eq('id', milestoneId)
+      .eq('deal_id', id)
+      .single();
+
+    if (msError || !milestone) {
+      return NextResponse.json({ success: false, error: 'Milestone bulunamadı' }, { status: 404 });
     }
 
     const { data: approval, error } = await supabase
@@ -19,27 +46,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         milestone_id: milestoneId,
         approved_by: approvedBy || null,
         decision,
-        note: note || '',
+        note: note?.trim() || '',
       })
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
 
     const newStatus = decision === 'approved' ? 'approved' : 'revision_requested';
-    await supabase.from('deal_milestones').update({ status: newStatus, updated_at: new Date().toISOString() }).eq('id', milestoneId);
+    await supabase
+      .from('deal_milestones')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', milestoneId);
 
+    const eventType = decision === 'approved' ? 'milestone_approved' : 'milestone_rejected';
     await supabase.from('deal_activity_logs').insert({
       deal_id: id,
       actor_id: approvedBy || null,
       actor_type: 'user',
-      event_type: decision === 'approved' ? 'milestone_approved' : 'milestone_rejected',
-      payload_json: { milestone_id: milestoneId, decision, note },
+      event_type: eventType,
+      payload_json: { milestone_id: milestoneId, decision, note: note?.trim() || '' },
     });
 
-    return NextResponse.json({ approval }, { status: 201 });
+    return NextResponse.json({ success: true, approval }, { status: 201 });
   } catch (err) {
     console.error('Approvals POST error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }

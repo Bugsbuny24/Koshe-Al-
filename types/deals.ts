@@ -5,7 +5,7 @@ export type Deal = {
   seller_id: string | null;
   total_amount: number;
   currency: string;
-  status: string; // 'draft' | 'scoped' | 'active' | 'completed' | 'cancelled'
+  status: 'draft' | 'scoped' | 'in_progress' | 'delivered' | 'completed' | 'on_hold' | string;
   created_at: string;
   updated_at: string;
 };
@@ -31,7 +31,7 @@ export type DealMilestone = {
   amount: number;
   sort_order: number;
   deadline: string | null;
-  status: string; // 'pending' | 'in_progress' | 'delivered' | 'revision_requested' | 'approved'
+  status: 'draft' | 'pending_funding' | 'funded' | 'in_progress' | 'delivered' | 'revision_requested' | 'approved' | 'released' | string;
   created_at: string;
   updated_at: string;
 };
@@ -77,9 +77,10 @@ export type EscrowTransaction = {
   external_transaction_id: string;
   amount: number;
   currency: string;
-  status: string; // 'pending' | 'funded' | 'partially_released' | 'released' | 'cancelled'
+  status: 'pending' | 'funded' | 'partially_released' | 'released' | 'cancelled' | string;
   funded_amount: number;
   released_amount: number;
+  last_synced_at: string | null;
   created_at: string;
   updated_at: string;
 };
