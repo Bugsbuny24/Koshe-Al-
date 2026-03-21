@@ -8,11 +8,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const { id } = await params;
     const supabase = createSupabaseServer();
-    const body = await req.json();
-    const { rawScopeText, lockedBy } = body;
+
+    let body: Record<string, unknown>;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, error: 'Geçersiz istek gövdesi' }, { status: 400 });
+    }
+
+    const { rawScopeText, lockedBy } = body as { rawScopeText?: string; lockedBy?: string };
 
     if (!rawScopeText?.trim()) {
-      return NextResponse.json({ error: 'Scope metni gerekli' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Scope metni gerekli' }, { status: 400 });
+    }
+
+    // Verify deal exists
+    const { data: deal, error: dealError } = await supabase
+      .from('deals')
+      .select('id')
+      .eq('id', id)
+      .single();
+
+    if (dealError || !deal) {
+      return NextResponse.json({ success: false, error: 'Deal bulunamadı' }, { status: 404 });
     }
 
     const prompt = buildScopeLockPrompt(rawScopeText);
@@ -43,9 +61,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       .select()
       .single();
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
 
-    await supabase.from('deals').update({ status: 'scoped', updated_at: new Date().toISOString() }).eq('id', id);
+    const { error: statusError } = await supabase
+      .from('deals')
+      .update({ status: 'scoped', updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (statusError) {
+      console.error('Deal status update error:', statusError);
+    }
 
     await supabase.from('deal_activity_logs').insert({
       deal_id: id,
@@ -55,9 +80,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       payload_json: { version: nextVersion, summary: aiResult?.summary },
     });
 
-    return NextResponse.json({ snapshot, aiResult });
+    return NextResponse.json({ success: true, snapshot, aiResult });
   } catch (err) {
     console.error('Scope lock error:', err);
-    return NextResponse.json({ error: 'Sunucu hatası' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Sunucu hatası' }, { status: 500 });
   }
 }
