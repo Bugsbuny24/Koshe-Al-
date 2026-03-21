@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ComingSoonCard } from '@/components/ui/ComingSoonCard';
 
 interface Thread {
   id: string;
@@ -84,6 +85,14 @@ const CHALLENGES = [
 export default function CommunityPage() {
   const [activeTab, setActiveTab] = useState<'threads' | 'challenges'>('threads');
   const [newThread, setNewThread] = useState('');
+  const [threadInfo, setThreadInfo] = useState(false);
+
+  const handleSubmitThread = () => {
+    if (!newThread.trim()) return;
+    setThreadInfo(true);
+    setNewThread('');
+    setTimeout(() => setThreadInfo(false), 5000);
+  };
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -125,12 +134,24 @@ export default function CommunityPage() {
                     placeholder="Bir soru sor veya tartışma başlat..."
                     className="flex-1 bg-bg-deep border border-white/8 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-accent-blue/40"
                   />
-                  <Button disabled={!newThread.trim()} size="md">
+                  <Button disabled={!newThread.trim()} size="md" onClick={handleSubmitThread}>
                     Gönder
                   </Button>
                 </div>
               </div>
             </Card>
+
+            {/* Thread submit info */}
+            <AnimatePresence>
+              {threadInfo && (
+                <ComingSoonCard
+                  icon="ℹ️"
+                  title="Gönderi oluşturma henüz aktif değil"
+                  message="Toplulukta yeni gönderi oluşturma akışı henüz aktif değil. Thread listesi read-only demo modunda."
+                  className="mb-4"
+                />
+              )}
+            </AnimatePresence>
           </motion.div>
 
           {/* Thread List */}

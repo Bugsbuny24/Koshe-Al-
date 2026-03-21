@@ -82,7 +82,21 @@ export default function MentorPage() {
 
       if (!response.ok) {
         const err = await response.json();
-        updateLastMessage(`❌ Hata: ${err.error || 'Bilinmeyen hata'}`);
+        const status = response.status;
+        let guardMsg = `❌ Hata: ${err.error || 'Bilinmeyen hata'}`;
+        if (status === 401) {
+          guardMsg = '🔒 **Kimlik doğrulaması gerekli.** Lütfen [giriş yapın](/login).';
+        } else if (status === 403) {
+          const reason = err.error || '';
+          if (reason.includes('kredi') || reason.includes('Yetersiz')) {
+            guardMsg = '⚡ **Yetersiz kredi.** [Planını yükselt](/plans) veya mevcut kredinizi kontrol edin.';
+          } else if (reason.includes('plan') || reason.includes('Plan')) {
+            guardMsg = '📦 **Aktif planınız yok veya süresi dolmuş.** [Planları incele](/plans) ve planını yükselt.';
+          } else {
+            guardMsg = `🚫 **Erişim reddedildi:** ${reason} — [Planını yükselt](/plans)`;
+          }
+        }
+        updateLastMessage(guardMsg);
         return;
       }
 

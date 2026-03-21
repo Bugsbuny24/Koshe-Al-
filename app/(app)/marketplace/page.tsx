@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { ComingSoonCard } from '@/components/ui/ComingSoonCard';
 
 interface Project {
   id: string;
@@ -92,6 +93,12 @@ const PROJECTS: Project[] = [
 
 export default function MarketplacePage() {
   const [search, setSearch] = useState('');
+  const [infoVisible, setInfoVisible] = useState(false);
+
+  const showInfo = () => {
+    setInfoVisible(true);
+    setTimeout(() => setInfoVisible(false), 4000);
+  };
 
   const filtered = PROJECTS.filter(
     (p) =>
@@ -125,13 +132,25 @@ export default function MarketplacePage() {
             className="w-full pl-10 pr-4 py-2.5 bg-bg-card border border-white/8 rounded-xl text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-accent-blue/40"
           />
         </div>
-        <Button variant="outline" size="md">
+        <Button variant="outline" size="md" onClick={showInfo}>
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
           Proje Yükle
         </Button>
       </motion.div>
+
+      {/* Info toast */}
+      <AnimatePresence>
+        {infoVisible && (
+          <ComingSoonCard
+            icon="ℹ️"
+            title="Marketplace satın alma akışı henüz aktif değil"
+            message="Marketplace satın alma ve yükleme akışı V1 kapsamında henüz aktif değil. Bu özellik read-only demo modunda."
+            className="mb-6"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Featured */}
       <motion.div
@@ -188,7 +207,7 @@ export default function MarketplacePage() {
                   <span className={`font-bold text-sm ${project.price === 0 ? 'text-accent-green' : 'text-white'}`}>
                     {project.price === 0 ? 'Ücretsiz' : `$${project.price}`}
                   </span>
-                  <Button size="sm" variant={project.price === 0 ? 'secondary' : 'primary'}>
+                  <Button size="sm" variant={project.price === 0 ? 'secondary' : 'primary'} onClick={showInfo}>
                     {project.price === 0 ? 'İndir' : 'Satın Al'}
                   </Button>
                 </div>
