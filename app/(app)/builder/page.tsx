@@ -129,14 +129,14 @@ export default function BuilderPage() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex items-end justify-between">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-black text-white">Kod Üretici</h1>
+            <h1 className="text-2xl font-black text-white">Builder</h1>
             {fromChat && (
               <span className="text-xs font-semibold bg-accent-blue/15 text-accent-blue border border-accent-blue/20 px-2 py-0.5 rounded-lg">
                 Chat&apos;ten yönlendirildi
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-sm">Gemini Pro ile kod üretin — 5 kredi/istek</p>
+          <p className="text-slate-500 text-sm">Doğal dil ile kod üret — Chat ve Execution tarafından beslenebilir</p>
         </div>
         {quota && (
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-card border border-white/5 text-xs text-slate-400">

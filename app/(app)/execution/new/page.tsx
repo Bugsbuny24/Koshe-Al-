@@ -15,6 +15,11 @@ const TEMPLATES = [
   { id: 'hotel-landing', label: 'Hotel Landing Page', icon: '🏨' },
   { id: 'hotel-whatsapp', label: 'Hotel WhatsApp Flow', icon: '💬' },
   { id: 'hotel-offer', label: 'Hotel Offer Page', icon: '🎁' },
+  { id: 'marketing-page', label: 'Marketing / Promo Sayfası', icon: '📣' },
+  { id: 'offer-page', label: 'Teklif / Fiyat Sayfası', icon: '💼' },
+  { id: 'small-web', label: 'Küçük Web Projesi', icon: '🌐' },
+  { id: 'automation-script', label: 'Otomasyon / Script', icon: '⚙️' },
+  { id: 'internal-tool', label: 'İç Araç / Admin Panel', icon: '🔧' },
 ];
 
 type Step = 1 | 2 | 3 | 4 | 5;
@@ -818,7 +823,7 @@ export default function ExecutionNewPage() {
             )}
           </div>
           <p className="text-slate-400 mt-1 text-sm">
-            Brief&apos;ten teknik plana, görev kırılımına ve teslim checklist&apos;ine.
+            İşini anlat — gereksinim çıkarımından mimari plana, görev kırılımından teslim listesine.
           </p>
         </div>
 

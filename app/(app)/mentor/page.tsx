@@ -151,7 +151,7 @@ export default function MentorPage() {
               </span>
             )}
           </div>
-          <p className="text-slate-500 text-sm">Yapay zeka öğretmeninizle sohbet edin</p>
+          <p className="text-slate-500 text-sm">Öğrenme, rehberlik ve skill development akışları</p>
         </div>
         <div className="flex items-center gap-2">
           {quota && (
@@ -199,7 +199,7 @@ export default function MentorPage() {
               <div className="text-5xl mb-4">🧠</div>
               <h3 className="text-lg font-bold text-white mb-2">Koschei AI Mentor</h3>
               <p className="text-slate-500 text-sm max-w-sm">
-                Her konuyu sorabilirsiniz. Matematik, programlama, dil öğrenimi, tarih... AI mentörünüz hazır!
+                Öğrenmek, anlamak veya derinleştirmek istediğin konuyu anlat. Programlama, iş süreçleri, teknik konular ve daha fazlası...
               </p>
               <div className="mt-6 grid grid-cols-2 gap-2">
                 {[
