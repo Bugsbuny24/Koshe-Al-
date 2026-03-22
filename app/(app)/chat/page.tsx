@@ -16,25 +16,10 @@ export default function ChatPage() {
             K
           </div>
           <div>
-            <h1 className="text-2xl font-black text-white">Koschei Chat</h1>
+            <h1 className="text-2xl font-black text-white">Koschei</h1>
             <p className="text-slate-500 text-sm">
-              İhtiyacını anlat — doğru akışa yönlendirelim
+              İhtiyacını anlat — seni doğru akışa yönlendirelim
             </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6 mt-4 text-xs text-slate-600">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-accent-blue" />
-            Intake → Sınıflandırma
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-accent-green" />
-            Planlama Motoru
-          </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2 h-2 rounded-full bg-purple-500" />
-            Teslim &amp; Workspace
           </div>
         </div>
       </motion.div>

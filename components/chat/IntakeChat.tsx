@@ -3,11 +3,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
-import { IntentSummaryCard } from './IntentSummaryCard';
-import { FlowRecommendationCard } from './FlowRecommendationCard';
-import type { IntakeResult } from '@/types/intake';
-
-type Stage = 'idle' | 'analyzing' | 'result';
+import { UserBubble, AssistantBubble, TypingIndicator } from './ChatBubble';
+import { ConversationSummaryCard } from './ConversationSummaryCard';
+import { NextActionCard } from './NextActionCard';
+import type { ChatMessage, ChatTurnResult } from '@/types/intake';
 
 const QUICK_STARTS = [
   'Otelim için rezervasyon alabilen WhatsApp botu istiyorum',
@@ -20,48 +19,67 @@ const QUICK_STARTS = [
 
 export function IntakeChat() {
   const [input, setInput] = useState('');
-  const [stage, setStage] = useState<Stage>('idle');
-  const [result, setResult] = useState<IntakeResult | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [typing, setTyping] = useState(false);
+  const [lastTurn, setLastTurn] = useState<ChatTurnResult | null>(null);
   const [error, setError] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     textareaRef.current?.focus();
   }, []);
 
-  const handleAnalyze = useCallback(async (message?: string) => {
-    const text = (message ?? input).trim();
-    if (!text) return;
+  // Scroll to bottom after each new message or typing indicator change
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, typing, lastTurn]);
 
-    setStage('analyzing');
+  const sendMessage = useCallback(async (text?: string) => {
+    const userText = (text ?? input).trim();
+    if (!userText || typing) return;
+
+    // Append user bubble immediately
+    setMessages((prev) => [...prev, { role: 'user', content: userText }]);
+    setInput('');
+    setTyping(true);
     setError('');
-    setResult(null);
+    setLastTurn(null);
+
+    // Small artificial delay for typing feel
+    await new Promise((r) => setTimeout(r, 400 + Math.random() * 300));
 
     try {
       const res = await fetch('/api/intake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({ message: userText }),
       });
 
       const data = await res.json();
       if (!res.ok || !data.success) {
-        setError(data.error ?? 'Analiz başarısız');
-        setStage('idle');
+        setError(data.error ?? 'Bir hata oluştu, lütfen tekrar deneyin.');
+        setTyping(false);
         return;
       }
 
-      setResult(data.data as IntakeResult);
-      setStage('result');
+      const turn = data.data as ChatTurnResult;
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: turn.assistant_visible_reply },
+      ]);
+      setLastTurn(turn);
     } catch {
       setError('Bağlantı hatası. Lütfen tekrar deneyin.');
-      setStage('idle');
+    } finally {
+      setTyping(false);
+      setTimeout(() => textareaRef.current?.focus(), 100);
     }
-  }, [input]);
+  }, [input, typing]);
 
   const handleReset = () => {
-    setStage('idle');
-    setResult(null);
+    setMessages([]);
+    setLastTurn(null);
     setError('');
     setInput('');
     setTimeout(() => textareaRef.current?.focus(), 100);
@@ -70,139 +88,156 @@ export function IntakeChat() {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      void handleAnalyze();
+      void sendMessage();
     }
   };
 
+  const isIdle = messages.length === 0 && !typing;
+
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      {/* Intro */}
+    <div className="max-w-2xl mx-auto flex flex-col gap-4">
+      {/* Greeting — shown only before any message */}
       <AnimatePresence>
-        {stage === 'idle' && (
+        {isIdle && (
           <motion.div
+            key="greeting"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="text-center py-6"
+            className="text-center py-8"
           >
-            <div className="text-5xl mb-4">🤖</div>
-            <h2 className="text-xl font-bold text-white mb-2">Ne üretmemi istiyorsunuz?</h2>
+            <div className="text-5xl mb-4">👋</div>
+            <h2 className="text-xl font-bold text-white mb-2">Ne üretmek istiyorsun?</h2>
             <p className="text-slate-400 text-sm max-w-md mx-auto">
-              İhtiyacınızı doğal dilde yazın. Koschei isteği analiz edip sizi doğru akışa yönlendirecek.
+              İhtiyacını doğal dille yaz. Koschei seni doğru akışa yönlendirecek.
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Input area */}
-      {stage !== 'result' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="bg-bg-card border border-white/8 rounded-2xl p-4 space-y-3"
-        >
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Örn: Otelim için rezervasyon alabilen WhatsApp botu istiyorum..."
-            rows={3}
-            className="w-full bg-transparent text-slate-200 placeholder-slate-600 text-sm resize-none focus:outline-none leading-relaxed"
-            disabled={stage === 'analyzing'}
-          />
+      {/* Conversation messages */}
+      {messages.length > 0 && (
+        <div className="space-y-4 px-1">
+          {messages.map((msg, i) => {
+            const isLastAssistant =
+              msg.role === 'assistant' && i === messages.length - 1 && !typing;
 
-          {error && (
-            <p className="text-red-400 text-xs">{error}</p>
-          )}
+            if (msg.role === 'user') {
+              return <UserBubble key={i} content={msg.content} />;
+            }
 
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-slate-600">Enter ile analiz et</span>
-            <Button
-              onClick={() => void handleAnalyze()}
-              loading={stage === 'analyzing'}
-              disabled={!input.trim() || stage === 'analyzing'}
-              size="sm"
+            return (
+              <div key={i} className="space-y-3">
+                <AssistantBubble content={msg.content} />
+
+                {/* Summary + recommendation only for the latest assistant turn */}
+                {isLastAssistant && lastTurn && (
+                  <>
+                    {lastTurn.visible_summary && (
+                      <ConversationSummaryCard summary={lastTurn.visible_summary} />
+                    )}
+
+                    {lastTurn.visible_recommendation_title &&
+                      lastTurn.visible_recommendation_body &&
+                      lastTurn.cta && (
+                        <NextActionCard
+                          title={lastTurn.visible_recommendation_title}
+                          body={lastTurn.visible_recommendation_body}
+                          ctaLabel={lastTurn.cta.label}
+                          ctaHref={lastTurn.cta.href}
+                          onReset={handleReset}
+                        />
+                      )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+
+          {/* Typing indicator */}
+          {typing && (
+            <motion.div
+              key="typing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
             >
-              {stage === 'analyzing' ? 'Analiz ediliyor...' : 'Analiz Et →'}
-            </Button>
-          </div>
+              <TypingIndicator />
+            </motion.div>
+          )}
+        </div>
+      )}
+
+      {/* Single turn typing state (no messages yet) */}
+      {messages.length === 0 && typing && (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          <TypingIndicator />
         </motion.div>
       )}
 
-      {/* Quick starts */}
-      {stage === 'idle' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-        >
-          <p className="text-xs text-slate-600 mb-3 text-center">Hızlı başlangıç örnekleri:</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {QUICK_STARTS.map((qs) => (
-              <button
-                key={qs}
-                onClick={() => {
-                  setInput(qs);
-                  void handleAnalyze(qs);
-                }}
-                className="text-left text-xs text-slate-400 hover:text-white bg-bg-card hover:bg-bg-card-hover border border-white/5 rounded-xl px-3 py-2.5 transition-all"
-              >
-                {qs}
-              </button>
-            ))}
-          </div>
-        </motion.div>
+      {/* Error */}
+      {error && (
+        <p className="text-red-400 text-xs text-center">{error}</p>
       )}
 
-      {/* Analyzing state */}
-      {stage === 'analyzing' && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center py-8 gap-4"
-        >
-          <div className="flex gap-1.5">
-            {[0, 150, 300].map((delay) => (
-              <div
-                key={delay}
-                className="w-2.5 h-2.5 bg-accent-blue rounded-full animate-bounce"
-                style={{ animationDelay: `${delay}ms` }}
-              />
-            ))}
-          </div>
-          <p className="text-sm text-slate-400">Talebiniz analiz ediliyor...</p>
-        </motion.div>
-      )}
+      {/* Scroll anchor */}
+      <div ref={bottomRef} />
 
-      {/* Result */}
-      {stage === 'result' && result && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-4"
-        >
-          <div className="flex items-center gap-2 text-sm text-slate-400">
-            <div className="w-8 h-8 rounded-lg bg-accent-blue/20 border border-accent-blue/30 flex items-center justify-center text-sm">
-              🤖
+      {/* Input area */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="bg-bg-card border border-white/8 rounded-2xl p-4 space-y-3 sticky bottom-4"
+      >
+        <textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Bir şeyler yaz..."
+          rows={2}
+          className="w-full bg-transparent text-slate-200 placeholder-slate-600 text-sm resize-none focus:outline-none leading-relaxed"
+          disabled={typing}
+        />
+
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-slate-600">Enter ile gönder</span>
+          <Button
+            onClick={() => void sendMessage()}
+            loading={typing}
+            disabled={!input.trim() || typing}
+            size="sm"
+          >
+            {typing ? 'Düşünüyor...' : 'Gönder →'}
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Quick starts — only before first message */}
+      <AnimatePresence>
+        {isIdle && (
+          <motion.div
+            key="quick-starts"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <p className="text-xs text-slate-600 mb-3 text-center">Hızlı başlangıç örnekleri:</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {QUICK_STARTS.map((qs) => (
+                <button
+                  key={qs}
+                  onClick={() => void sendMessage(qs)}
+                  className="text-left text-xs text-slate-400 hover:text-white bg-bg-card hover:bg-bg-card-hover border border-white/5 rounded-xl px-3 py-2.5 transition-all"
+                >
+                  {qs}
+                </button>
+              ))}
             </div>
-            <span>Koschei talebinizi analiz etti:</span>
-          </div>
-
-          <div className="ml-10 space-y-3">
-            {/* User message bubble */}
-            <div className="bg-white/5 border border-white/8 rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-slate-300">
-              {result.raw_user_request}
-            </div>
-
-            {/* Intent summary */}
-            <IntentSummaryCard result={result} />
-
-            {/* Flow recommendation with routing */}
-            <FlowRecommendationCard result={result} onReset={handleReset} />
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
