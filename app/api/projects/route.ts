@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         title,
         description,
         prompt,
-        tech_stack,
+        tech_stack: tech_stack ? [tech_stack] : null,
       })
       .select()
       .single();
