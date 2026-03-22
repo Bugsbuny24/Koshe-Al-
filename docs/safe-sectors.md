@@ -199,10 +199,10 @@ Before any Industry Pack is scaffolded, the following check must pass:
 import { SAFE_SECTORS, PROHIBITED_SECTORS } from '@/lib/features/capabilities';
 
 function validateSector(slug: string): boolean {
-  if (PROHIBITED_SECTORS.includes(slug)) {
+  if ((PROHIBITED_SECTORS as readonly string[]).includes(slug)) {
     throw new Error(`Sector "${slug}" is prohibited. See docs/safe-sectors.md.`);
   }
-  return SAFE_SECTORS.includes(slug);
+  return (SAFE_SECTORS as readonly string[]).includes(slug);
 }
 ```
 

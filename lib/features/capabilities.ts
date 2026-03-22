@@ -1,7 +1,5 @@
 import type { FeatureFlagKey } from './flags';
-
-export type CapabilityStatus = 'planned' | 'scaffolded' | 'active';
-export type LayerOwner = 'intake' | 'planning' | 'production' | 'delivery' | 'intelligence';
+import type { CapabilityStatus, LayerOwner } from '@/types/roadmap';
 
 export type Capability = {
   id: string;
