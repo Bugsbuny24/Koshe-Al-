@@ -150,3 +150,5 @@ export default function PlannedModulePage({
     </motion.div>
   );
 }
+
+export { PlannedModulePage };
