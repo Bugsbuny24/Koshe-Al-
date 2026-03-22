@@ -77,7 +77,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Connector integrations: Notion, Google Drive, email, webhook |
 | **Layer** | delivery |
 | **Sits On** | V4 Production Engine + V5 Operational Intelligence |
-| **Affected Modules** | `/delivery`, `/connectors`, `/deals` |
+| **Affected Modules** | `/delivery`, `/deploy/connectors`, `/deals` |
 | **Flag** | `V6_DEPLOY_CONNECTORS` |
 
 **Risks:**
@@ -251,7 +251,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Industry-specific prompt libraries, intake flows, and deliverable templates |
 | **Layer** | planning |
 | **Sits On** | V1–V12 full platform |
-| **Affected Modules** | `/packs`, `/intake`, `/production` |
+| **Affected Modules** | `/industry`, `/intake`, `/production` |
 | **Flag** | `V13_INDUSTRY_PACKS` |
 
 **Risks:**
@@ -275,7 +275,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Sector knowledge bases, terminology dictionaries, context injectors |
 | **Layer** | intelligence |
 | **Sits On** | V13 Industry Packs |
-| **Affected Modules** | `/knowledge`, `/intelligence`, `/production` |
+| **Affected Modules** | `/industry`, `/intelligence`, `/production` |
 | **Flag** | `V14_SECTOR_KNOWLEDGE` |
 
 **Risks:**
@@ -299,7 +299,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Sector-specific deal pipelines, automation sequences, delivery flows |
 | **Layer** | production |
 | **Sits On** | V13 Industry Packs + V14 Sector Knowledge + V7 Autonomous Production |
-| **Affected Modules** | `/workflows`, `/execution`, `/packs` |
+| **Affected Modules** | `/industry`, `/autonomy`, `/production` |
 | **Flag** | `V15_SECTOR_WORKFLOWS` |
 
 **Risks:**
@@ -349,7 +349,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Load balancing, specialization routing, unit selection algorithms |
 | **Layer** | delivery |
 | **Sits On** | V16 Autonomous Units |
-| **Affected Modules** | `/routing`, `/units`, `/deals` |
+| **Affected Modules** | `/units/routing`, `/units`, `/deals` |
 | **Flag** | `V17_MULTI_UNIT_ROUTING` |
 
 **Risks:**
@@ -399,7 +399,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Industry trend detection, cross-company pattern recognition, early warnings |
 | **Layer** | intelligence |
 | **Sits On** | V9 Learning Engine + V18 Unit Analytics |
-| **Affected Modules** | `/intelligence`, `/analytics`, `/benchmark` |
+| **Affected Modules** | `/intelligence`, `/units/analytics`, `/network-intelligence/benchmarks` |
 | **Flag** | `V19_CROSS_COMPANY_INTELLIGENCE` |
 
 **Risks:**
@@ -424,7 +424,7 @@ intake → planning → production → delivery → intelligence
 | **Main Capability** | Percentile rankings, performance gap analysis, improvement recommendations |
 | **Layer** | intelligence |
 | **Sits On** | V19 Cross-Company Intelligence |
-| **Affected Modules** | `/benchmark`, `/analytics`, `/executive` |
+| **Affected Modules** | `/network-intelligence/benchmarks`, `/units/analytics`, `/executive` |
 | **Flag** | `V20_BENCHMARK_ENGINE` |
 
 **Risks:**

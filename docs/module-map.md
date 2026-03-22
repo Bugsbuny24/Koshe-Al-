@@ -174,22 +174,22 @@ Handles all analytics, learning, knowledge, and benchmarking.
 | Proposal Engine | `/proposals` |
 | Deal Structuring | `/deals` |
 | Production Engine | `/production` |
-| Operational Intelligence | `/analytics/ops` |
-| Deploy Connectors | `/connectors` |
-| Autonomous Production | `/execution/auto` |
+| Operational Intelligence | `/ops` |
+| Deploy Connectors | `/deploy/connectors` |
+| Autonomous Production | `/autonomy` |
 | Team / Company OS | `/team` |
-| Learning Engine | `/intelligence/learning` |
+| Learning Engine | `/intelligence` |
 | Revenue Operator | `/revenue` |
 | Operations Operator | `/operations` |
 | Executive Operator | `/executive` |
-| Industry Packs | `/packs` |
-| Sector Knowledge | `/knowledge` |
-| Sector Workflows | `/workflows` |
+| Industry Packs | `/industry` |
+| Sector Knowledge | `/industry` |
+| Sector Workflows | `/industry` |
 | Autonomous Units | `/units` |
-| Multi-Unit Routing | `/routing` |
-| Unit Analytics | `/analytics/units` |
-| Cross-Company Intelligence | `/intelligence/cross` |
-| Benchmark Engine | `/benchmark` |
+| Multi-Unit Routing | `/units/routing` |
+| Unit Analytics | `/units/analytics` |
+| Cross-Company Intelligence | `/network-intelligence` |
+| Benchmark Engine | `/network-intelligence/benchmarks` |
 
 ---
 
