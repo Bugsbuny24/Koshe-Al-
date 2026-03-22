@@ -22,6 +22,31 @@ const LANGUAGES = [
   { id: 'sql', label: 'SQL', ext: 'sql' },
 ];
 
+interface ReviewIssue {
+  severity: 'critical' | 'warning' | 'info';
+  line?: number;
+  description: string;
+  suggestion: string;
+}
+
+interface CodeReview {
+  summary: string;
+  score: number;
+  issues: ReviewIssue[];
+}
+
+const SEVERITY_STYLES: Record<ReviewIssue['severity'], string> = {
+  critical: 'bg-red-500/10 border-red-500/20 text-red-400',
+  warning: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+  info: 'bg-accent-blue/10 border-accent-blue/20 text-accent-blue',
+};
+
+const SEVERITY_ICONS: Record<ReviewIssue['severity'], string> = {
+  critical: '🔴',
+  warning: '🟡',
+  info: '🔵',
+};
+
 export default function BuilderPage() {
   const { quota, setQuota } = useStore();
   const searchParams = useSearchParams();
@@ -32,6 +57,10 @@ export default function BuilderPage() {
   const [error, setError] = useState('');
   const [guardType, setGuardType] = useState<'auth' | 'credits' | 'plan' | null>(null);
   const [copied, setCopied] = useState(false);
+  // RuView-inspired code review state
+  const [review, setReview] = useState<CodeReview | null>(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState('');
 
   // Pre-fill from chat intake
   const fromChat = searchParams.get('source') === 'chat';
@@ -105,8 +134,34 @@ export default function BuilderPage() {
     }
   };
 
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(code);
+  // RuView-inspired: AI code review
+  const handleReview = async () => {
+    const trimmed = code.trim();
+    if (!trimmed || trimmed === '# Kod burada görünecek') return;
+    setReviewLoading(true);
+    setReviewError('');
+    setReview(null);
+    try {
+      const res = await fetch('/api/builder/review', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed, language }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setReviewError(data.error || 'Kod incelemesi başarısız');
+        return;
+      }
+      const data = await res.json();
+      setReview(data);
+    } catch {
+      setReviewError('Bağlantı hatası. Lütfen tekrar deneyin.');
+    } finally {
+      setReviewLoading(false);
+    }
+  };
+
+  const handleCopy = async () => {    await navigator.clipboard.writeText(code);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -331,6 +386,117 @@ export default function BuilderPage() {
           </Card>
         </motion.div>
       </div>
+
+      {/* RuView-inspired Code Review Panel */}
+      {code && code.trim() !== '# Kod burada görünecek' && (
+        <motion.div
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mt-6"
+        >
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-white">Kod İncelemesi</h2>
+              <span className="text-[10px] text-slate-500 border border-white/5 bg-bg-card px-2 py-0.5 rounded-md">
+                RuView ilhamlı
+              </span>
+            </div>
+            <button
+              onClick={handleReview}
+              disabled={reviewLoading}
+              className="flex items-center gap-1.5 text-xs font-semibold bg-accent-blue/15 text-accent-blue border border-accent-blue/20 px-3 py-1.5 rounded-lg hover:bg-accent-blue/25 transition-colors disabled:opacity-50"
+            >
+              {reviewLoading ? (
+                <>
+                  <svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  İnceleniyor...
+                </>
+              ) : (
+                <>
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 4h6m-6 4h6m-6 4h3" />
+                  </svg>
+                  Kodu İncele
+                </>
+              )}
+            </button>
+          </div>
+
+          {reviewError && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-red-400 text-sm mb-3">
+              {reviewError}
+            </div>
+          )}
+
+          {review && (
+            <div className="rounded-xl border border-white/5 bg-bg-card p-5 space-y-4">
+              {/* Score + summary */}
+              <div className="flex items-start justify-between gap-4">
+                <p className="text-sm text-slate-400 leading-relaxed flex-1">{review.summary}</p>
+                <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+                  <span
+                    className={`text-2xl font-black ${
+                      review.score >= 80
+                        ? 'text-accent-green'
+                        : review.score >= 60
+                        ? 'text-amber-400'
+                        : 'text-red-400'
+                    }`}
+                  >
+                    {review.score}
+                  </span>
+                  <span className="text-[10px] text-slate-600 uppercase tracking-widest">/ 100</span>
+                </div>
+              </div>
+
+              {/* Issues */}
+              {review.issues.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+                    Bulunan Sorunlar ({review.issues.length})
+                  </p>
+                  {review.issues.map((issue, i) => (
+                    <div
+                      key={i}
+                      className={`rounded-lg border px-3 py-2.5 ${SEVERITY_STYLES[issue.severity]}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm mt-0.5">{SEVERITY_ICONS[issue.severity]}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-xs font-semibold uppercase">{issue.severity}</span>
+                            {issue.line && (
+                              <span className="text-[10px] font-mono text-slate-500">
+                                satır {issue.line}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-300 mb-1">{issue.description}</p>
+                          <p className="text-xs text-slate-500">
+                            <span className="font-semibold text-slate-400">Öneri: </span>
+                            {issue.suggestion}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-accent-green text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Herhangi bir sorun bulunamadı. Kod temiz görünüyor!
+                </div>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
     </div>
   );
 }

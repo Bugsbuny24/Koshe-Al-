@@ -191,6 +191,59 @@ export default function CoursesPage() {
           </Card>
         ))}
       </motion.div>
+
+      {/* build-your-own-x inspired challenges section */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+        className="mt-10"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <h2 className="text-lg font-black text-white">Kendi X&apos;ini İnşa Et</h2>
+          <span className="text-[10px] border border-white/5 bg-bg-card text-slate-500 px-2 py-0.5 rounded-md">
+            build-your-own-x ilhamlı
+          </span>
+        </div>
+        <p className="text-sm text-slate-400 mb-5">
+          Gerçek bir şey inşa ederek öğren. Her zorluk, popüler bir teknolojiyi sıfırdan
+          oluşturma deneyimi sunar — adım adım, proje tabanlı öğrenme.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { title: 'Kendi Git\'ini İnşa Et', desc: 'Version control sisteminin temellerini öğren — blob, tree, commit nesneleri.', icon: '🌿', difficulty: 'İleri' },
+            { title: 'Kendi HTTP Sunucunu İnşa Et', desc: 'TCP soketlerinden başlayarak sıfırdan bir web sunucusu yaz.', icon: '🌐', difficulty: 'Orta' },
+            { title: 'Kendi Redis\'ini İnşa Et', desc: 'Anahtar-değer deposu, TTL ve RESP protokolünü implement et.', icon: '🗄️', difficulty: 'İleri' },
+            { title: 'Kendi Docker\'ını İnşa Et', desc: 'Linux namespace ve cgroups kullanarak konteyner izolasyonu yaz.', icon: '🐳', difficulty: 'İleri' },
+            { title: 'Kendi Regex Motorunu İnşa Et', desc: 'NFA/DFA tabanlı düzenli ifade motorunu sıfırdan oluştur.', icon: '🔍', difficulty: 'Orta' },
+            { title: 'Kendi Shell\'ini İnşa Et', desc: 'REPL, pipe, yönlendirme ve job kontrolü ile bir kabuk yaz.', icon: '💻', difficulty: 'Orta' },
+          ].map((challenge) => (
+            <Card key={challenge.title} className="p-4 flex flex-col gap-3 hover:border-white/10 transition-colors cursor-pointer">
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-2xl">{challenge.icon}</span>
+                <Badge
+                  variant={
+                    challenge.difficulty === 'İleri'
+                      ? 'gold'
+                      : challenge.difficulty === 'Orta'
+                      ? 'blue'
+                      : 'green'
+                  }
+                >
+                  {challenge.difficulty}
+                </Badge>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white mb-1">{challenge.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{challenge.desc}</p>
+              </div>
+              <button className="mt-auto text-xs font-semibold text-accent-blue hover:underline text-left">
+                Zorluğu Başlat →
+              </button>
+            </Card>
+          ))}
+        </div>
+      </motion.div>
     </div>
   );
 }

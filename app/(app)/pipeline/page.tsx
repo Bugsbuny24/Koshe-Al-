@@ -57,6 +57,22 @@ const PIPELINE_TEMPLATES: PipelineTemplate[] = [
       'Ürün veya hizmet bilgisinden hedef kitle analizi yaparak landing page için başlık, özellik listesi ve CTA metni üretir.',
     nodeCount: 4,
   },
+  {
+    // Inspired by bytedance/deer-flow — multi-agent deep research framework
+    id: 'koschei-deep-research-v1',
+    name: 'Derin Araştırma',
+    description:
+      'Deer-Flow ilhamlı çok ajanlı araştırma akışı: Planner → Researcher → Synthesiser → Report Writer. Karmaşık bir araştırma sorusunu yapılandırılmış bir rapora dönüştürür.',
+    nodeCount: 4,
+  },
+  {
+    // Inspired by langchain-ai/open-swe — autonomous software engineering agent
+    id: 'koschei-swe-agent-v1',
+    name: 'Yazılım Mühendisi Ajanı',
+    description:
+      'open-swe ilhamlı otonom mühendislik döngüsü: Plan → Implement → Test → Review → Iterate. Bir mühendislik görevini adım adım çözer ve her adımı kayıt altına alır.',
+    nodeCount: 5,
+  },
 ];
 
 const NODE_STATUS_COLORS: Record<string, string> = {
