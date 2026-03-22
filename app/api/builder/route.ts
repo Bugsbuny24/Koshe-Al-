@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseRouteClient } from '@/lib/supabase/server';
 import { generateText, checkAccess } from '@/lib/gemini/client';
 
 function extractCode(text: string, language: string): string {
@@ -14,33 +14,12 @@ function extractCode(text: string, language: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createSupabaseServer();
-    
-    // Auth check
-    let userId: string | undefined;
-    const authHeader = req.headers.get('authorization');
-    if (authHeader) {
-      const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-      userId = user?.id;
-    }
+    const supabaseAuth = await createSupabaseRouteClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    const userId = user?.id;
 
     if (!userId) {
-      // Try via service role with cookies
-      const cookieHeader = req.headers.get('cookie') || '';
-      const tokenMatch = cookieHeader.match(/sb-[^-]+-auth-token=([^;]+)/);
-      if (tokenMatch) {
-        try {
-          const decoded = JSON.parse(decodeURIComponent(tokenMatch[1]));
-          const { data: { user: u } } = await supabase.auth.getUser(decoded?.access_token);
-          userId = u?.id;
-        } catch {
-          // ignore
-        }
-      }
-    }
-
-    if (!userId) {
-      return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+      return NextResponse.json({ error: 'Oturum açmanız gerekiyor. Lütfen giriş yapın.' }, { status: 401 });
     }
 
     const { prompt, language = 'python' } = await req.json();

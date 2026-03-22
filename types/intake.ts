@@ -1,11 +1,13 @@
 export type IntentType =
-  | 'landing_page'
+  | 'marketing_page'
   | 'offer_page'
-  | 'whatsapp_booking_flow'
+  | 'booking_flow'
   | 'simple_code_task'
-  | 'technical_web_project'
+  | 'web_project'
   | 'automation_task'
+  | 'internal_tool'
   | 'learning_request'
+  | 'growth_asset'
   | 'unknown';
 
 export type RecommendedFlow = 'execution' | 'builder' | 'mentor';

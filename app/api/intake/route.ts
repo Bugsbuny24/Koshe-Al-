@@ -15,8 +15,9 @@ interface AiChatResponse {
 }
 
 const VALID_INTENTS = new Set<IntentType>([
-  'landing_page', 'offer_page', 'whatsapp_booking_flow', 'simple_code_task',
-  'technical_web_project', 'automation_task', 'learning_request', 'unknown',
+  'marketing_page', 'offer_page', 'booking_flow', 'simple_code_task',
+  'web_project', 'automation_task', 'internal_tool', 'learning_request',
+  'growth_asset', 'unknown',
 ]);
 
 function buildConversationalPrompt(

@@ -1,40 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseAdmin, createSupabaseRouteClient } from '@/lib/supabase/server';
 
-async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSupabaseServer>): Promise<string | undefined> {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader) {
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (user?.id) return user.id;
-  }
-
-  const cookieHeader = req.headers.get('cookie') || '';
-  const tokenMatch = cookieHeader.match(/sb-[^-]+-auth-token=([^;]+)/);
-  if (tokenMatch) {
-    try {
-      const decoded = JSON.parse(decodeURIComponent(tokenMatch[1]));
-      const { data: { user: u } } = await supabase.auth.getUser(decoded?.access_token);
-      if (u?.id) return u.id;
-    } catch {
-      // ignore
-    }
-  }
-
-  return undefined;
-}
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
-    const supabase = createSupabaseServer();
-    const userId = await getUserId(req, supabase);
-    if (!userId) {
-      return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    const supabaseAuth = await createSupabaseRouteClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Oturum açmanız gerekiyor. Lütfen giriş yapın.' }, { status: 401 });
     }
 
+    const supabase = createSupabaseAdmin();
     const { data: projects, error } = await supabase
       .from('projects')
       .select('*')
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -50,11 +29,13 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   try {
-    const supabase = createSupabaseServer();
-    const userId = await getUserId(req, supabase);
-    if (!userId) {
-      return NextResponse.json({ error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
+    const supabaseAuth = await createSupabaseRouteClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user?.id) {
+      return NextResponse.json({ error: 'Oturum açmanız gerekiyor. Lütfen giriş yapın.' }, { status: 401 });
     }
+    const userId = user.id;
+    const supabase = createSupabaseAdmin();
 
     const body = await req.json();
     // Support both simplified fields (title/description/tech_stack) and legacy form fields
