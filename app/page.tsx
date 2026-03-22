@@ -1,16 +1,34 @@
 import { Navbar } from '@/components/layout/Navbar';
-import { Hero } from '@/components/landing/Hero';
-import { Features } from '@/components/landing/Features';
-import { Pricing } from '@/components/landing/Pricing';
+import { HeroSection } from '@/components/landing/HeroSection';
+import { ValueCardsSection } from '@/components/landing/ValueCardsSection';
+import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { ModulesSection } from '@/components/landing/ModulesSection';
+import { UseCasesSection } from '@/components/landing/UseCasesSection';
+import { WhyKoscheiSection } from '@/components/landing/WhyKoscheiSection';
+import { AudienceSection } from '@/components/landing/AudienceSection';
+import { FlowExampleSection } from '@/components/landing/FlowExampleSection';
+import { TrustStructureSection } from '@/components/landing/TrustStructureSection';
+import { PrimaryCtaSection } from '@/components/landing/PrimaryCtaSection';
+import { PricingTeaserSection } from '@/components/landing/PricingTeaserSection';
+import { FinalCtaSection } from '@/components/landing/FinalCtaSection';
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-bg-void">
       <Navbar />
       <main>
-        <Hero />
-        <Features />
-        <Pricing />
+        <HeroSection />
+        <ValueCardsSection />
+        <HowItWorksSection />
+        <ModulesSection />
+        <UseCasesSection />
+        <WhyKoscheiSection />
+        <AudienceSection />
+        <FlowExampleSection />
+        <TrustStructureSection />
+        <PrimaryCtaSection />
+        <PricingTeaserSection />
+        <FinalCtaSection />
       </main>
 
       {/* Footer */}
