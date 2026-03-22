@@ -18,7 +18,7 @@ export interface Project {
   description: string | null;
   prompt: string | null;
   generated_code: string | null;
-  tech_stack: string | null;
+  tech_stack: string[] | null;
   deploy_url: string | null;
   price_pi: number | null;
   is_published: boolean;

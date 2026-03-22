@@ -98,7 +98,7 @@ export default function ProjectOverviewPage() {
               {project.tech_stack && (
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Tür:</span>
-                  <span className="text-slate-200">{project.tech_stack}</span>
+                  <span className="text-slate-200">{project.tech_stack.join(', ')}</span>
                 </div>
               )}
               {project.deploy_url && (

@@ -63,7 +63,7 @@ export default function ProjectsPage() {
                   </div>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     {project.tech_stack && (
-                      <span className="text-xs font-medium text-slate-400 hidden md:block">{project.tech_stack}</span>
+                      <span className="text-xs font-medium text-slate-400 hidden md:block">{project.tech_stack.join(', ')}</span>
                     )}
                     {project.is_deployed && (
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-green">
