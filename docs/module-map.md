@@ -8,8 +8,12 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
+│                     INTEGRATION LAYER                           │
+│  dify · trigger.dev · mem0 · deer-flow · ruview · worldmonitor  │
+│                  superpowers · convex-ai-foundation             │
+├─────────────────────────────────────────────────────────────────┤
 │                        INTELLIGENCE                             │
-│    V5 · V9 · V12 · V14 · V18 · V19 · V20                      │
+│    V5 · V9 · V12 · V14 · V18 · V19 · V20                       │
 ├─────────────────────────────────────────────────────────────────┤
 │                         DELIVERY                                │
 │              V6 · V10 · V17                                     │
@@ -24,6 +28,8 @@
 │                       V1 · V8                                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+> See [`docs/integrations.md`](./integrations.md) for the full integration layer specification.
 
 ---
 

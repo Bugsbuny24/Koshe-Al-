@@ -15,7 +15,16 @@ export type FeatureFlagKey =
   | 'V17_MULTI_UNIT_ROUTING'
   | 'V18_UNIT_ANALYTICS'
   | 'V19_CROSS_COMPANY_INTELLIGENCE'
-  | 'V20_BENCHMARK_ENGINE';
+  | 'V20_BENCHMARK_ENGINE'
+  // Integration layer — external repos merged with --merge-strategy layered
+  | 'INT_DIFY_WORKFLOW'
+  | 'INT_TRIGGER_DEV'
+  | 'INT_CONVEX_AI_FOUNDATION'
+  | 'INT_MEM0_MEMORY'
+  | 'INT_DEER_FLOW_AGENTS'
+  | 'INT_RUVIEW_CODE_REVIEW'
+  | 'INT_WORLDMONITOR'
+  | 'INT_SUPERPOWERS';
 
 export type FeatureFlag = {
   key: FeatureFlagKey;
@@ -161,6 +170,71 @@ export const featureFlags: Record<FeatureFlagKey, FeatureFlag> = {
     label: 'Benchmark Engine',
     description:
       'Percentile rankings, performance gap analysis, and improvement recommendations versus industry peers.',
+  },
+  // ── Integration layer ──────────────────────────────────────────────────────
+  INT_DIFY_WORKFLOW: {
+    key: 'INT_DIFY_WORKFLOW',
+    enabled: false,
+    version: 'int',
+    label: 'Dify Workflow Integration',
+    description:
+      'Visual LLM workflow builder and RAG pipeline from Dify. Powers structured AI workflow execution in the Production Engine.',
+  },
+  INT_TRIGGER_DEV: {
+    key: 'INT_TRIGGER_DEV',
+    enabled: false,
+    version: 'int',
+    label: 'Trigger.dev Job Scheduler',
+    description:
+      'Background job and workflow scheduling via Trigger.dev. Enables reliable long-running AI production jobs and autonomous runs.',
+  },
+  INT_CONVEX_AI_FOUNDATION: {
+    key: 'INT_CONVEX_AI_FOUNDATION',
+    enabled: false,
+    version: 'int',
+    label: 'Next.js + Convex + AI Foundation',
+    description:
+      'Real-time backend patterns from the starter-nextjs-convex-ai template. Provides type-safe, AI-first data sync conventions.',
+  },
+  INT_MEM0_MEMORY: {
+    key: 'INT_MEM0_MEMORY',
+    enabled: false,
+    version: 'int',
+    label: 'Mem0 AI Memory Layer',
+    description:
+      'Persistent adaptive memory for AI agents via Mem0. Enables cross-session learning, user preference retention, and context recall.',
+  },
+  INT_DEER_FLOW_AGENTS: {
+    key: 'INT_DEER_FLOW_AGENTS',
+    enabled: false,
+    version: 'int',
+    label: 'DeerFlow Multi-Agent Framework',
+    description:
+      'ByteDance deep research and multi-agent orchestration. Powers autonomous multi-step planning and executive reporting flows.',
+  },
+  INT_RUVIEW_CODE_REVIEW: {
+    key: 'INT_RUVIEW_CODE_REVIEW',
+    enabled: false,
+    version: 'int',
+    label: 'RuView AI Code Review',
+    description:
+      'AI-powered code review and quality gate for generated deliverables. Surfaces issues before deployment via Deploy Connectors.',
+  },
+  INT_WORLDMONITOR: {
+    key: 'INT_WORLDMONITOR',
+    enabled: false,
+    version: 'int',
+    label: 'WorldMonitor Signal Monitor',
+    description:
+      'Global monitoring and external signal collection. Feeds trend data into Operational Intelligence and Cross-Company Intelligence.',
+  },
+  INT_SUPERPOWERS: {
+    key: 'INT_SUPERPOWERS',
+    enabled: false,
+    version: 'int',
+    label: 'Superpowers Developer Tools',
+    description:
+      'Developer productivity extensions for code generation, scaffolding, and automation in the Production and Operations pipelines.',
   },
 };
 
