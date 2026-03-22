@@ -98,7 +98,14 @@ export default function RoadmapPage() {
       {/* Header */}
       <div className="mb-10">
         <h1 className="text-3xl font-black text-white">Product Roadmap</h1>
-        <p className="text-slate-400 mt-1">V4–V20 Architecture Preview</p>
+        <p className="text-slate-400 mt-1">V4–V20 Future Scaffold Preview</p>
+        <div className="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/5 px-5 py-4 max-w-2xl">
+          <p className="text-sm font-semibold text-amber-400">🗓 Not active yet</p>
+          <p className="mt-1 text-sm text-slate-400">
+            All modules below are <strong className="text-slate-300">scaffolded</strong> or <strong className="text-slate-300">planned</strong> — no active logic runs.
+            V1–V3 (Chat, Execution, Workspace, Builder, Mentor) are the live active core.
+          </p>
+        </div>
       </div>
 
       {/* Phase groups */}

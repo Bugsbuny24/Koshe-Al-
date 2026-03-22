@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin, createSupabaseRouteClient } from '@/lib/supabase/server';
-import { generateJson } from '@/lib/ai/gemini';
-import { buildBriefCleanerPrompt } from '@/lib/ai/prompts';
+import { generateJson } from '@/lib/common/gemini';
+import { buildBriefCleanerPrompt } from '@/lib/common/prompts';
 import { AiBriefResult } from '@/types/freelancer';
 
 async function logAiRun(

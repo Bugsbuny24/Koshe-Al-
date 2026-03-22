@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateJson } from '@/lib/ai/gemini';
-import { classifyIntent, getConfidence } from '@/lib/intake/classifyIntent';
-import { buildClarifyingQuestions } from '@/lib/intake/buildClarifyingQuestions';
-import { mapIntentToFlow } from '@/lib/intake/mapIntentToFlow';
-import { mapIntentToTemplate } from '@/lib/intake/mapIntentToTemplate';
-import { generateVisibleReply } from '@/lib/intake/generateVisibleReply';
-import { formatRecommendation, formatVisibleSummary } from '@/lib/intake/formatRecommendation';
+import { generateJson } from '@/lib/common/gemini';
+import { classifyIntent, getConfidence } from '@/lib/chat/classifyIntent';
+import { buildClarifyingQuestions } from '@/lib/chat/buildClarifyingQuestions';
+import { mapIntentToFlow } from '@/lib/chat/mapIntentToFlow';
+import { mapIntentToTemplate } from '@/lib/chat/mapIntentToTemplate';
+import { generateVisibleReply } from '@/lib/chat/generateVisibleReply';
+import { formatRecommendation, formatVisibleSummary } from '@/lib/chat/formatRecommendation';
 import type { ChatTurnResult, IntentType, RecommendedFlow } from '@/types/intake';
 
 interface AiChatResponse {

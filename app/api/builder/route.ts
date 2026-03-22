@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseRouteClient } from '@/lib/supabase/server';
-import { generateText, checkAccess } from '@/lib/gemini/client';
+import { generateText, checkAccess } from '@/lib/common/gemini-client';
 
 function extractCode(text: string, language: string): string {
   // Try to extract code block from markdown

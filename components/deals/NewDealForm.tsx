@@ -138,11 +138,11 @@ export function NewDealForm() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Buyer ID</label>
+            <label className="text-xs text-slate-400 mb-1 block">Client ID</label>
             <Input value={buyerId} onChange={(e) => setBuyerId(e.target.value)} placeholder="uuid (opsiyonel)" />
           </div>
           <div>
-            <label className="text-xs text-slate-400 mb-1 block">Seller ID</label>
+            <label className="text-xs text-slate-400 mb-1 block">Operator ID</label>
             <Input value={sellerId} onChange={(e) => setSellerId(e.target.value)} placeholder="uuid (opsiyonel)" />
           </div>
         </div>

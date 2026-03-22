@@ -1,4 +1,4 @@
-import { generateJson } from '@/lib/ai/gemini';
+import { generateJson } from '@/lib/common/gemini';
 import { buildRequirementExtractorPrompt } from './prompts';
 import type { RequirementExtractionResult } from '@/types/execution';
 
