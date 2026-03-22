@@ -14,7 +14,7 @@ export default function ApprovalsPage() {
         'Approval history and audit trail',
       ]}
       dependsOn={['deals', 'execution']}
-      ownerLayer="delivery"
+      ownerLayer="intake"
       flagKey="V8_TEAM_WORKSPACE"
     />
   );
