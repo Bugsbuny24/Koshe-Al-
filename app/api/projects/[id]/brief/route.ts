@@ -1,29 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseAdmin, createSupabaseRouteClient } from '@/lib/supabase/server';
 import { generateJson } from '@/lib/ai/gemini';
 import { buildBriefCleanerPrompt } from '@/lib/ai/prompts';
 import { AiBriefResult } from '@/types/freelancer';
 
-async function getUserId(req: NextRequest, supabase: ReturnType<typeof createSupabaseServer>): Promise<string | undefined> {
-  const authHeader = req.headers.get('authorization');
-  if (authHeader) {
-    const { data: { user } } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
-    if (user?.id) return user.id;
-  }
-  const cookieHeader = req.headers.get('cookie') || '';
-  const tokenMatch = cookieHeader.match(/sb-[^-]+-auth-token=([^;]+)/);
-  if (tokenMatch) {
-    try {
-      const decoded = JSON.parse(decodeURIComponent(tokenMatch[1]));
-      const { data: { user: u } } = await supabase.auth.getUser(decoded?.access_token);
-      if (u?.id) return u.id;
-    } catch { /* ignore */ }
-  }
-  return undefined;
-}
-
 async function logAiRun(
-  supabase: ReturnType<typeof createSupabaseServer>,
+  supabase: ReturnType<typeof createSupabaseAdmin>,
   data: Record<string, unknown>
 ) {
   try {
@@ -37,17 +19,18 @@ export async function POST(
 ) {
   try {
     const { id } = await params;
-    const supabase = createSupabaseServer();
-    const userId = await getUserId(req, supabase);
-    if (!userId) {
+    const supabaseAuth = await createSupabaseRouteClient();
+    const { data: { user } } = await supabaseAuth.auth.getUser();
+    if (!user?.id) {
       return NextResponse.json({ success: false, error: 'Kimlik doğrulaması gerekli' }, { status: 401 });
     }
 
+    const supabase = createSupabaseAdmin();
     const { data: project, error: pErr } = await supabase
       .from('projects')
       .select('description, prompt, title, tech_stack')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('user_id', user.id)
       .single();
 
     if (pErr || !project) {
@@ -68,7 +51,7 @@ export async function POST(
       const errMsg = aiErr instanceof Error ? aiErr.message : 'AI hatası';
       await logAiRun(supabase, {
         project_id: id,
-        user_id: userId,
+        user_id: user.id,
         run_type: 'brief',
         input: rawBrief,
         output: JSON.stringify({ error: errMsg }),
@@ -85,7 +68,7 @@ export async function POST(
 
     await logAiRun(supabase, {
       project_id: id,
-      user_id: userId,
+      user_id: user.id,
       run_type: 'brief',
       input: rawBrief,
       output: JSON.stringify(result),
