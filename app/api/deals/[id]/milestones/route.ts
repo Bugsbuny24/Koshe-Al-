@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { generateJson } from '@/lib/ai/gemini';
-import { buildMilestonePlanPrompt } from '@/lib/ai/prompts';
+import { generateJson } from '@/lib/common/gemini';
+import { buildMilestonePlanPrompt } from '@/lib/common/prompts';
 import { buildMilestonesFromTemplate, isMilestoneTemplateKey } from '@/lib/deals/milestoneTemplates';
 import { AiMilestonePlanResult } from '@/types/deals';
 

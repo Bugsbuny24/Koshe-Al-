@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseAdmin } from '@/lib/supabase/server';
-import { generateJson } from '@/lib/ai/gemini';
-import { buildRevisionParsePrompt } from '@/lib/ai/prompts';
+import { generateJson } from '@/lib/common/gemini';
+import { buildRevisionParsePrompt } from '@/lib/common/prompts';
 import { AiRevisionParseResult, DealRevision } from '@/types/deals';
 import { mapDealRevisionToExecution } from '@/lib/flow/mapDealRevisionToExecution';
 

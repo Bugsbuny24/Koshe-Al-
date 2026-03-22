@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { generateJson } from '@/lib/ai/gemini';
-import { buildScopeLockPrompt } from '@/lib/ai/prompts';
+import { generateJson } from '@/lib/common/gemini';
+import { buildScopeLockPrompt } from '@/lib/common/prompts';
 import { AiScopeLockResult } from '@/types/deals';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

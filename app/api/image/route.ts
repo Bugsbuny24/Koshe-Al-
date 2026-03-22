@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { checkAccess, deductCredits, MODELS, getGenAI } from '@/lib/gemini/client';
+import { checkAccess, deductCredits, MODELS, getGenAI } from '@/lib/common/gemini-client';
 
 export async function POST(req: NextRequest) {
   try {

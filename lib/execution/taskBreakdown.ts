@@ -1,4 +1,4 @@
-import { generateJson } from '@/lib/ai/gemini';
+import { generateJson } from '@/lib/common/gemini';
 import { buildTaskBreakdownPrompt } from './prompts';
 import type { RequirementExtractionResult, ArchitecturePlanResult, TaskBreakdownResult } from '@/types/execution';
 

@@ -27,12 +27,12 @@ export default function SettingsPage() {
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-black text-white">Ayarlar</h1>
-        <p className="text-slate-400 mt-1 text-sm">Freelancer profilini ve tercihlerini düzenle.</p>
+        <p className="text-slate-400 mt-1 text-sm">Profilini ve tercihlerini düzenle.</p>
       </div>
 
       <div className="space-y-5">
         <Card className="p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Freelancer Profili</h2>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Profil</h2>
           <Input
             label="Adın / Markan"
             placeholder="Ahmet Yılmaz veya AY Digital"

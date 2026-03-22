@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSupabaseServer } from '@/lib/supabase/server';
-import { streamText, checkAccess } from '@/lib/gemini/client';
-import type { FeatureKey } from '@/lib/gemini/client';
+import { streamText, checkAccess } from '@/lib/common/gemini-client';
+import type { FeatureKey } from '@/lib/common/gemini-client';
 
 const SYSTEM_INSTRUCTION = `Sen Koschei AI - yapay zeka destekli bir eğitim platformunun akıllı mentörüsün.
 
