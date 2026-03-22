@@ -1,6 +1,12 @@
 import type { ExecutiveKPI } from '@/types/executive';
 import { KPI_CATEGORY_LABELS, KPI_STATUS_CONFIG } from '@/lib/executive/kpiTypes';
 
+const KPI_STATUS_TEXT_COLOR: Record<ExecutiveKPI['status'], string> = {
+  on_track: 'text-green-400',
+  at_risk: 'text-yellow-400',
+  off_track: 'text-red-400',
+};
+
 interface ExecutiveKpiCardProps {
   kpi: ExecutiveKPI;
 }
@@ -20,7 +26,7 @@ export default function ExecutiveKpiCard({ kpi }: ExecutiveKpiCardProps) {
         <span className="text-xs font-medium uppercase tracking-widest text-slate-500">
           {KPI_CATEGORY_LABELS[kpi.category]}
         </span>
-        <span className={`text-xs font-semibold text-${statusConfig.color}-400`}>
+        <span className={`text-xs font-semibold ${KPI_STATUS_TEXT_COLOR[kpi.status]}`}>
           {statusConfig.label}
         </span>
       </div>

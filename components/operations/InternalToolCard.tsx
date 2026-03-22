@@ -1,6 +1,13 @@
 import type { InternalTool } from '@/types/operations';
 import { INTERNAL_TOOL_CATEGORY_LABELS, TOOL_STATUS_CONFIG } from '@/lib/operations/internalToolTypes';
 
+const STATUS_TEXT_COLOR: Record<InternalTool['status'], string> = {
+  planned: 'text-yellow-400',
+  building: 'text-blue-400',
+  active: 'text-green-400',
+  deprecated: 'text-red-400',
+};
+
 interface InternalToolCardProps {
   tool: InternalTool;
 }
@@ -14,7 +21,7 @@ export default function InternalToolCard({ tool }: InternalToolCardProps) {
         <span className="text-xs font-medium uppercase tracking-widest text-slate-500">
           {INTERNAL_TOOL_CATEGORY_LABELS[tool.category]}
         </span>
-        <span className={`text-xs font-semibold text-${statusConfig.color}-400`}>
+        <span className={`text-xs font-semibold ${STATUS_TEXT_COLOR[tool.status]}`}>
           {statusConfig.label}
         </span>
       </div>

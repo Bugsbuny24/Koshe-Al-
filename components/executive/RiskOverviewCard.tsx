@@ -8,6 +8,13 @@ const STATUS_COLOR: Record<RiskOverview['status'], string> = {
   accepted: 'text-slate-400',
 };
 
+const RISK_LEVEL_TEXT_COLOR: Record<string, string> = {
+  low: 'text-green-400',
+  medium: 'text-yellow-400',
+  high: 'text-orange-400',
+  critical: 'text-red-400',
+};
+
 interface RiskOverviewCardProps {
   risk: RiskOverview;
 }
@@ -22,7 +29,7 @@ export default function RiskOverviewCard({ risk }: RiskOverviewCardProps) {
           {RISK_CATEGORY_LABELS[risk.category]}
         </span>
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-semibold text-${riskLevel.color}-400`}>
+          <span className={`text-xs font-semibold ${RISK_LEVEL_TEXT_COLOR[riskLevel.level]}`}>
             {riskLevel.label}
           </span>
           <span className={`text-xs font-semibold capitalize ${STATUS_COLOR[risk.status]}`}>
