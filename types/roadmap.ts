@@ -44,3 +44,17 @@ export type FutureModuleDescriptor = {
   depends_on: string[];
   flag_key: string;
 };
+
+export type DBTableStage = 'active_core' | 'scaffolded' | 'risky_excluded';
+
+export type DBRiskLevel = 'safe' | 'regulated' | 'prohibited';
+
+export type DBModuleDescriptor = {
+  module: string;
+  version_range: [RoadmapVersion, RoadmapVersion] | [RoadmapVersion];
+  table_names: string[];
+  stage: DBTableStage;
+  risk_level: DBRiskLevel;
+  active: boolean;
+  migration_file?: string;
+};
