@@ -8,6 +8,9 @@ import { StatCard } from '@/components/dashboard/StatCard';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Project } from '@/types/freelancer';
+import { capabilities } from '@/lib/features/capabilities';
+
+const TEASER_MODULES = capabilities.slice(0, 4);
 
 export default function DashboardPage() {
   const { profile } = useStore();
@@ -123,6 +126,40 @@ export default function DashboardPage() {
             ))}
           </div>
         )}
+      </motion.div>
+
+      {/* Upcoming Modules teaser */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+        className="mt-10"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-bold text-white">Upcoming Modules</h2>
+          <Link href="/roadmap">
+            <Button variant="ghost" size="sm">View Roadmap →</Button>
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {TEASER_MODULES.map((cap) => (
+            <div
+              key={cap.id}
+              className="bg-bg-card border border-white/5 rounded-xl p-4 flex flex-col gap-2"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  {cap.version.toUpperCase()}
+                </span>
+                <span className="text-[10px] font-semibold bg-amber-500/15 text-amber-400 px-1.5 py-0.5 rounded-md">
+                  Scaffolded
+                </span>
+              </div>
+              <p className="text-sm font-semibold text-white leading-snug">{cap.name}</p>
+              <p className="text-xs text-slate-500 line-clamp-2">{cap.summary}</p>
+            </div>
+          ))}
+        </div>
       </motion.div>
     </div>
   );
