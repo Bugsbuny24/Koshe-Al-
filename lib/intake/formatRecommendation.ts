@@ -25,13 +25,15 @@ const FLOW_COPY: Record<RecommendedFlow, { title: string; body: string; cta: str
 };
 
 const INTENT_SUMMARY: Partial<Record<IntentType, string>> = {
-  landing_page: 'Açılış sayfası oluşturma',
+  marketing_page: 'Pazarlama / açılış sayfası',
   offer_page: 'Teklif / fiyatlandırma sayfası',
-  whatsapp_booking_flow: 'WhatsApp rezervasyon akışı',
+  booking_flow: 'Rezervasyon ve randevu akışı',
   simple_code_task: 'Kod geliştirme görevi',
-  technical_web_project: 'Web / uygulama projesi',
+  web_project: 'Web / uygulama projesi',
   automation_task: 'Otomasyon ve entegrasyon',
+  internal_tool: 'İç araç / admin panel',
   learning_request: 'Öğrenme ve keşif',
+  growth_asset: 'Büyüme varlığı / içerik',
 };
 
 /**

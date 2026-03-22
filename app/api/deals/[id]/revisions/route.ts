@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createSupabaseServer } from '@/lib/supabase/server';
+import { createSupabaseAdmin } from '@/lib/supabase/server';
 import { generateJson } from '@/lib/ai/gemini';
 import { buildRevisionParsePrompt } from '@/lib/ai/prompts';
-import { AiRevisionParseResult } from '@/types/deals';
+import { AiRevisionParseResult, DealRevision } from '@/types/deals';
+import { mapDealRevisionToExecution } from '@/lib/flow/mapDealRevisionToExecution';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const supabase = createSupabaseServer();
+    const supabase = createSupabaseAdmin();
     const { data, error } = await supabase
       .from('deal_revisions')
       .select('*')
@@ -24,7 +25,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const supabase = createSupabaseServer();
+    const supabase = createSupabaseAdmin();
 
     let body: Record<string, unknown>;
     try {
@@ -79,6 +80,50 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       event_type: 'revision_requested',
       payload_json: { milestone_id: milestoneId, scope_status: aiResult?.scope_status },
     });
+
+    // ── Back-link revision feedback to execution run ──────────────────────────
+    // Find an execution run linked to this deal and append the revision note.
+    try {
+      const { data: linkedRuns } = await supabase
+        .from('execution_runs')
+        .select('id, revision_notes_json')
+        .eq('deal_id', id)
+        .limit(1);
+
+      const linkedRun = linkedRuns?.[0];
+      if (linkedRun && revision) {
+        const revisionData = revision as DealRevision;
+        const summary = mapDealRevisionToExecution(revisionData);
+
+        const revisionNote = {
+          type: 'deal_revision' as const,
+          deal_id: id,
+          revision_id: revisionData.id,
+          created_at: revisionData.created_at,
+          milestone_id: milestoneId ?? null,
+          summary: summary.summary,
+          requested_changes: aiResult?.requested_changes ?? [],
+          action_items: summary.action_items,
+          severity: (summary.scope_impact ? 'high' : 'low') as 'low' | 'medium' | 'high',
+        };
+
+        // Existing notes — safely parse as array, then append
+        let existing: unknown[] = [];
+        if (Array.isArray(linkedRun.revision_notes_json)) {
+          existing = linkedRun.revision_notes_json as unknown[];
+        } else if (linkedRun.revision_notes_json !== null && linkedRun.revision_notes_json !== undefined && typeof linkedRun.revision_notes_json === 'object') {
+          existing = [linkedRun.revision_notes_json];
+        }
+
+        await supabase
+          .from('execution_runs')
+          .update({ revision_notes_json: [...existing, revisionNote] })
+          .eq('id', linkedRun.id);
+      }
+    } catch (linkErr) {
+      // Non-fatal: log but don't block revision creation
+      console.error('execution run revision back-link failed:', linkErr);
+    }
 
     return NextResponse.json({ success: true, revision, aiResult }, { status: 201 });
   } catch (err) {

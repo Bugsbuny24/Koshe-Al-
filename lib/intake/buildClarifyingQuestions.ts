@@ -1,7 +1,7 @@
 import type { IntentType } from '@/types/intake';
 
 const CLARIFYING_QUESTIONS: Record<IntentType, string[]> = {
-  landing_page: [
+  marketing_page: [
     'Hangi sektör veya ürün için bir açılış sayfası istiyorsunuz?',
     'Sayfanın birincil amacı nedir? (lead toplama, satış, tanıtım)',
     'Mevcut bir marka kimliğiniz var mı? (renk, logo, ton)',
@@ -11,7 +11,7 @@ const CLARIFYING_QUESTIONS: Record<IntentType, string[]> = {
     'Kaç adet paket veya fiyat seçeneği olmasını istiyorsunuz?',
     'Hedef kitleniz kimler?',
   ],
-  whatsapp_booking_flow: [
+  booking_flow: [
     'Hangi tür rezervasyon veya randevu akışı gerekiyor?',
     'Müşteriler hangi bilgileri dolduracak? (isim, tarih, hizmet)',
     'Onay bildirimi nasıl gönderilmeli? (otomatik mesaj, e-posta)',
@@ -21,26 +21,34 @@ const CLARIFYING_QUESTIONS: Record<IntentType, string[]> = {
     'Bu kodun tam olarak ne yapmasını istiyorsunuz?',
     'Herhangi bir kısıtlama veya özel gereksinim var mı?',
   ],
-  technical_web_project: [
+  web_project: [
     'Projenin ana amacı ve hedef kitlesi nedir?',
     'Hangi temel özellikler olmalı?',
     'Tercih ettiğiniz bir teknoloji stack var mı?',
-    'Projenin tahmini kapsamı ve teslim tarihi nedir?',
   ],
   automation_task: [
     'Hangi süreç veya iş akışını otomatikleştirmek istiyorsunuz?',
     'Hangi araçlar veya platformlar kullanılıyor? (Slack, Google Sheets, vb.)',
     'Tetikleyici olay nedir ve sonuç ne olmalı?',
   ],
+  internal_tool: [
+    'Bu araç ekibinizin hangi sorununu çözecek?',
+    'Kaç kişi kullanacak ve hangi veriyi görecek?',
+    'Mevcut bir sisteme entegre olması gerekiyor mu?',
+  ],
   learning_request: [
     'Hangi konuyu öğrenmek istiyorsunuz?',
     'Mevcut bilgi seviyeniz nedir? (başlangıç, orta, ileri)',
     'Pratik mi yoksa teorik öğrenmeyi mi tercih edersiniz?',
   ],
+  growth_asset: [
+    'Büyüme hedefiniz nedir? (daha fazla müşteri, daha fazla gelir, farkındalık)',
+    'Hedef kitleniz kim ve hangi kanalda ulaşmak istiyorsunuz?',
+    'Mevcut en büyük darboğaz nerede?',
+  ],
   unknown: [
     'Projeniz veya talebiniz hakkında daha fazla detay verebilir misiniz?',
     'Çıktı olarak ne elde etmek istiyorsunuz?',
-    'Bu talep ne zaman tamamlanmalı?',
   ],
 };
 
