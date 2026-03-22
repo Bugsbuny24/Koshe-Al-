@@ -26,10 +26,20 @@ export type ArtifactTypeConfig = {
   color: string;
 };
 
+const ARTIFACT_TYPE_COLORS: Record<ArtifactType, string> = {
+  document: 'text-pi-gold',
+  code: 'text-accent-blue',
+  report: 'text-accent-green',
+  presentation: 'text-pi-gold',
+  data: 'text-accent-blue',
+  media: 'text-accent-green',
+  other: 'text-slate-400',
+};
+
 export function getArtifactTypeConfig(type: ArtifactType): ArtifactTypeConfig {
   return {
     label: ARTIFACT_TYPE_LABELS[type],
     icon: ARTIFACT_TYPE_ICONS[type],
-    color: type === 'code' ? 'text-accent-blue' : type === 'report' ? 'text-accent-green' : 'text-pi-gold',
+    color: ARTIFACT_TYPE_COLORS[type],
   };
 }

@@ -5,7 +5,7 @@ export default function OpsFeedbackPage() {
     <PlannedModulePage
       title="Feedback Inbox"
       version="V5"
-      summary="Centralised inbox for feedback across deals, executions, and deliveries. Triage, resolve, and act on quality signals."
+      summary="Centralized inbox for feedback across deals, executions, and deliveries. Triage, resolve, and act on quality signals."
       status="scaffolded"
       plannedCapabilities={[
         'Cross-source feedback aggregation',

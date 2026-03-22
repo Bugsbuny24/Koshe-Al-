@@ -9,7 +9,7 @@ export function FeedbackInboxCard() {
           V5
         </span>
       </div>
-      <p className="text-slate-400 text-xs mb-4">Centralised feedback from deals, executions, and deliveries.</p>
+      <p className="text-slate-400 text-xs mb-4">Centralized feedback from deals, executions, and deliveries.</p>
       <div className="flex gap-4 text-xs">
         <div>
           <span className="text-slate-500">Open</span>

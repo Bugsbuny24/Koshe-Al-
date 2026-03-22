@@ -5,7 +5,7 @@ export default function OpsPage() {
     <PlannedModulePage
       title="Operational Intelligence"
       version="V5"
-      summary="Monitor and optimise the health of your workflow. Surface bottlenecks, quality signals, and feedback across the full delivery pipeline."
+      summary="Monitor and optimize the health of your workflow. Surface bottlenecks, quality signals, and feedback across the full delivery pipeline."
       status="scaffolded"
       plannedCapabilities={[
         'Workflow health monitoring',
