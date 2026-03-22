@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 
 export function HeroSection() {
   return (
-    <section className="relative min-h-[90vh] flex items-start justify-center overflow-hidden pt-24 md:pt-28 pb-16">
+    <section className="relative min-h-[80vh] flex items-start justify-center overflow-hidden pt-16 md:pt-20 pb-16">
       {/* Background glow orbs */}
       <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-accent-blue/8 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-accent-green/6 rounded-full blur-3xl pointer-events-none" />
