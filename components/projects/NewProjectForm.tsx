@@ -44,6 +44,7 @@ export function NewProjectForm() {
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [linkWarning, setLinkWarning] = useState('');
   const [fromTemplate, setFromTemplate] = useState('');
   const [fromExecution, setFromExecution] = useState(false);
   const [executionRunId, setExecutionRunId] = useState<string | null>(null);
@@ -101,16 +102,22 @@ export function NewProjectForm() {
 
       const projectId: string = data.project.id;
 
-      // Back-link execution run to this project
+      // Back-link execution run to this project (non-blocking)
       if (executionRunId) {
         try {
-          await fetch(`/api/execution/runs/${executionRunId}`, {
+          const linkRes = await fetch(`/api/execution/runs/${executionRunId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ project_id: projectId, status: 'linked_to_project' }),
           });
+          if (!linkRes.ok) {
+            const linkData = await linkRes.json().catch(() => ({}));
+            console.warn('execution run back-link failed:', linkData?.error);
+            setLinkWarning('Execution run projeye bağlanamadı, ancak proje oluşturuldu.');
+          }
         } catch (linkErr) {
           console.error('execution run back-link failed:', linkErr);
+          setLinkWarning('Execution run bağlantısı kurulamadı, ancak proje oluşturuldu.');
         }
       }
 
@@ -192,6 +199,12 @@ export function NewProjectForm() {
       {error && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-lg px-4 py-3 text-sm text-red-400">
           {error}
+        </div>
+      )}
+
+      {linkWarning && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg px-4 py-3 text-sm text-amber-400">
+          ⚠️ {linkWarning}
         </div>
       )}
 

@@ -536,6 +536,15 @@ function Step5({
           🔄 Tekrar Üret
         </button>
       </div>
+      {savedRunId && (
+        <div className="flex items-start gap-2 bg-white/3 border border-white/8 rounded-xl px-4 py-3 text-xs text-slate-400">
+          <span className="shrink-0 text-accent-green">●</span>
+          <span>
+            Execution run kaydedildi. Deal&apos;e bağlandığında revizyon notları otomatik olarak bu run&apos;a eklenir ve takip edilebilir hale gelir.
+          </span>
+        </div>
+      )}
+
       <div className="flex justify-end pt-1">
         <button
           type="button"
