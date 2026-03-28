@@ -1,0 +1,91 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: adgenius
+      POSTGRES_PASSWORD: adgenius
+      POSTGRES_DB: adgenius
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U adgenius"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://adgenius:adgenius@postgres:5432/adgenius
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY:-changeme-in-production-use-long-random-string}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      ENABLE_TIKTOK_CONNECT: ${ENABLE_TIKTOK_CONNECT:-false}
+      ENABLE_META_CONNECT: ${ENABLE_META_CONNECT:-false}
+      ENABLE_GOOGLE_CONNECT: ${ENABLE_GOOGLE_CONNECT:-false}
+      ENABLE_PUBLISHING: ${ENABLE_PUBLISHING:-false}
+      CORS_ORIGINS: '["http://localhost:3000"]'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head && python seed.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://adgenius:adgenius@postgres:5432/adgenius
+      REDIS_URL: redis://redis:6379
+      SECRET_KEY: ${SECRET_KEY:-changeme-in-production-use-long-random-string}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      ENABLE_TIKTOK_CONNECT: ${ENABLE_TIKTOK_CONNECT:-false}
+      ENABLE_META_CONNECT: ${ENABLE_META_CONNECT:-false}
+      ENABLE_GOOGLE_CONNECT: ${ENABLE_GOOGLE_CONNECT:-false}
+      ENABLE_PUBLISHING: ${ENABLE_PUBLISHING:-false}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.tasks.celery_app worker --loglevel=info -Q default
+
+  web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  postgres_data:
+  redis_data:
