@@ -12,15 +12,9 @@ import { ConfirmDialog } from '@/components/common/confirm-dialog'
 import { EmptyState } from '@/components/common/empty-state'
 import { useCampaigns, useDeleteCampaign } from '@/hooks/use-campaigns'
 import { useCreateGenerationJob } from '@/hooks/use-generation'
-import { formatDate, getObjectiveLabel, getToneLabel, getPlatformLabel } from '@/lib/utils'
+import { formatDate, getObjectiveLabel, getToneLabel, getAdFormatLabel } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { CampaignBrief, Platform } from '@/types/api'
-
-const platformVariants: Record<Platform, 'google' | 'meta' | 'tiktok'> = {
-  GOOGLE: 'google',
-  META: 'meta',
-  TIKTOK: 'tiktok',
-}
+import type { CampaignBrief } from '@/types/api'
 
 export default function CampaignsPage() {
   const router = useRouter()
@@ -90,7 +84,7 @@ export default function CampaignsPage() {
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50 text-xs font-medium uppercase tracking-wider text-slate-500">
                   <th className="px-6 py-3 text-left">Campaign</th>
-                  <th className="px-6 py-3 text-left">Platforms</th>
+                  <th className="px-6 py-3 text-left">Ad Formats</th>
                   <th className="px-6 py-3 text-left">Objective</th>
                   <th className="px-6 py-3 text-left">Tone</th>
                   <th className="px-6 py-3 text-left">Created</th>
@@ -110,9 +104,9 @@ export default function CampaignsPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-wrap gap-1">
-                        {campaign.platforms.map((p) => (
-                          <Badge key={p} variant={platformVariants[p]} className="text-xs">
-                            {getPlatformLabel(p)}
+                        {campaign.ad_formats.map((f) => (
+                          <Badge key={f} variant="secondary" className="text-xs">
+                            {getAdFormatLabel(f)}
                           </Badge>
                         ))}
                       </div>

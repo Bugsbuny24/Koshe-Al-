@@ -27,7 +27,7 @@ def run_async(coro):
 async def _execute_generation(job_id: str):
     from app.database import AsyncSessionLocal
     from app.models.generation import GenerationJob, GeneratedAdSet, GeneratedAdVariant, JobStatus
-    from app.models.campaign import CampaignBrief, Platform
+    from app.models.campaign import CampaignBrief, AdFormat
     from app.ai.gemini_provider import GeminiProvider
     from sqlalchemy import select
     from sqlalchemy.orm import selectinload
@@ -77,62 +77,79 @@ async def _execute_generation(job_id: str):
             await db.flush()
             await db.refresh(ad_set)
 
-            # Create variants for each platform
-            platforms = brief.platforms or []
+            # Create variants for each ad format
+            ad_formats = brief.ad_formats or []
             variants = []
 
-            if output.google_ads and (Platform.GOOGLE.value in platforms or "GOOGLE" in platforms):
-                g = output.google_ads
-                google_data = g.model_dump()
+            if output.banner_ads and (AdFormat.BANNER.value in ad_formats or "BANNER" in ad_formats):
+                b = output.banner_ads
                 variants.append(GeneratedAdVariant(
                     ad_set_id=ad_set.id,
-                    platform=Platform.GOOGLE,
+                    ad_format=AdFormat.BANNER.value,
                     variant_type="full_set",
-                    content=google_data,
+                    content=b.model_dump(),
                 ))
-                for i, headline in enumerate(g.headlines):
+                for i, headline in enumerate(b.headlines):
                     variants.append(GeneratedAdVariant(
                         ad_set_id=ad_set.id,
-                        platform=Platform.GOOGLE,
+                        ad_format=AdFormat.BANNER.value,
                         variant_type="headline",
                         content={"text": headline, "index": i},
                     ))
-                for i, desc in enumerate(g.descriptions):
-                    variants.append(GeneratedAdVariant(
-                        ad_set_id=ad_set.id,
-                        platform=Platform.GOOGLE,
-                        variant_type="description",
-                        content={"text": desc, "index": i},
-                    ))
 
-            if output.meta_ads and (Platform.META.value in platforms or "META" in platforms):
-                m = output.meta_ads
+            if output.native_card_ads and (AdFormat.NATIVE_CARD.value in ad_formats or "NATIVE_CARD" in ad_formats):
+                n = output.native_card_ads
                 variants.append(GeneratedAdVariant(
                     ad_set_id=ad_set.id,
-                    platform=Platform.META,
+                    ad_format=AdFormat.NATIVE_CARD.value,
                     variant_type="full_set",
-                    content=m.model_dump(),
+                    content=n.model_dump(),
                 ))
-                for i, text in enumerate(m.primary_texts):
+                for i, text in enumerate(n.body_texts):
                     variants.append(GeneratedAdVariant(
                         ad_set_id=ad_set.id,
-                        platform=Platform.META,
-                        variant_type="primary_text",
+                        ad_format=AdFormat.NATIVE_CARD.value,
+                        variant_type="body_text",
                         content={"text": text, "index": i},
                     ))
 
-            if output.tiktok_ads and (Platform.TIKTOK.value in platforms or "TIKTOK" in platforms):
-                t = output.tiktok_ads
+            if output.promoted_listing_ads and (AdFormat.PROMOTED_LISTING.value in ad_formats or "PROMOTED_LISTING" in ad_formats):
+                p = output.promoted_listing_ads
                 variants.append(GeneratedAdVariant(
                     ad_set_id=ad_set.id,
-                    platform=Platform.TIKTOK,
+                    ad_format=AdFormat.PROMOTED_LISTING.value,
                     variant_type="full_set",
-                    content=t.model_dump(),
+                    content=p.model_dump(),
                 ))
-                for i, hook in enumerate(t.hooks):
+
+            if output.feed_card_ads and (AdFormat.FEED_CARD.value in ad_formats or "FEED_CARD" in ad_formats):
+                f = output.feed_card_ads
+                variants.append(GeneratedAdVariant(
+                    ad_set_id=ad_set.id,
+                    ad_format=AdFormat.FEED_CARD.value,
+                    variant_type="full_set",
+                    content=f.model_dump(),
+                ))
+                for i, text in enumerate(f.body_texts):
                     variants.append(GeneratedAdVariant(
                         ad_set_id=ad_set.id,
-                        platform=Platform.TIKTOK,
+                        ad_format=AdFormat.FEED_CARD.value,
+                        variant_type="body_text",
+                        content={"text": text, "index": i},
+                    ))
+
+            if output.video_ads and (AdFormat.VIDEO.value in ad_formats or "VIDEO" in ad_formats):
+                v = output.video_ads
+                variants.append(GeneratedAdVariant(
+                    ad_set_id=ad_set.id,
+                    ad_format=AdFormat.VIDEO.value,
+                    variant_type="full_set",
+                    content=v.model_dump(),
+                ))
+                for i, hook in enumerate(v.hooks):
+                    variants.append(GeneratedAdVariant(
+                        ad_set_id=ad_set.id,
+                        ad_format=AdFormat.VIDEO.value,
                         variant_type="hook",
                         content={"text": hook, "index": i},
                     ))

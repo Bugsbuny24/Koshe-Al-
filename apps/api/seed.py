@@ -20,7 +20,7 @@ from sqlalchemy import select
 from app.config import settings
 from app.models.user import User, Workspace, WorkspaceMember, UserRole
 from app.models.brand import Brand, Product, Audience
-from app.models.campaign import CampaignBrief, CampaignObjective, ToneOfVoice, Platform
+from app.models.campaign import CampaignBrief, CampaignObjective, ToneOfVoice, AdFormat
 from app.models.generation import GenerationJob, GeneratedAdSet, GeneratedAdVariant, JobStatus
 from app.models.publisher import (
     PublisherProfile, PublisherSite, Placement, AdSlot, SlotFormat, PublisherStatus,
@@ -155,7 +155,7 @@ async def seed():
             language="English",
             objective=CampaignObjective.LEADS,
             tone=ToneOfVoice.PROFESSIONAL,
-            platforms=[Platform.GOOGLE.value, Platform.META.value],
+            ad_formats=[AdFormat.BANNER.value, AdFormat.NATIVE_CARD.value],
             offer="Start free for 30 days, no credit card required",
             budget_range="$5,000 - $10,000/month",
             landing_page_angle="Free trial with instant value",
@@ -188,22 +188,22 @@ async def seed():
         await db.flush()
 
         # Create a few variants
-        if mock_output.google_ads:
-            g = mock_output.google_ads
+        if mock_output.banner_ads:
+            b = mock_output.banner_ads
             db.add(GeneratedAdVariant(
                 ad_set_id=ad_set.id,
-                platform=Platform.GOOGLE,
+                ad_format=AdFormat.BANNER.value,
                 variant_type="full_set",
-                content=g.model_dump(),
+                content=b.model_dump(),
                 is_favorite=True,
             ))
-        if mock_output.meta_ads:
-            m = mock_output.meta_ads
+        if mock_output.native_card_ads:
+            n = mock_output.native_card_ads
             db.add(GeneratedAdVariant(
                 ad_set_id=ad_set.id,
-                platform=Platform.META,
+                ad_format=AdFormat.NATIVE_CARD.value,
                 variant_type="full_set",
-                content=m.model_dump(),
+                content=n.model_dump(),
             ))
 
         # ── Publisher: profile, site, placement, slot ───────────────────────

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 from pydantic import BaseModel
-from app.models.campaign import Platform
+from app.models.campaign import AdFormat
 from app.models.generation import JobStatus
 
 
@@ -27,7 +27,7 @@ class AdVariantResponse(BaseModel):
     model_config = {"from_attributes": True}
     id: uuid.UUID
     ad_set_id: uuid.UUID
-    platform: Platform
+    ad_format: str
     variant_type: str
     content: Dict[str, Any]
     is_favorite: bool
@@ -51,5 +51,5 @@ class GeneratedAdSetResponse(BaseModel):
     updated_at: datetime
 
 
-class RegenerateSectionRequest(BaseModel):
-    platform: Platform
+class RegenerateFormatRequest(BaseModel):
+    ad_format: AdFormat

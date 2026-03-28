@@ -8,7 +8,7 @@ from fastapi import HTTPException, status
 import structlog
 
 from app.models.generation import GenerationJob, GeneratedAdSet, GeneratedAdVariant, JobStatus
-from app.models.campaign import CampaignBrief, Platform
+from app.models.campaign import CampaignBrief
 from app.schemas.generation import GenerationJobCreate, AdVariantUpdate
 
 logger = structlog.get_logger()

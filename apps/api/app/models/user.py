@@ -40,7 +40,6 @@ class Workspace(UUIDBase):
     audiences: Mapped[list] = relationship("Audience", back_populates="workspace")
     campaign_briefs: Mapped[list] = relationship("CampaignBrief", back_populates="workspace")
     generation_jobs: Mapped[list] = relationship("GenerationJob", back_populates="workspace")
-    platform_connections: Mapped[list] = relationship("PlatformConnection", back_populates="workspace")
     usage_logs: Mapped[list] = relationship("UsageLog", back_populates="workspace")
     api_usage_counters: Mapped[list] = relationship("ApiUsageCounter", back_populates="workspace")
 

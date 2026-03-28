@@ -13,13 +13,6 @@ class Settings(BaseSettings):
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
     ENVIRONMENT: str = "development"
 
-    # Feature flags
-    ENABLE_TIKTOK_CONNECT: bool = False
-    ENABLE_META_CONNECT: bool = False
-    ENABLE_GOOGLE_CONNECT: bool = False
-    ENABLE_PUBLISHING: bool = False
-    ENABLE_EXTERNAL_PUBLISHING: bool = False
-
     # Rate limiting
     RATE_LIMIT_GENERATION_PER_MINUTE: int = 5
 

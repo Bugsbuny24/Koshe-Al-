@@ -19,9 +19,6 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Enums
-    platform_enum = postgresql.ENUM("GOOGLE", "META", "TIKTOK", name="platform", create_type=False)
-    platform_enum.create(op.get_bind(), checkfirst=True)
-
     job_status_enum = postgresql.ENUM("PENDING", "PROCESSING", "COMPLETED", "FAILED", name="jobstatus", create_type=False)
     job_status_enum.create(op.get_bind(), checkfirst=True)
 
@@ -132,7 +129,7 @@ def upgrade() -> None:
         sa.Column("language", sa.String(100), nullable=True),
         sa.Column("objective", sa.Enum("TRAFFIC", "LEADS", "SALES", "ENGAGEMENT", "AWARENESS", name="campaignobjective"), nullable=False),
         sa.Column("tone", sa.Enum("PROFESSIONAL", "PREMIUM", "CASUAL", "AGGRESSIVE", "EDUCATIONAL", name="toneofvoice"), nullable=False),
-        sa.Column("platforms", sa.JSON(), nullable=False, server_default="[]"),
+        sa.Column("ad_formats", sa.JSON(), nullable=False, server_default="[]"),
         sa.Column("offer", sa.Text(), nullable=True),
         sa.Column("budget_range", sa.String(255), nullable=True),
         sa.Column("landing_page_angle", sa.Text(), nullable=True),
@@ -174,7 +171,7 @@ def upgrade() -> None:
         "generated_ad_variants",
         sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
         sa.Column("ad_set_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("generated_ad_sets.id"), nullable=False),
-        sa.Column("platform", sa.Enum("GOOGLE", "META", "TIKTOK", name="platform"), nullable=False),
+        sa.Column("ad_format", sa.String(50), nullable=False),
         sa.Column("variant_type", sa.String(100), nullable=False),
         sa.Column("content", sa.JSON(), nullable=False),
         sa.Column("is_favorite", sa.Boolean(), nullable=False, server_default="false"),
@@ -194,33 +191,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
     op.create_index("ix_export_bundles_ad_set_id", "export_bundles", ["ad_set_id"])
-
-    # Platform Connections
-    op.create_table(
-        "platform_connections",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
-        sa.Column("workspace_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("workspaces.id"), nullable=False),
-        sa.Column("platform", sa.Enum("GOOGLE", "META", "TIKTOK", name="platform"), nullable=False),
-        sa.Column("access_token_encrypted", sa.String(2048), nullable=True),
-        sa.Column("refresh_token_encrypted", sa.String(2048), nullable=True),
-        sa.Column("connected_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("is_active", sa.Boolean(), nullable=False, server_default="false"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-    )
-    op.create_index("ix_platform_connections_workspace_id", "platform_connections", ["workspace_id"])
-
-    # OAuth States
-    op.create_table(
-        "oauth_states",
-        sa.Column("id", postgresql.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4),
-        sa.Column("workspace_id", postgresql.UUID(as_uuid=True), sa.ForeignKey("workspaces.id"), nullable=False),
-        sa.Column("platform", sa.Enum("GOOGLE", "META", "TIKTOK", name="platform"), nullable=False),
-        sa.Column("state_token", sa.String(255), nullable=False, unique=True),
-        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-    )
 
     # Usage Logs
     op.create_table(
@@ -251,8 +221,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_table("api_usage_counters")
     op.drop_table("usage_logs")
-    op.drop_table("oauth_states")
-    op.drop_table("platform_connections")
     op.drop_table("export_bundles")
     op.drop_table("generated_ad_variants")
     op.drop_table("generated_ad_sets")
@@ -265,7 +233,6 @@ def downgrade() -> None:
     op.drop_table("workspaces")
     op.drop_table("users")
 
-    op.execute("DROP TYPE IF EXISTS platform")
     op.execute("DROP TYPE IF EXISTS jobstatus")
     op.execute("DROP TYPE IF EXISTS campaignobjective")
     op.execute("DROP TYPE IF EXISTS toneofvoice")

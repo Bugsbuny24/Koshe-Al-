@@ -24,11 +24,11 @@ describe('smoke tests', () => {
     expect(result.length).toBeGreaterThan(0)
   })
 
-  it('getPlatformLabel returns correct labels', async () => {
-    const { getPlatformLabel } = await import('../lib/utils')
-    expect(getPlatformLabel('GOOGLE')).toBe('Google Ads')
-    expect(getPlatformLabel('META')).toBe('Meta Ads')
-    expect(getPlatformLabel('TIKTOK')).toBe('TikTok Ads')
+  it('getAdFormatLabel returns correct labels', async () => {
+    const { getAdFormatLabel } = await import('../lib/utils')
+    expect(getAdFormatLabel('BANNER')).toBe('Banner')
+    expect(getAdFormatLabel('NATIVE_CARD')).toBe('Native Card')
+    expect(getAdFormatLabel('VIDEO')).toBe('Video')
   })
 
   it('getObjectiveLabel returns correct labels', async () => {

@@ -16,78 +16,104 @@ class ExportService:
         raw = ad_set.raw_json
         lines = [f"# Ad Set Export\n\n**Generated:** {datetime.now(timezone.utc).isoformat()}\n"]
 
-        if "google_ads" in raw:
-            g = raw["google_ads"]
-            lines.append("## Google Ads\n")
-            if g.get("headlines"):
+        if "banner_ads" in raw:
+            b = raw["banner_ads"]
+            lines.append("## Banner Ads\n")
+            if b.get("headlines"):
                 lines.append("### Headlines\n")
-                for h in g["headlines"]:
+                for h in b["headlines"]:
                     lines.append(f"- {h}")
                 lines.append("")
-            if g.get("descriptions"):
+            if b.get("descriptions"):
                 lines.append("### Descriptions\n")
-                for d in g["descriptions"]:
+                for d in b["descriptions"]:
                     lines.append(f"- {d}")
                 lines.append("")
-            if g.get("keyword_themes"):
-                lines.append("### Keyword Themes\n")
-                for k in g["keyword_themes"]:
-                    lines.append(f"- {k}")
-                lines.append("")
-            if g.get("callout_ideas"):
-                lines.append("### Callout Ideas\n")
-                for c in g["callout_ideas"]:
-                    lines.append(f"- {c}")
-                lines.append("")
-            if g.get("sitelink_ideas"):
-                lines.append("### Sitelink Ideas\n")
-                for s in g["sitelink_ideas"]:
-                    lines.append(f"**{s.get('title', '')}**: {s.get('description', '')}")
-                lines.append("")
-
-        if "meta_ads" in raw:
-            m = raw["meta_ads"]
-            lines.append("## Meta Ads\n")
-            if m.get("primary_texts"):
-                lines.append("### Primary Texts\n")
-                for t in m["primary_texts"]:
-                    lines.append(f"---\n{t}\n")
-            if m.get("headlines"):
-                lines.append("### Headlines\n")
-                for h in m["headlines"]:
-                    lines.append(f"- {h}")
-                lines.append("")
-            if m.get("cta_suggestions"):
+            if b.get("cta_suggestions"):
                 lines.append("### CTA Suggestions\n")
-                for c in m["cta_suggestions"]:
+                for c in b["cta_suggestions"]:
                     lines.append(f"- {c}")
                 lines.append("")
-            if m.get("angle_summary"):
-                lines.append(f"### Angle Summary\n\n{m['angle_summary']}\n")
-            if m.get("image_creative_brief"):
-                lines.append(f"### Image Creative Brief\n\n{m['image_creative_brief']}\n")
+            if b.get("image_brief"):
+                lines.append(f"### Image Brief\n\n{b['image_brief']}\n")
 
-        if "tiktok_ads" in raw:
-            t = raw["tiktok_ads"]
-            lines.append("## TikTok Ads\n")
-            if t.get("hooks"):
-                lines.append("### Hooks\n")
-                for h in t["hooks"]:
+        if "native_card_ads" in raw:
+            n = raw["native_card_ads"]
+            lines.append("## Native Card Ads\n")
+            if n.get("headlines"):
+                lines.append("### Headlines\n")
+                for h in n["headlines"]:
                     lines.append(f"- {h}")
                 lines.append("")
-            if t.get("short_scripts"):
-                lines.append("### Short Scripts\n")
-                for i, s in enumerate(t["short_scripts"], 1):
-                    lines.append(f"**Script {i}:**\n{s}\n")
-            if t.get("captions"):
-                lines.append("### Captions\n")
-                for c in t["captions"]:
+            if n.get("body_texts"):
+                lines.append("### Body Texts\n")
+                for i, t in enumerate(n["body_texts"], 1):
+                    lines.append(f"---\n**Body {i}:** {t}\n")
+            if n.get("cta_suggestions"):
+                lines.append("### CTA Suggestions\n")
+                for c in n["cta_suggestions"]:
                     lines.append(f"- {c}")
                 lines.append("")
-            if t.get("ugc_brief"):
-                lines.append(f"### UGC Brief\n\n{t['ugc_brief']}\n")
-            if t.get("video_prompt"):
-                lines.append(f"### Video Prompt\n\n{t['video_prompt']}\n")
+            if n.get("angle_summary"):
+                lines.append(f"### Angle Summary\n\n{n['angle_summary']}\n")
+            if n.get("image_brief"):
+                lines.append(f"### Image Brief\n\n{n['image_brief']}\n")
+
+        if "promoted_listing_ads" in raw:
+            p = raw["promoted_listing_ads"]
+            lines.append("## Promoted Listing Ads\n")
+            if p.get("titles"):
+                lines.append("### Titles\n")
+                for t in p["titles"]:
+                    lines.append(f"- {t}")
+                lines.append("")
+            if p.get("descriptions"):
+                lines.append("### Descriptions\n")
+                for d in p["descriptions"]:
+                    lines.append(f"- {d}")
+                lines.append("")
+            if p.get("price_callouts"):
+                lines.append("### Price Callouts\n")
+                for c in p["price_callouts"]:
+                    lines.append(f"- {c}")
+                lines.append("")
+
+        if "feed_card_ads" in raw:
+            f = raw["feed_card_ads"]
+            lines.append("## Feed Card Ads\n")
+            if f.get("headlines"):
+                lines.append("### Headlines\n")
+                for h in f["headlines"]:
+                    lines.append(f"- {h}")
+                lines.append("")
+            if f.get("body_texts"):
+                lines.append("### Body Texts\n")
+                for i, t in enumerate(f["body_texts"], 1):
+                    lines.append(f"---\n**Body {i}:** {t}\n")
+            if f.get("angle_summary"):
+                lines.append(f"### Angle Summary\n\n{f['angle_summary']}\n")
+            if f.get("image_brief"):
+                lines.append(f"### Image Brief\n\n{f['image_brief']}\n")
+
+        if "video_ads" in raw:
+            v = raw["video_ads"]
+            lines.append("## Video Ads\n")
+            if v.get("hooks"):
+                lines.append("### Hooks\n")
+                for h in v["hooks"]:
+                    lines.append(f"- {h}")
+                lines.append("")
+            if v.get("scripts"):
+                lines.append("### Scripts\n")
+                for i, s in enumerate(v["scripts"], 1):
+                    lines.append(f"**Script {i}:**\n{s}\n")
+            if v.get("captions"):
+                lines.append("### Captions\n")
+                for c in v["captions"]:
+                    lines.append(f"- {c}")
+                lines.append("")
+            if v.get("video_brief"):
+                lines.append(f"### Video Brief\n\n{v['video_brief']}\n")
 
         if raw.get("brand_safe_summary"):
             lines.append(f"## Brand Safe Summary\n\n{raw['brand_safe_summary']}\n")
@@ -106,49 +132,77 @@ class ExportService:
         raw = ad_set.raw_json
         lines = [f"AD SET EXPORT - {datetime.now(timezone.utc).isoformat()}", "=" * 60, ""]
 
-        if "google_ads" in raw:
-            g = raw["google_ads"]
-            lines.append("GOOGLE ADS")
+        if "banner_ads" in raw:
+            b = raw["banner_ads"]
+            lines.append("BANNER ADS")
             lines.append("-" * 40)
-            if g.get("headlines"):
+            if b.get("headlines"):
                 lines.append("Headlines:")
-                for h in g["headlines"]:
+                for h in b["headlines"]:
                     lines.append(f"  • {h}")
-            if g.get("descriptions"):
+            if b.get("descriptions"):
                 lines.append("\nDescriptions:")
-                for d in g["descriptions"]:
+                for d in b["descriptions"]:
                     lines.append(f"  • {d}")
-            if g.get("keyword_themes"):
-                lines.append("\nKeyword Themes:")
-                for k in g["keyword_themes"]:
-                    lines.append(f"  • {k}")
+            if b.get("cta_suggestions"):
+                lines.append("\nCTA Suggestions:")
+                for c in b["cta_suggestions"]:
+                    lines.append(f"  • {c}")
             lines.append("")
 
-        if "meta_ads" in raw:
-            m = raw["meta_ads"]
-            lines.append("META ADS")
+        if "native_card_ads" in raw:
+            n = raw["native_card_ads"]
+            lines.append("NATIVE CARD ADS")
             lines.append("-" * 40)
-            if m.get("primary_texts"):
-                lines.append("Primary Texts:")
-                for i, t in enumerate(m["primary_texts"], 1):
-                    lines.append(f"\n  [Text {i}]\n  {t}")
-            if m.get("headlines"):
-                lines.append("\nHeadlines:")
-                for h in m["headlines"]:
+            if n.get("headlines"):
+                lines.append("Headlines:")
+                for h in n["headlines"]:
                     lines.append(f"  • {h}")
+            if n.get("body_texts"):
+                lines.append("\nBody Texts:")
+                for i, t in enumerate(n["body_texts"], 1):
+                    lines.append(f"\n  [Body {i}]\n  {t}")
             lines.append("")
 
-        if "tiktok_ads" in raw:
-            t = raw["tiktok_ads"]
-            lines.append("TIKTOK ADS")
+        if "promoted_listing_ads" in raw:
+            p = raw["promoted_listing_ads"]
+            lines.append("PROMOTED LISTING ADS")
             lines.append("-" * 40)
-            if t.get("hooks"):
+            if p.get("titles"):
+                lines.append("Titles:")
+                for t in p["titles"]:
+                    lines.append(f"  • {t}")
+            if p.get("descriptions"):
+                lines.append("\nDescriptions:")
+                for d in p["descriptions"]:
+                    lines.append(f"  • {d}")
+            lines.append("")
+
+        if "feed_card_ads" in raw:
+            f = raw["feed_card_ads"]
+            lines.append("FEED CARD ADS")
+            lines.append("-" * 40)
+            if f.get("headlines"):
+                lines.append("Headlines:")
+                for h in f["headlines"]:
+                    lines.append(f"  • {h}")
+            if f.get("body_texts"):
+                lines.append("\nBody Texts:")
+                for i, t in enumerate(f["body_texts"], 1):
+                    lines.append(f"\n  [Body {i}]\n  {t}")
+            lines.append("")
+
+        if "video_ads" in raw:
+            v = raw["video_ads"]
+            lines.append("VIDEO ADS")
+            lines.append("-" * 40)
+            if v.get("hooks"):
                 lines.append("Hooks:")
-                for h in t["hooks"]:
+                for h in v["hooks"]:
                     lines.append(f"  • {h}")
-            if t.get("captions"):
+            if v.get("captions"):
                 lines.append("\nCaptions:")
-                for c in t["captions"]:
+                for c in v["captions"]:
                     lines.append(f"  • {c}")
             lines.append("")
 
@@ -159,34 +213,46 @@ class ExportService:
         raw = ad_set.raw_json
         output = io.StringIO()
         writer = csv.writer(output)
-        writer.writerow(["Platform", "Type", "Content"])
+        writer.writerow(["Format", "Type", "Content"])
 
-        if "google_ads" in raw:
-            g = raw["google_ads"]
-            for h in g.get("headlines", []):
-                writer.writerow(["Google", "Headline", h])
-            for d in g.get("descriptions", []):
-                writer.writerow(["Google", "Description", d])
-            for k in g.get("keyword_themes", []):
-                writer.writerow(["Google", "Keyword Theme", k])
-            for c in g.get("callout_ideas", []):
-                writer.writerow(["Google", "Callout", c])
+        if "banner_ads" in raw:
+            b = raw["banner_ads"]
+            for h in b.get("headlines", []):
+                writer.writerow(["Banner", "Headline", h])
+            for d in b.get("descriptions", []):
+                writer.writerow(["Banner", "Description", d])
+            for c in b.get("cta_suggestions", []):
+                writer.writerow(["Banner", "CTA", c])
 
-        if "meta_ads" in raw:
-            m = raw["meta_ads"]
-            for t in m.get("primary_texts", []):
-                writer.writerow(["Meta", "Primary Text", t])
-            for h in m.get("headlines", []):
-                writer.writerow(["Meta", "Headline", h])
-            for c in m.get("cta_suggestions", []):
-                writer.writerow(["Meta", "CTA", c])
+        if "native_card_ads" in raw:
+            n = raw["native_card_ads"]
+            for h in n.get("headlines", []):
+                writer.writerow(["Native Card", "Headline", h])
+            for t in n.get("body_texts", []):
+                writer.writerow(["Native Card", "Body Text", t])
+            for c in n.get("cta_suggestions", []):
+                writer.writerow(["Native Card", "CTA", c])
 
-        if "tiktok_ads" in raw:
-            t = raw["tiktok_ads"]
-            for h in t.get("hooks", []):
-                writer.writerow(["TikTok", "Hook", h])
-            for c in t.get("captions", []):
-                writer.writerow(["TikTok", "Caption", c])
+        if "promoted_listing_ads" in raw:
+            p = raw["promoted_listing_ads"]
+            for t in p.get("titles", []):
+                writer.writerow(["Promoted Listing", "Title", t])
+            for d in p.get("descriptions", []):
+                writer.writerow(["Promoted Listing", "Description", d])
+
+        if "feed_card_ads" in raw:
+            f = raw["feed_card_ads"]
+            for h in f.get("headlines", []):
+                writer.writerow(["Feed Card", "Headline", h])
+            for t in f.get("body_texts", []):
+                writer.writerow(["Feed Card", "Body Text", t])
+
+        if "video_ads" in raw:
+            v = raw["video_ads"]
+            for h in v.get("hooks", []):
+                writer.writerow(["Video", "Hook", h])
+            for c in v.get("captions", []):
+                writer.writerow(["Video", "Caption", c])
 
         return output.getvalue()
 

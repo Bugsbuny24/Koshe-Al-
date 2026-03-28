@@ -1,79 +1,80 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Zap, LayoutGrid, BarChart3, Globe } from 'lucide-react'
 
-const platforms = [
+const networkFeatures = [
   {
-    name: 'Google Ads',
-    description: 'Connect your Google Ads account to publish campaigns directly.',
-    color: 'bg-blue-100',
-    textColor: 'text-blue-700',
-    initial: 'G',
-  },
-  {
-    name: 'Meta Ads',
-    description:
-      'Connect Facebook & Instagram Ads Manager to run your generated campaigns.',
+    icon: LayoutGrid,
+    name: 'Multiple Ad Formats',
+    description: 'Serve banner, native card, promoted listing, feed card, and video ads across the publisher network.',
     color: 'bg-indigo-100',
     textColor: 'text-indigo-700',
-    initial: 'M',
+    status: 'Active',
   },
   {
-    name: 'TikTok Ads',
-    description:
-      'Connect TikTok Ads Manager to publish short-form video campaigns.',
-    color: 'bg-pink-100',
-    textColor: 'text-pink-700',
-    initial: 'T',
+    icon: Globe,
+    name: 'Publisher Network',
+    description: 'Your campaigns are automatically matched and served across approved publisher sites and apps.',
+    color: 'bg-emerald-100',
+    textColor: 'text-emerald-700',
+    status: 'Active',
+  },
+  {
+    icon: BarChart3,
+    name: 'Unified Reporting',
+    description: 'Track impressions, clicks, CTR, and spend in one place — no external dashboards needed.',
+    color: 'bg-blue-100',
+    textColor: 'text-blue-700',
+    status: 'Active',
+  },
+  {
+    icon: Zap,
+    name: 'AI Ad Generation',
+    description: 'Generate high-converting creatives for every ad format from a single campaign brief.',
+    color: 'bg-amber-100',
+    textColor: 'text-amber-700',
+    status: 'Active',
   },
 ]
 
-export default function IntegrationsPage() {
+export default function NetworkPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Integrations</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Ad Network</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Connect your ad platforms to publish campaigns directly from AdGenius.
+          AdGenius Network — your campaigns are served across our proprietary publisher ecosystem.
         </p>
       </div>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm font-medium text-amber-800">Platform integrations coming soon</p>
-        <p className="mt-1 text-sm text-amber-700">
-          Direct publishing to ad platforms is on our roadmap. You can currently export your
-          generated copy and manually upload it to your ad platforms.
+      <div className="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
+        <p className="text-sm font-medium text-indigo-800">Proprietary Ad Network</p>
+        <p className="mt-1 text-sm text-indigo-700">
+          AdGenius delivers your ads directly through its own publisher network. There are no
+          external platform dependencies — everything runs within the AdGenius ecosystem.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {platforms.map((platform) => (
-          <Card key={platform.name} className="opacity-75">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {networkFeatures.map((feature) => (
+          <Card key={feature.name}>
             <CardHeader>
               <div className="flex items-center gap-3">
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${platform.color}`}
+                  className={`flex h-12 w-12 items-center justify-center rounded-xl ${feature.color}`}
                 >
-                  <span className={`text-xl font-bold ${platform.textColor}`}>
-                    {platform.initial}
-                  </span>
+                  <feature.icon className={`h-6 w-6 ${feature.textColor}`} />
                 </div>
                 <div>
-                  <CardTitle className="text-base">{platform.name}</CardTitle>
-                  <Badge variant="outline" className="mt-0.5 text-xs">
-                    Coming Soon
+                  <CardTitle className="text-base">{feature.name}</CardTitle>
+                  <Badge variant="outline" className="mt-0.5 text-xs text-emerald-700 border-emerald-200 bg-emerald-50">
+                    {feature.status}
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <CardDescription className="mb-4">{platform.description}</CardDescription>
-              <Button variant="outline" disabled className="w-full">
-                Connect {platform.name}
-              </Button>
-              <p className="mt-2 text-center text-xs text-slate-400">
-                Publishing integration will be available in a future update.
-              </p>
+              <CardDescription>{feature.description}</CardDescription>
             </CardContent>
           </Card>
         ))}

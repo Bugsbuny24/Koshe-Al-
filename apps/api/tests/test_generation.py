@@ -19,7 +19,7 @@ async def test_create_generation_job(auth_client: AsyncClient):
         "name": "Test Campaign",
         "objective": "TRAFFIC",
         "tone": "CASUAL",
-        "platforms": ["GOOGLE", "META"],
+        "ad_formats": ["BANNER", "NATIVE_CARD"],
         "product_description": "A great product for testing",
     })
     assert brief_resp.status_code == 201
@@ -51,7 +51,7 @@ async def test_get_generation_job_status(auth_client: AsyncClient):
         "name": "Status Test Campaign",
         "objective": "SALES",
         "tone": "PROFESSIONAL",
-        "platforms": ["META"],
+        "ad_formats": ["NATIVE_CARD"],
         "product_description": "SaaS tool",
     })
     assert brief_resp.status_code == 201

@@ -65,19 +65,19 @@ function exportAsText(adSet: GeneratedAdSet): string {
 }
 
 function exportAsCsv(adSet: GeneratedAdSet): string {
-  const rows: string[][] = [['Platform', 'Type', 'Content']]
+  const rows: string[][] = [['Format', 'Type', 'Content']]
   const raw = adSet.raw_json as Record<string, unknown>
 
-  for (const [platform, content] of Object.entries(raw)) {
+  for (const [format, content] of Object.entries(raw)) {
     if (typeof content === 'object' && content !== null) {
       for (const [key, value] of Object.entries(content as Record<string, unknown>)) {
         if (Array.isArray(value)) {
           value.forEach((item) => {
             const text = typeof item === 'object' ? JSON.stringify(item) : String(item)
-            rows.push([platform, key, `"${text.replace(/"/g, '""')}"`])
+            rows.push([format, key, `"${text.replace(/"/g, '""')}"`])
           })
         } else {
-          rows.push([platform, key, `"${String(value).replace(/"/g, '""')}"`])
+          rows.push([format, key, `"${String(value).replace(/"/g, '""')}"`])
         }
       }
     }

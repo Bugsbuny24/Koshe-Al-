@@ -13,8 +13,7 @@ import { ExportMenu } from '@/components/generation/export-menu'
 import { JobStatusPoller } from '@/components/generation/job-status-poller'
 import { useAdSet, useGenerationJob } from '@/hooks/use-generation'
 import { useCampaign } from '@/hooks/use-campaigns'
-import { formatDate, getPlatformLabel } from '@/lib/utils'
-import type { Platform } from '@/types/api'
+import { formatDate, getAdFormatLabel } from '@/lib/utils'
 
 export default function GeneratedAdSetPage() {
   const params = useParams()
@@ -25,7 +24,7 @@ export default function GeneratedAdSetPage() {
     adSet?.campaign_brief_id ?? ''
   )
 
-  const platforms = adSet ? (Object.keys(adSet.raw_json ?? {}) as Platform[]) : []
+  const adFormats = adSet ? (adSet.raw_json ? Object.keys(adSet.raw_json) : []) : []
 
   if (adSetLoading) {
     return (
@@ -92,11 +91,11 @@ export default function GeneratedAdSetPage() {
               </Link>
             </div>
             <div>
-              <p className="text-xs text-slate-400">Platforms</p>
+              <p className="text-xs text-slate-400">Ad Formats</p>
               <div className="flex gap-1">
-                {platforms.map((p) => (
+                {adFormats.map((p) => (
                   <Badge key={p} variant="secondary" className="text-xs">
-                    {getPlatformLabel(p.toUpperCase())}
+                    {getAdFormatLabel(p.toUpperCase())}
                   </Badge>
                 ))}
               </div>

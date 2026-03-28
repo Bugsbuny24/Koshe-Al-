@@ -9,7 +9,7 @@ import {
   Users,
   FileText,
   Sparkles,
-  Plug,
+  Network,
   Settings,
   Zap,
   BarChart3,
@@ -26,7 +26,7 @@ const navItems = [
   { href: '/generated', label: 'Generated Ads', icon: Sparkles },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/billing', label: 'Billing', icon: CreditCard },
-  { href: '/integrations', label: 'Integrations', icon: Plug },
+  { href: '/integrations', label: 'Ad Network', icon: Network },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

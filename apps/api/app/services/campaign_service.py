@@ -38,9 +38,9 @@ class CampaignService:
         if not result.scalar_one_or_none():
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Brand not found")
 
-        platforms = [p.value if hasattr(p, "value") else p for p in data.platforms]
-        brief_data = data.model_dump(exclude={"platforms"})
-        brief = CampaignBrief(**brief_data, platforms=platforms, workspace_id=workspace_id)
+        ad_formats = [f.value if hasattr(f, "value") else f for f in data.ad_formats]
+        brief_data = data.model_dump(exclude={"ad_formats"})
+        brief = CampaignBrief(**brief_data, ad_formats=ad_formats, workspace_id=workspace_id)
         db.add(brief)
         await db.flush()
         await db.refresh(brief)
@@ -50,8 +50,8 @@ class CampaignService:
     async def update_brief(db: AsyncSession, brief_id: uuid.UUID, data: CampaignBriefUpdate, workspace_id: uuid.UUID) -> CampaignBrief:
         brief = await CampaignService.get_brief(db, brief_id, workspace_id)
         update_data = data.model_dump(exclude_unset=True)
-        if "platforms" in update_data and update_data["platforms"] is not None:
-            update_data["platforms"] = [p.value if hasattr(p, "value") else p for p in update_data["platforms"]]
+        if "ad_formats" in update_data and update_data["ad_formats"] is not None:
+            update_data["ad_formats"] = [f.value if hasattr(f, "value") else f for f in update_data["ad_formats"]]
         for key, value in update_data.items():
             setattr(brief, key, value)
         await db.flush()
