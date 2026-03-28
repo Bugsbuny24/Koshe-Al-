@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     ENABLE_META_CONNECT: bool = False
     ENABLE_GOOGLE_CONNECT: bool = False
     ENABLE_PUBLISHING: bool = False
+    ENABLE_EXTERNAL_PUBLISHING: bool = False
 
     # Rate limiting
     RATE_LIMIT_GENERATION_PER_MINUTE: int = 5

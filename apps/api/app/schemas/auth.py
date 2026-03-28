@@ -1,12 +1,14 @@
 import uuid
 from datetime import datetime
 from pydantic import BaseModel, EmailStr
+from typing import Optional
 
 
 class SignupRequest(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    role: str = "ADVERTISER"  # ADVERTISER or PUBLISHER
 
 
 class LoginRequest(BaseModel):
@@ -34,7 +36,8 @@ class UserResponse(BaseModel):
     id: uuid.UUID
     email: str
     full_name: str
+    role: str
     is_active: bool
     created_at: datetime
     updated_at: datetime
-    workspace: WorkspaceResponse | None = None
+    workspace: Optional[WorkspaceResponse] = None

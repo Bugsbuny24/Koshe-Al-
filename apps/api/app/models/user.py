@@ -1,9 +1,17 @@
 import uuid
+import enum
 from datetime import datetime
-from sqlalchemy import String, Boolean, ForeignKey, DateTime
+from sqlalchemy import String, Boolean, ForeignKey, DateTime, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from app.models.base import UUIDBase
+
+
+class UserRole(str, enum.Enum):
+    SUPER_ADMIN = "SUPER_ADMIN"
+    OPS_MANAGER = "OPS_MANAGER"
+    ADVERTISER = "ADVERTISER"
+    PUBLISHER = "PUBLISHER"
 
 
 class User(UUIDBase):
@@ -12,6 +20,7 @@ class User(UUIDBase):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[UserRole] = mapped_column(SAEnum(UserRole), nullable=False, default=UserRole.ADVERTISER)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     workspaces: Mapped[list["Workspace"]] = relationship("Workspace", back_populates="owner")

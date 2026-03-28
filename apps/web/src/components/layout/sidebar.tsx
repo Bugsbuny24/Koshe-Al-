@@ -12,6 +12,8 @@ import {
   Plug,
   Settings,
   Zap,
+  BarChart3,
+  CreditCard,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +24,8 @@ const navItems = [
   { href: '/audiences', label: 'Audiences', icon: Users },
   { href: '/campaigns', label: 'Campaigns', icon: FileText },
   { href: '/generated', label: 'Generated Ads', icon: Sparkles },
+  { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/integrations', label: 'Integrations', icon: Plug },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
