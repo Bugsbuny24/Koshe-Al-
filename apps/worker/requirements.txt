@@ -1,0 +1,2 @@
+# Worker shares the same dependencies as the API.
+# See apps/api/pyproject.toml for the full dependency list.
