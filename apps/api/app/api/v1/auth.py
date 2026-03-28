@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 import structlog
 
 from app.dependencies import get_db, get_current_user
-from app.models.user import User, Workspace, WorkspaceMember
+from app.models.user import User, Workspace, WorkspaceMember, UserRole
 from app.schemas.auth import SignupRequest, LoginRequest, UserResponse, WorkspaceResponse
 from app.services.auth_service import hash_password, verify_password, create_access_token
 
@@ -33,11 +33,19 @@ async def signup(
     if result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Email already registered")
 
+    # Validate role
+    allowed_roles = {UserRole.ADVERTISER.value, UserRole.PUBLISHER.value}
+    role_str = (data.role or "ADVERTISER").upper()
+    if role_str not in allowed_roles:
+        role_str = UserRole.ADVERTISER.value
+    role = UserRole(role_str)
+
     # Create user
     user = User(
         email=data.email,
         hashed_password=hash_password(data.password),
         full_name=data.full_name,
+        role=role,
     )
     db.add(user)
     await db.flush()

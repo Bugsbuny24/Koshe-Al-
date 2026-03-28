@@ -1,19 +1,35 @@
 """
-Seed demo data for AdGenius.
+Seed demo data for AdGenius Network.
 Run: python seed.py
+
+Demo credentials:
+  Admin:      admin@adgenius.ai / admin1234
+  Advertiser: advertiser@adgenius.ai / adv12345
+  Publisher:  publisher@adgenius.ai / pub12345
 """
 import asyncio
 import sys
 import os
+import secrets
+from decimal import Decimal
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy import select
 from app.config import settings
-from app.models.user import User, Workspace, WorkspaceMember
+from app.models.user import User, Workspace, WorkspaceMember, UserRole
 from app.models.brand import Brand, Product, Audience
 from app.models.campaign import CampaignBrief, CampaignObjective, ToneOfVoice, Platform
 from app.models.generation import GenerationJob, GeneratedAdSet, GeneratedAdVariant, JobStatus
+from app.models.publisher import (
+    PublisherProfile, PublisherSite, Placement, AdSlot, SlotFormat, PublisherStatus,
+)
+from app.models.delivery import (
+    LiveCampaign, LiveCampaignStatus, PricingModel,
+    AdImpression, AdClick, BudgetLedger, PacingCounter,
+)
+from app.models.finance import AdvertiserInvoice, InvoiceStatus
 from app.services.auth_service import hash_password
 from app.ai.mock_data import get_mock_output
 from datetime import datetime, timezone
@@ -25,46 +41,77 @@ async def seed():
     SessionLocal = async_sessionmaker(bind=engine, class_=AsyncSession, expire_on_commit=False)
 
     async with SessionLocal() as db:
-        # Check if demo user exists
-        from sqlalchemy import select
-        result = await db.execute(select(User).where(User.email == "demo@adgenius.ai"))
-        existing = result.scalar_one_or_none()
-        if existing:
+        # Check if already seeded
+        result = await db.execute(select(User).where(User.email == "admin@adgenius.ai"))
+        if result.scalar_one_or_none():
             print("Demo data already seeded.")
             return
 
-        print("Seeding demo data...")
+        print("Seeding AdGenius Network demo data...")
 
-        # Create demo user
-        user = User(
-            email="demo@adgenius.ai",
-            hashed_password=hash_password("demo1234"),
-            full_name="Demo User",
+        # ── Admin user ──────────────────────────────────────────────────────
+        admin_user = User(
+            email="admin@adgenius.ai",
+            hashed_password=hash_password("admin1234"),
+            full_name="Super Admin",
+            role=UserRole.SUPER_ADMIN,
             is_active=True,
         )
-        db.add(user)
+        db.add(admin_user)
         await db.flush()
 
-        # Create workspace
-        workspace = Workspace(
-            name="Demo Workspace",
-            slug="demo-workspace",
-            owner_id=user.id,
+        admin_workspace = Workspace(
+            name="AdGenius HQ",
+            slug="adgenius-hq",
+            owner_id=admin_user.id,
         )
-        db.add(workspace)
+        db.add(admin_workspace)
+        await db.flush()
+        db.add(WorkspaceMember(workspace_id=admin_workspace.id, user_id=admin_user.id, role="owner"))
+
+        # ── Advertiser user ─────────────────────────────────────────────────
+        adv_user = User(
+            email="advertiser@adgenius.ai",
+            hashed_password=hash_password("adv12345"),
+            full_name="Alex Advertiser",
+            role=UserRole.ADVERTISER,
+            is_active=True,
+        )
+        db.add(adv_user)
         await db.flush()
 
-        # Add user as owner member
-        member = WorkspaceMember(
-            workspace_id=workspace.id,
-            user_id=user.id,
-            role="owner",
+        adv_workspace = Workspace(
+            name="TechCorp Workspace",
+            slug="techcorp-workspace",
+            owner_id=adv_user.id,
         )
-        db.add(member)
+        db.add(adv_workspace)
+        await db.flush()
+        db.add(WorkspaceMember(workspace_id=adv_workspace.id, user_id=adv_user.id, role="owner"))
 
-        # Create brand
+        # ── Publisher user ──────────────────────────────────────────────────
+        pub_user = User(
+            email="publisher@adgenius.ai",
+            hashed_password=hash_password("pub12345"),
+            full_name="Paula Publisher",
+            role=UserRole.PUBLISHER,
+            is_active=True,
+        )
+        db.add(pub_user)
+        await db.flush()
+
+        pub_workspace = Workspace(
+            name="MediaHub Workspace",
+            slug="mediahub-workspace",
+            owner_id=pub_user.id,
+        )
+        db.add(pub_workspace)
+        await db.flush()
+        db.add(WorkspaceMember(workspace_id=pub_workspace.id, user_id=pub_user.id, role="owner"))
+
+        # ── Advertiser: Brand, Product, Audience ────────────────────────────
         brand = Brand(
-            workspace_id=workspace.id,
+            workspace_id=adv_workspace.id,
             name="TechCorp",
             description="A leading technology company building innovative SaaS products for modern teams.",
             website_url="https://techcorp.example.com",
@@ -73,7 +120,6 @@ async def seed():
         db.add(brand)
         await db.flush()
 
-        # Create product
         product = Product(
             brand_id=brand.id,
             name="TechCorp Pro",
@@ -84,22 +130,21 @@ async def seed():
         db.add(product)
         await db.flush()
 
-        # Create audience
         audience = Audience(
-            workspace_id=workspace.id,
+            workspace_id=adv_workspace.id,
             name="Young Professionals 25-35",
             age_range="25-35",
             gender="All",
             interests=["technology", "productivity", "startup culture", "business growth"],
-            locations=["United States", "United Kingdom", "Canada", "Australia"],
+            locations=["United States", "United Kingdom", "Canada"],
             languages=["English"],
         )
         db.add(audience)
         await db.flush()
 
-        # Create campaign brief
+        # ── Campaign brief ──────────────────────────────────────────────────
         brief = CampaignBrief(
-            workspace_id=workspace.id,
+            workspace_id=adv_workspace.id,
             brand_id=brand.id,
             product_id=product.id,
             audience_id=audience.id,
@@ -110,19 +155,19 @@ async def seed():
             language="English",
             objective=CampaignObjective.LEADS,
             tone=ToneOfVoice.PROFESSIONAL,
-            platforms=[Platform.GOOGLE.value, Platform.META.value, Platform.TIKTOK.value],
+            platforms=[Platform.GOOGLE.value, Platform.META.value],
             offer="Start free for 30 days, no credit card required",
             budget_range="$5,000 - $10,000/month",
             landing_page_angle="Free trial with instant value",
             cta_preference="Start Free Trial",
-            special_notes="Emphasize AI features and time-saving benefits. Target decision-makers and team leads.",
+            special_notes="Emphasize AI features and time-saving benefits.",
         )
         db.add(brief)
         await db.flush()
 
-        # Create generation job
+        # ── AI generation job & ad set ──────────────────────────────────────
         job = GenerationJob(
-            workspace_id=workspace.id,
+            workspace_id=adv_workspace.id,
             campaign_brief_id=brief.id,
             status=JobStatus.COMPLETED,
             started_at=datetime.now(timezone.utc),
@@ -131,11 +176,9 @@ async def seed():
         db.add(job)
         await db.flush()
 
-        # Generate mock output
         mock_output = get_mock_output(brief)
         raw_json = mock_output.model_dump(exclude_none=True)
 
-        # Create ad set
         ad_set = GeneratedAdSet(
             generation_job_id=job.id,
             campaign_brief_id=brief.id,
@@ -144,61 +187,165 @@ async def seed():
         db.add(ad_set)
         await db.flush()
 
-        # Create variants
-        variants = []
+        # Create a few variants
         if mock_output.google_ads:
             g = mock_output.google_ads
-            variants.append(GeneratedAdVariant(
+            db.add(GeneratedAdVariant(
                 ad_set_id=ad_set.id,
                 platform=Platform.GOOGLE,
                 variant_type="full_set",
                 content=g.model_dump(),
                 is_favorite=True,
             ))
-            for i, h in enumerate(g.headlines[:3]):
-                variants.append(GeneratedAdVariant(
-                    ad_set_id=ad_set.id,
-                    platform=Platform.GOOGLE,
-                    variant_type="headline",
-                    content={"text": h, "index": i},
-                ))
-
         if mock_output.meta_ads:
             m = mock_output.meta_ads
-            variants.append(GeneratedAdVariant(
+            db.add(GeneratedAdVariant(
                 ad_set_id=ad_set.id,
                 platform=Platform.META,
                 variant_type="full_set",
                 content=m.model_dump(),
             ))
-            for i, t in enumerate(m.primary_texts):
-                variants.append(GeneratedAdVariant(
-                    ad_set_id=ad_set.id,
-                    platform=Platform.META,
-                    variant_type="primary_text",
-                    content={"text": t, "index": i},
-                ))
 
-        if mock_output.tiktok_ads:
-            t = mock_output.tiktok_ads
-            variants.append(GeneratedAdVariant(
+        # ── Publisher: profile, site, placement, slot ───────────────────────
+        pub_profile = PublisherProfile(
+            user_id=pub_user.id,
+            company_name="MediaHub Digital",
+            website_url="https://mediahub.example.com",
+            contact_email="paula@mediahub.example.com",
+            description="Premium digital media publisher serving technology and business audiences.",
+            status=PublisherStatus.APPROVED,
+            revenue_share_pct=Decimal("70.00"),
+        )
+        db.add(pub_profile)
+        await db.flush()
+
+        pub_site = PublisherSite(
+            publisher_id=pub_profile.id,
+            name="MediaHub Tech",
+            domain="tech.mediahub.example.com",
+            category="technology",
+            description="Technology news and reviews for professionals.",
+            is_active=True,
+            allowed_categories=["technology", "software", "business"],
+        )
+        db.add(pub_site)
+        await db.flush()
+
+        placement = Placement(
+            publisher_id=pub_profile.id,
+            site_id=pub_site.id,
+            name="Homepage Above Fold",
+            page_path="/",
+            context_tags=["homepage", "featured"],
+            is_active=True,
+        )
+        db.add(placement)
+        await db.flush()
+
+        slot = AdSlot(
+            placement_id=placement.id,
+            name="Home Banner 728x90",
+            format=SlotFormat.BANNER,
+            width=728,
+            height=90,
+            category="technology",
+            is_active=True,
+        )
+        db.add(slot)
+        await db.flush()
+
+        # ── Live campaign ───────────────────────────────────────────────────
+        live_campaign = LiveCampaign(
+            campaign_brief_id=brief.id,
+            ad_set_id=ad_set.id,
+            workspace_id=adv_workspace.id,
+            name="TechCorp Pro - Q1 Live",
+            status=LiveCampaignStatus.ACTIVE,
+            pricing_model=PricingModel.CPM,
+            cpm_rate=Decimal("5.00"),
+            cpc_rate=Decimal("0.50"),
+            total_budget=Decimal("1000.00"),
+            spent_amount=Decimal("247.50"),
+            daily_budget_cap=Decimal("50.00"),
+            target_categories=["technology", "software", "business"],
+            target_formats=["BANNER", "NATIVE_CARD"],
+            is_approved=True,
+            approved_at=datetime.now(timezone.utc),
+            priority=7,
+            frequency_cap_per_session=3,
+        )
+        db.add(live_campaign)
+        await db.flush()
+
+        # Budget ledger entry for reservation
+        db.add(BudgetLedger(
+            campaign_id=live_campaign.id,
+            entry_type="reserve",
+            amount=Decimal("1000.00"),
+            description="Initial budget reservation",
+        ))
+
+        # Invoice
+        db.add(AdvertiserInvoice(
+            workspace_id=adv_workspace.id,
+            campaign_id=live_campaign.id,
+            invoice_number="INV-2024-001",
+            gross_amount=Decimal("1200.00"),
+            platform_fee=Decimal("200.00"),
+            ad_budget_allocated=Decimal("1000.00"),
+            status=InvoiceStatus.PAID,
+            paid_at=datetime.now(timezone.utc),
+        ))
+
+        # ── Fake impressions and clicks ──────────────────────────────────────
+        now = datetime.now(timezone.utc)
+        for i in range(50):
+            click_token = secrets.token_urlsafe(24)
+            impression = AdImpression(
+                campaign_id=live_campaign.id,
+                slot_id=slot.id,
                 ad_set_id=ad_set.id,
-                platform=Platform.TIKTOK,
-                variant_type="full_set",
-                content=t.model_dump(),
-            ))
+                session_id=f"session_{i % 10:03d}",
+                site_url="https://tech.mediahub.example.com/",
+                cost=Decimal("0.005000"),
+                publisher_earnings=Decimal("0.003500"),
+                served_at=now,
+            )
+            db.add(impression)
+            await db.flush()
 
-        for v in variants:
-            db.add(v)
+            if i % 5 == 0:  # 20% CTR on seed data
+                click = AdClick(
+                    impression_id=impression.id,
+                    campaign_id=live_campaign.id,
+                    slot_id=slot.id,
+                    click_token=click_token,
+                    destination_url="https://techcorp.example.com/pro",
+                    cost=Decimal("0.000000"),  # CPM campaign, no CPC cost
+                    publisher_earnings=Decimal("0.000000"),
+                    clicked_at=now,
+                )
+                db.add(click)
+
+        # Pacing counter
+        db.add(PacingCounter(
+            campaign_id=live_campaign.id,
+            date_bucket=now.strftime("%Y-%m-%d"),
+            impressions_today=50,
+            clicks_today=10,
+            spend_today=Decimal("0.250000"),
+        ))
 
         await db.commit()
-        print(f"✅ Demo user created: demo@adgenius.ai / demo1234")
-        print(f"✅ Workspace: Demo Workspace")
-        print(f"✅ Brand: TechCorp")
-        print(f"✅ Product: TechCorp Pro")
-        print(f"✅ Audience: Young Professionals 25-35")
-        print(f"✅ Campaign Brief: TechCorp Pro - Q1 Launch Campaign")
-        print(f"✅ Generated Ad Set with {len(variants)} variants")
+
+        print("✅ Admin user: admin@adgenius.ai / admin1234")
+        print("✅ Advertiser user: advertiser@adgenius.ai / adv12345")
+        print("✅ Publisher user: publisher@adgenius.ai / pub12345")
+        print("✅ TechCorp brand, product, audience, campaign brief")
+        print("✅ AI-generated ad set (mock)")
+        print("✅ Publisher profile, site, placement, slot")
+        print("✅ Active live campaign with 50 impressions and 10 clicks")
+        print("✅ Advertiser invoice INV-2024-001")
         print("Seeding complete!")
 
     await engine.dispose()
