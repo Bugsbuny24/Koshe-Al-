@@ -31,13 +31,15 @@ export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase()
 }
 
-export function getPlatformLabel(platform: string): string {
+export function getAdFormatLabel(format: string): string {
   const labels: Record<string, string> = {
-    GOOGLE: 'Google Ads',
-    META: 'Meta Ads',
-    TIKTOK: 'TikTok Ads',
+    BANNER: 'Banner',
+    NATIVE_CARD: 'Native Card',
+    PROMOTED_LISTING: 'Promoted Listing',
+    FEED_CARD: 'Feed Card',
+    VIDEO: 'Video',
   }
-  return labels[platform] ?? platform
+  return labels[format] ?? format
 }
 
 export function getObjectiveLabel(objective: string): string {

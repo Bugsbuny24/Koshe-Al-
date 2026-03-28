@@ -14,10 +14,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { PlatformSelector } from './platform-selector'
+import { AdFormatSelector } from './platform-selector'
 import { useBrands, useProducts } from '@/hooks/use-brands'
 import { useAudiences } from '@/hooks/use-campaigns'
-import type { CampaignBrief, Platform, CampaignObjective, ToneOfVoice } from '@/types/api'
+import type { CampaignBrief, AdFormat, CampaignObjective, ToneOfVoice } from '@/types/api'
 
 const campaignBriefSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -30,9 +30,9 @@ const campaignBriefSchema = z.object({
   language: z.string().min(1, 'Language is required'),
   objective: z.enum(['TRAFFIC', 'LEADS', 'SALES', 'ENGAGEMENT', 'AWARENESS'] as const),
   tone: z.enum(['PROFESSIONAL', 'PREMIUM', 'CASUAL', 'AGGRESSIVE', 'EDUCATIONAL'] as const),
-  platforms: z
-    .array(z.enum(['GOOGLE', 'META', 'TIKTOK'] as const))
-    .min(1, 'Select at least one platform'),
+  ad_formats: z
+    .array(z.enum(['BANNER', 'NATIVE_CARD', 'PROMOTED_LISTING', 'FEED_CARD', 'VIDEO'] as const))
+    .min(1, 'Select at least one ad format'),
   offer: z.string().min(1, 'Offer is required'),
   budget_range: z.string().min(1, 'Budget range is required'),
   landing_page_angle: z.string().min(1, 'Landing page angle is required'),
@@ -88,7 +88,7 @@ export function CampaignBriefForm({ defaultValues, onSubmit, isLoading }: Campai
       language: defaultValues?.language ?? 'English',
       objective: defaultValues?.objective ?? undefined,
       tone: defaultValues?.tone ?? undefined,
-      platforms: (defaultValues?.platforms as Platform[]) ?? [],
+      ad_formats: (defaultValues?.ad_formats as AdFormat[]) ?? [],
       offer: defaultValues?.offer ?? '',
       budget_range: defaultValues?.budget_range ?? '',
       landing_page_angle: defaultValues?.landing_page_angle ?? '',
@@ -315,21 +315,21 @@ export function CampaignBriefForm({ defaultValues, onSubmit, isLoading }: Campai
         </div>
       </div>
 
-      {/* Section 4: Platform & Creative */}
+      {/* Section 4: Ad Formats & Creative */}
       <div className="rounded-xl border border-slate-200 bg-white p-6">
-        <h2 className="mb-4 text-base font-semibold text-slate-900">Platform & Creative</h2>
+        <h2 className="mb-4 text-base font-semibold text-slate-900">Ad Formats & Creative</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2 space-y-1.5">
-            <Label>Platforms *</Label>
+            <Label>Ad Formats *</Label>
             <Controller
-              name="platforms"
+              name="ad_formats"
               control={control}
               render={({ field }) => (
-                <PlatformSelector value={field.value} onChange={field.onChange} />
+                <AdFormatSelector value={field.value} onChange={field.onChange} />
               )}
             />
-            {errors.platforms && (
-              <p className="text-xs text-red-500">{errors.platforms.message}</p>
+            {errors.ad_formats && (
+              <p className="text-xs text-red-500">{errors.ad_formats.message}</p>
             )}
           </div>
 

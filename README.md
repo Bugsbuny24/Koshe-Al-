@@ -4,7 +4,7 @@
 
 ## What is AdGenius Network?
 
-AdGenius Network is a **full-stack ad platform** that connects advertisers and publishers through a proprietary ad network, powered by AI. This is **not** just an ad copy tool or a Meta/TikTok helper.
+AdGenius Network is a **full-stack ad platform** that connects advertisers and publishers through a proprietary ad network, powered by AI. This is **not** an external ad platform integration tool.
 
 **Advertisers** can:
 - Create brands, products, and audiences
@@ -20,7 +20,7 @@ AdGenius Network is a **full-stack ad platform** that connects advertisers and p
 - View fill rates, impressions, clicks, and earnings
 
 **The Platform** itself:
-- Serves ads across its own publisher network (no TikTok/Meta/Google in V1)
+- Serves ads across its own publisher network
 - Matches eligible campaigns to ad slots with budget, category, format, and frequency checks
 - Tracks impressions and clicks, deducts budget, and stops campaigns when exhausted
 - Provides a full admin/ops control panel
@@ -64,7 +64,7 @@ Browser
 - `/generated/[id]` — Review generated ad package
 - `/reports` — Campaign performance reports
 - `/billing` — Invoice history
-- `/integrations` — External platform status (disabled in V1)
+- `/integrations` — Ad network overview
 - `/settings` — Account settings
 
 ### Publisher (`/publisher`)
@@ -160,14 +160,10 @@ npm run dev
 | `DATABASE_URL` | — | PostgreSQL connection string |
 | `REDIS_URL` | `redis://localhost:6379` | Redis connection string |
 | `JWT_SECRET` / `SECRET_KEY` | — | JWT signing secret (generate a long random string) |
-| `GEMINI_API_KEY` | — | Google Gemini API key (empty = mock mode) |
+| `GEMINI_API_KEY` | — | Gemini API key (empty = mock mode) |
 | `APP_ENV` | `development` | `development` or `production` |
 | `WEB_URL` | `http://localhost:3000` | Frontend base URL |
 | `API_URL` | `http://localhost:8000` | Backend API URL |
-| `ENABLE_TIKTOK_CONNECT` | `false` | Enable TikTok OAuth + publishing |
-| `ENABLE_META_CONNECT` | `false` | Enable Meta OAuth + publishing |
-| `ENABLE_GOOGLE_CONNECT` | `false` | Enable Google Ads OAuth + publishing |
-| `ENABLE_EXTERNAL_PUBLISHING` | `false` | Master external publish switch |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8000` | Frontend → API base URL |
 
 ## Demo Credentials
@@ -194,8 +190,9 @@ cd apps/api && alembic downgrade -1
 ```
 
 **Migrations:**
-- `0001_initial.py` — Users, workspaces, brands, products, audiences, campaigns, generation, integrations
+- `0001_initial.py` — Users, workspaces, brands, products, audiences, campaigns, generation
 - `0002_add_publisher_delivery_finance.py` — User roles, publishers, sites, apps, placements, slots, live campaigns, impressions, clicks, budget ledger, pacing, finance, moderation
+- `0003_remove_integrations_add_ad_formats.py` — Remove external platform integration tables; migrate to ad formats
 
 ## Seed Data
 
@@ -268,14 +265,12 @@ cd apps/web && npm test
 - No file/asset upload UI (infrastructure ready)
 - No real-time bidding (RTB) — simple scoring model used
 - No advanced fraud detection (signals table exists; TODO comments mark expansion points)
-- External platform integrations (TikTok, Meta, Google Ads) are scaffold only — disabled
 - Frequency cap is session-based (no cross-device tracking in V1)
 - Publisher payouts are manual (payout ledger exists; automation planned for V2)
 
 ## V2 Roadmap
 
 - [ ] Self-serve billing with Stripe
-- [ ] TikTok, Meta, and Google Ads publishing integrations
 - [ ] Real image generation / creative upload
 - [ ] Advanced RTB auction engine
 - [ ] ML-based fraud detection

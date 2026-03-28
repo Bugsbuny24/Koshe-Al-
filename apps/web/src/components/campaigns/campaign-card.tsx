@@ -5,14 +5,8 @@ import { Eye, Trash2, Zap } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatDate, getObjectiveLabel, getToneLabel, getPlatformLabel } from '@/lib/utils'
-import type { CampaignBrief, Platform } from '@/types/api'
-
-const platformVariants: Record<Platform, 'google' | 'meta' | 'tiktok'> = {
-  GOOGLE: 'google',
-  META: 'meta',
-  TIKTOK: 'tiktok',
-}
+import { formatDate, getAdFormatLabel, getObjectiveLabel, getToneLabel } from '@/lib/utils'
+import type { CampaignBrief } from '@/types/api'
 
 interface CampaignCardProps {
   campaign: CampaignBrief
@@ -34,12 +28,12 @@ export function CampaignCard({ campaign, onDelete, onGenerate }: CampaignCardPro
       </CardHeader>
       <CardContent className="pb-4">
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {campaign.platforms.map((platform) => (
-            <Badge key={platform} variant={platformVariants[platform]}>
-              {getPlatformLabel(platform)}
+          {campaign.ad_formats.map((format) => (
+            <Badge key={format} variant="secondary">
+              {getAdFormatLabel(format)}
             </Badge>
           ))}
-          <Badge variant="secondary">{getToneLabel(campaign.tone)}</Badge>
+          <Badge variant="outline">{getToneLabel(campaign.tone)}</Badge>
         </div>
         {campaign.product_description && (
           <p className="mb-3 line-clamp-2 text-sm text-slate-500">

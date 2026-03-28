@@ -1,8 +1,7 @@
 from app.models.user import User, Workspace, WorkspaceMember, UserRole
 from app.models.brand import Brand, Product, Audience
-from app.models.campaign import CampaignBrief, Platform, CampaignObjective, ToneOfVoice
+from app.models.campaign import CampaignBrief, AdFormat, CampaignObjective, ToneOfVoice
 from app.models.generation import GenerationJob, GeneratedAdSet, GeneratedAdVariant, ExportBundle, JobStatus
-from app.models.integration import PlatformConnection, OAuthState
 from app.models.usage import UsageLog, ApiUsageCounter
 from app.models.publisher import (
     PublisherProfile, PublisherSite, PublisherApp, Placement, AdSlot,
@@ -21,9 +20,8 @@ from app.models.finance import (
 __all__ = [
     "User", "Workspace", "WorkspaceMember", "UserRole",
     "Brand", "Product", "Audience",
-    "CampaignBrief", "Platform", "CampaignObjective", "ToneOfVoice",
+    "CampaignBrief", "AdFormat", "CampaignObjective", "ToneOfVoice",
     "GenerationJob", "GeneratedAdSet", "GeneratedAdVariant", "ExportBundle", "JobStatus",
-    "PlatformConnection", "OAuthState",
     "UsageLog", "ApiUsageCounter",
     "PublisherProfile", "PublisherSite", "PublisherApp", "Placement", "AdSlot",
     "PublisherStatus", "SlotFormat",

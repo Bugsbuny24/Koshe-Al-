@@ -1,5 +1,5 @@
 // Enums
-export type Platform = 'GOOGLE' | 'META' | 'TIKTOK'
+export type AdFormat = 'BANNER' | 'NATIVE_CARD' | 'PROMOTED_LISTING' | 'FEED_CARD' | 'VIDEO'
 export type JobStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED'
 export type CampaignObjective = 'TRAFFIC' | 'LEADS' | 'SALES' | 'ENGAGEMENT' | 'AWARENESS'
 export type ToneOfVoice = 'PROFESSIONAL' | 'PREMIUM' | 'CASUAL' | 'AGGRESSIVE' | 'EDUCATIONAL'
@@ -58,7 +58,7 @@ export interface CampaignBrief {
   language: string
   objective: CampaignObjective
   tone: ToneOfVoice
-  platforms: Platform[]
+  ad_formats: AdFormat[]
   offer: string
   budget_range: string
   landing_page_angle: string
@@ -77,7 +77,7 @@ export interface GenerationJob {
 
 export interface GeneratedAdVariant {
   id: string
-  platform: Platform
+  ad_format: AdFormat
   variant_type: string
   content: Record<string, unknown>
   is_favorite: boolean
@@ -109,36 +109,53 @@ export interface ApiError {
   status?: number
 }
 
-// Google Ads content structure
-export interface GoogleAdsContent {
+// Banner Ad content structure
+export interface BannerAdContent {
   headlines: string[]
   descriptions: string[]
-  keyword_themes: string[]
-  sitelink_ideas: Array<{ title: string; description: string }>
-  callout_ideas: string[]
+  cta_suggestions: string[]
+  image_brief: string
 }
 
-// Meta Ads content structure
-export interface MetaAdsContent {
-  primary_texts: string[]
+// Native Card Ad content structure
+export interface NativeCardAdContent {
   headlines: string[]
+  body_texts: string[]
   cta_suggestions: string[]
-  image_creative_brief: string
+  image_brief: string
   angle_summary: string
 }
 
-// TikTok Ads content structure
-export interface TikTokAdsContent {
-  hooks: string[]
-  short_scripts: string[]
-  captions: string[]
+// Promoted Listing Ad content structure
+export interface PromotedListingAdContent {
+  titles: string[]
+  descriptions: string[]
+  price_callouts: string[]
   cta_suggestions: string[]
-  ugc_brief: string
-  video_prompt: string
 }
 
-export interface PlatformContent {
-  google?: GoogleAdsContent
-  meta?: MetaAdsContent
-  tiktok?: TikTokAdsContent
+// Feed Card Ad content structure
+export interface FeedCardAdContent {
+  headlines: string[]
+  body_texts: string[]
+  cta_suggestions: string[]
+  image_brief: string
+  angle_summary: string
+}
+
+// Video Ad content structure
+export interface VideoAdContent {
+  hooks: string[]
+  scripts: string[]
+  captions: string[]
+  cta_suggestions: string[]
+  video_brief: string
+}
+
+export interface AdFormatContent {
+  banner_ads?: BannerAdContent
+  native_card_ads?: NativeCardAdContent
+  promoted_listing_ads?: PromotedListingAdContent
+  feed_card_ads?: FeedCardAdContent
+  video_ads?: VideoAdContent
 }

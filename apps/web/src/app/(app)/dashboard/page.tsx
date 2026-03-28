@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useBrands } from '@/hooks/use-brands'
 import { useCampaigns } from '@/hooks/use-campaigns'
 import { useAdSets } from '@/hooks/use-generation'
-import { formatDate, getPlatformLabel, getObjectiveLabel } from '@/lib/utils'
+import { formatDate, getAdFormatLabel, getObjectiveLabel } from '@/lib/utils'
 
 function StatCard({
   title,
@@ -192,7 +192,7 @@ export default function DashboardPage() {
             ) : (
               <div className="divide-y divide-slate-100">
                 {recentAdSets.map((adSet) => {
-                  const platforms = Object.keys(adSet.raw_json ?? {})
+                  const adFormats = Object.keys(adSet.raw_json ?? {})
                   return (
                     <Link
                       key={adSet.id}
@@ -206,9 +206,9 @@ export default function DashboardPage() {
                         <p className="text-xs text-slate-400">{formatDate(adSet.created_at)}</p>
                       </div>
                       <div className="ml-3 flex flex-wrap gap-1">
-                        {platforms.map((p) => (
-                          <Badge key={p} variant="secondary" className="text-xs">
-                            {getPlatformLabel(p.toUpperCase())}
+                        {adFormats.map((f) => (
+                          <Badge key={f} variant="secondary" className="text-xs">
+                            {getAdFormatLabel(f.toUpperCase())}
                           </Badge>
                         ))}
                       </div>

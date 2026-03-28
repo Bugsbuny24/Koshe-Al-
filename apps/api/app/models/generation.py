@@ -5,7 +5,6 @@ from sqlalchemy import String, ForeignKey, JSON, Text, Boolean, DateTime, Enum a
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from app.models.base import UUIDBase
-from app.models.campaign import Platform
 
 
 class JobStatus(str, enum.Enum):
@@ -47,7 +46,7 @@ class GeneratedAdVariant(UUIDBase):
     __tablename__ = "generated_ad_variants"
 
     ad_set_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("generated_ad_sets.id"), nullable=False, index=True)
-    platform: Mapped[Platform] = mapped_column(SAEnum(Platform), nullable=False)
+    ad_format: Mapped[str] = mapped_column(String(50), nullable=False)
     variant_type: Mapped[str] = mapped_column(String(100), nullable=False)
     content: Mapped[dict] = mapped_column(JSON, nullable=False)
     is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

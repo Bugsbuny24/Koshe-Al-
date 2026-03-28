@@ -6,10 +6,12 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from app.models.base import UUIDBase
 
 
-class Platform(str, enum.Enum):
-    GOOGLE = "GOOGLE"
-    META = "META"
-    TIKTOK = "TIKTOK"
+class AdFormat(str, enum.Enum):
+    BANNER = "BANNER"
+    NATIVE_CARD = "NATIVE_CARD"
+    PROMOTED_LISTING = "PROMOTED_LISTING"
+    FEED_CARD = "FEED_CARD"
+    VIDEO = "VIDEO"
 
 
 class CampaignObjective(str, enum.Enum):
@@ -43,7 +45,7 @@ class CampaignBrief(UUIDBase):
     language: Mapped[str | None] = mapped_column(String(100), nullable=True)
     objective: Mapped[CampaignObjective] = mapped_column(SAEnum(CampaignObjective), nullable=False)
     tone: Mapped[ToneOfVoice] = mapped_column(SAEnum(ToneOfVoice), nullable=False)
-    platforms: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    ad_formats: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     offer: Mapped[str | None] = mapped_column(Text, nullable=True)
     budget_range: Mapped[str | None] = mapped_column(String(255), nullable=True)
     landing_page_angle: Mapped[str | None] = mapped_column(Text, nullable=True)

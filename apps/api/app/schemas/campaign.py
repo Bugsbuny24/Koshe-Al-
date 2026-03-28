@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Optional, List
 from pydantic import BaseModel
-from app.models.campaign import Platform, CampaignObjective, ToneOfVoice
+from app.models.campaign import AdFormat, CampaignObjective, ToneOfVoice
 
 
 class CampaignBriefCreate(BaseModel):
@@ -16,7 +16,7 @@ class CampaignBriefCreate(BaseModel):
     language: Optional[str] = None
     objective: CampaignObjective
     tone: ToneOfVoice
-    platforms: List[Platform]
+    ad_formats: List[AdFormat]
     offer: Optional[str] = None
     budget_range: Optional[str] = None
     landing_page_angle: Optional[str] = None
@@ -35,7 +35,7 @@ class CampaignBriefUpdate(BaseModel):
     language: Optional[str] = None
     objective: Optional[CampaignObjective] = None
     tone: Optional[ToneOfVoice] = None
-    platforms: Optional[List[Platform]] = None
+    ad_formats: Optional[List[AdFormat]] = None
     offer: Optional[str] = None
     budget_range: Optional[str] = None
     landing_page_angle: Optional[str] = None
@@ -57,7 +57,7 @@ class CampaignBriefResponse(BaseModel):
     language: Optional[str] = None
     objective: CampaignObjective
     tone: ToneOfVoice
-    platforms: List[str]
+    ad_formats: List[str]
     offer: Optional[str] = None
     budget_range: Optional[str] = None
     landing_page_angle: Optional[str] = None

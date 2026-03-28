@@ -3,7 +3,6 @@ from app.services.brand_service import BrandService, ProductService, AudienceSer
 from app.services.campaign_service import CampaignService
 from app.services.generation_service import GenerationService
 from app.services.export_service import ExportService
-from app.services.integration_service import IntegrationService
 
 __all__ = [
     "hash_password", "verify_password", "create_access_token", "decode_access_token",
@@ -11,5 +10,4 @@ __all__ = [
     "CampaignService",
     "GenerationService",
     "ExportService",
-    "IntegrationService",
 ]

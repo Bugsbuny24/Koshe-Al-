@@ -10,15 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Separator } from '@/components/ui/separator'
 import { useCampaign } from '@/hooks/use-campaigns'
 import { useAdSets, useCreateGenerationJob } from '@/hooks/use-generation'
-import { formatDate, getObjectiveLabel, getToneLabel, getPlatformLabel } from '@/lib/utils'
+import { formatDate, getObjectiveLabel, getToneLabel, getAdFormatLabel } from '@/lib/utils'
 import { toast } from 'sonner'
-import type { GenerationJob, Platform } from '@/types/api'
-
-const platformVariants: Record<Platform, 'google' | 'meta' | 'tiktok'> = {
-  GOOGLE: 'google',
-  META: 'meta',
-  TIKTOK: 'tiktok',
-}
+import type { GenerationJob } from '@/types/api'
 
 function InfoRow({ label, value }: { label: string; value: string | undefined }) {
   if (!value) return null
@@ -113,12 +107,12 @@ export default function CampaignDetailPage() {
             <Separator className="my-4" />
             <div>
               <dt className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">
-                Platforms
+                Ad Formats
               </dt>
               <dd className="flex flex-wrap gap-1.5">
-                {campaign.platforms.map((p) => (
-                  <Badge key={p} variant={platformVariants[p]}>
-                    {getPlatformLabel(p)}
+                {campaign.ad_formats.map((f) => (
+                  <Badge key={f} variant="secondary">
+                    {getAdFormatLabel(f)}
                   </Badge>
                 ))}
               </dd>
@@ -183,7 +177,7 @@ export default function CampaignDetailPage() {
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {adSets.map((adSet) => {
-              const platforms = Object.keys(adSet.raw_json ?? {})
+              const adFormats = Object.keys(adSet.raw_json ?? {})
               return (
                 <Link
                   key={adSet.id}
@@ -197,9 +191,9 @@ export default function CampaignDetailPage() {
                     <p className="text-xs text-slate-400">{formatDate(adSet.created_at)}</p>
                   </div>
                   <div className="flex flex-wrap gap-1">
-                    {platforms.map((p) => (
-                      <Badge key={p} variant="secondary" className="text-xs">
-                        {getPlatformLabel(p.toUpperCase())}
+                    {adFormats.map((f) => (
+                      <Badge key={f} variant="secondary" className="text-xs">
+                        {getAdFormatLabel(f.toUpperCase())}
                       </Badge>
                     ))}
                   </div>

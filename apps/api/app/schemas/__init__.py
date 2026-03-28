@@ -7,10 +7,9 @@ from app.schemas.brand import (
 from app.schemas.campaign import CampaignBriefCreate, CampaignBriefUpdate, CampaignBriefResponse
 from app.schemas.generation import (
     GenerationJobCreate, GenerationJobResponse,
-    GeneratedAdSetResponse, AdVariantResponse, AdVariantUpdate, RegenerateSectionRequest,
+    GeneratedAdSetResponse, AdVariantResponse, AdVariantUpdate, RegenerateFormatRequest,
 )
 from app.schemas.export import ExportResponse
-from app.schemas.integration import IntegrationStatus, ConnectRequest, AllIntegrationsStatus
 from app.schemas.common import PaginatedResponse, ErrorResponse
 
 __all__ = [
@@ -20,8 +19,7 @@ __all__ = [
     "AudienceCreate", "AudienceUpdate", "AudienceResponse",
     "CampaignBriefCreate", "CampaignBriefUpdate", "CampaignBriefResponse",
     "GenerationJobCreate", "GenerationJobResponse",
-    "GeneratedAdSetResponse", "AdVariantResponse", "AdVariantUpdate", "RegenerateSectionRequest",
+    "GeneratedAdSetResponse", "AdVariantResponse", "AdVariantUpdate", "RegenerateFormatRequest",
     "ExportResponse",
-    "IntegrationStatus", "ConnectRequest", "AllIntegrationsStatus",
     "PaginatedResponse", "ErrorResponse",
 ]

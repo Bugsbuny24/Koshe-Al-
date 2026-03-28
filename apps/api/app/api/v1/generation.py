@@ -8,7 +8,7 @@ from app.dependencies import get_db, get_current_user, get_current_workspace, ra
 from app.models.user import User, Workspace
 from app.schemas.generation import (
     GenerationJobCreate, GenerationJobResponse,
-    GeneratedAdSetResponse, AdVariantResponse, AdVariantUpdate, RegenerateSectionRequest,
+    GeneratedAdSetResponse, AdVariantResponse, AdVariantUpdate, RegenerateFormatRequest,
 )
 from app.services.generation_service import GenerationService
 from app.config import settings
@@ -82,7 +82,7 @@ async def get_ad_set(
 @router.post("/generated-ad-sets/{ad_set_id}/regenerate-section", response_model=GenerationJobResponse, status_code=status.HTTP_201_CREATED)
 async def regenerate_section(
     ad_set_id: uuid.UUID,
-    data: RegenerateSectionRequest,
+    data: RegenerateFormatRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     workspace: Workspace = Depends(get_current_workspace),
