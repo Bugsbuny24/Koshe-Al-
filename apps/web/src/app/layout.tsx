@@ -5,7 +5,7 @@ import { ToastProvider } from '@/components/common/toast-provider'
 
 export const metadata: Metadata = {
   title: 'AdGenius — AI-Powered Ad Copy Generator',
-  description: 'Generate high-converting ad copy for Google, Meta, and TikTok with AI',
+  description: 'AI-powered ad platform — generate high-converting creatives and serve them across the AdGenius publisher network',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

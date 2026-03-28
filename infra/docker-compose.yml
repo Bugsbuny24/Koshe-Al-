@@ -41,10 +41,6 @@ services:
       SECRET_KEY: ${SECRET_KEY:-changeme-in-production-use-long-random-string}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       ENVIRONMENT: ${ENVIRONMENT:-development}
-      ENABLE_TIKTOK_CONNECT: ${ENABLE_TIKTOK_CONNECT:-false}
-      ENABLE_META_CONNECT: ${ENABLE_META_CONNECT:-false}
-      ENABLE_GOOGLE_CONNECT: ${ENABLE_GOOGLE_CONNECT:-false}
-      ENABLE_PUBLISHING: ${ENABLE_PUBLISHING:-false}
       CORS_ORIGINS: '["http://localhost:3000"]'
     depends_on:
       postgres:
@@ -64,10 +60,6 @@ services:
       SECRET_KEY: ${SECRET_KEY:-changeme-in-production-use-long-random-string}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       ENVIRONMENT: ${ENVIRONMENT:-development}
-      ENABLE_TIKTOK_CONNECT: ${ENABLE_TIKTOK_CONNECT:-false}
-      ENABLE_META_CONNECT: ${ENABLE_META_CONNECT:-false}
-      ENABLE_GOOGLE_CONNECT: ${ENABLE_GOOGLE_CONNECT:-false}
-      ENABLE_PUBLISHING: ${ENABLE_PUBLISHING:-false}
     depends_on:
       postgres:
         condition: service_healthy

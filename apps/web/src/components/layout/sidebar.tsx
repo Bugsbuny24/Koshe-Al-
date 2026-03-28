@@ -26,7 +26,7 @@ const navItems = [
   { href: '/generated', label: 'Generated Ads', icon: Sparkles },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
   { href: '/billing', label: 'Billing', icon: CreditCard },
-  { href: '/integrations', label: 'Ad Network', icon: Network },
+  { href: '/network', label: 'Ad Network', icon: Network },
   { href: '/settings', label: 'Settings', icon: Settings },
 ]
 

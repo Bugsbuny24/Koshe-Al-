@@ -25,7 +25,7 @@ function getBreadcrumb(pathname: string): string {
     audiences: 'Audiences',
     campaigns: 'Campaigns',
     generated: 'Generated Ads',
-    integrations: 'Integrations',
+    network: 'Ad Network',
     settings: 'Settings',
     new: 'New',
   }
