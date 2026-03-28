@@ -9,7 +9,7 @@ const PROTECTED_PATHS = [
   '/campaigns',
   '/generated',
   '/settings',
-  '/integrations',
+  '/network',
 ]
 
 const AUTH_PATHS = ['/login', '/signup']

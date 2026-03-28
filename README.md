@@ -64,7 +64,7 @@ Browser
 - `/generated/[id]` — Review generated ad package
 - `/reports` — Campaign performance reports
 - `/billing` — Invoice history
-- `/integrations` — Ad network overview
+- `/network` — Ad network overview
 - `/settings` — Account settings
 
 ### Publisher (`/publisher`)
