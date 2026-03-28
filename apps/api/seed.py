@@ -30,6 +30,7 @@ from app.models.delivery import (
     AdImpression, AdClick, BudgetLedger, PacingCounter,
 )
 from app.models.finance import AdvertiserInvoice, InvoiceStatus
+from app.models.adnet import Campaign, CampaignStatus, Ad, AdvertiserWallet, AdvertiserTransaction
 from app.services.auth_service import hash_password
 from app.ai.mock_data import get_mock_output
 from datetime import datetime, timezone
@@ -226,6 +227,7 @@ async def seed():
             category="technology",
             description="Technology news and reviews for professionals.",
             is_active=True,
+            is_verified=True,
             allowed_categories=["technology", "software", "business"],
         )
         db.add(pub_site)
@@ -250,6 +252,8 @@ async def seed():
             height=90,
             category="technology",
             is_active=True,
+            slot_key="techblog-header-banner",
+            revenue_share_percent=Decimal("70.00"),
         )
         db.add(slot)
         await db.flush()
@@ -336,6 +340,58 @@ async def seed():
             spend_today=Decimal("0.250000"),
         ))
 
+        # ── Advertiser wallet (new adnet model) ─────────────────────────────
+        adv_wallet = AdvertiserWallet(
+            user_id=adv_user.id,
+            balance=Decimal("500.00"),
+            total_deposited=Decimal("500.00"),
+            total_spent=Decimal("0.00"),
+        )
+        db.add(adv_wallet)
+        await db.flush()
+
+        # Deposit transaction
+        db.add(AdvertiserTransaction(
+            wallet_id=adv_wallet.id,
+            tx_type="deposit",
+            amount=Decimal("500.00"),
+            description="Initial wallet funding",
+        ))
+
+        # ── Direct Campaign (new adnet model) ───────────────────────────────
+        campaign = Campaign(
+            user_id=adv_user.id,
+            title="TechCorp Summer Sale",
+            landing_url="https://techcorp.example.com/sale",
+            status=CampaignStatus.ACTIVE,
+            total_budget=Decimal("200.00"),
+            daily_budget=Decimal("20.00"),
+            pricing_model="CPM",
+            bid_amount=Decimal("2.50"),
+            target_countries=["US", "GB", "CA"],
+            target_devices=["desktop", "mobile"],
+            category="technology",
+            is_active=True,
+            spent_amount=Decimal("12.50"),
+            impressions_count=5000,
+            clicks_count=48,
+        )
+        db.add(campaign)
+        await db.flush()
+
+        # ── Ad for the campaign ─────────────────────────────────────────────
+        ad = Ad(
+            campaign_id=campaign.id,
+            headline="Get 30% Off TechCorp Pro",
+            body="Limited time offer! Upgrade your workflow with TechCorp Pro and save 30%. Trusted by 10,000+ teams.",
+            cta="Claim Offer",
+            image_url=None,
+            creative_type="text",
+            is_active=True,
+        )
+        db.add(ad)
+        await db.flush()
+
         await db.commit()
 
         print("✅ Admin user: admin@adgenius.ai / admin1234")
@@ -343,9 +399,12 @@ async def seed():
         print("✅ Publisher user: publisher@adgenius.ai / pub12345")
         print("✅ TechCorp brand, product, audience, campaign brief")
         print("✅ AI-generated ad set (mock)")
-        print("✅ Publisher profile, site, placement, slot")
+        print("✅ Publisher profile, site, placement, slot (slot_key: techblog-header-banner)")
         print("✅ Active live campaign with 50 impressions and 10 clicks")
         print("✅ Advertiser invoice INV-2024-001")
+        print("✅ Advertiser wallet with $500 balance")
+        print("✅ Direct adnet campaign: TechCorp Summer Sale")
+        print("✅ Ad creative for adnet campaign")
         print("Seeding complete!")
 
     await engine.dispose()

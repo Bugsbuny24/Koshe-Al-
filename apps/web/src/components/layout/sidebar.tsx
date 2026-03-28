@@ -14,6 +14,7 @@ import {
   Zap,
   BarChart3,
   CreditCard,
+  Wallet,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -25,6 +26,7 @@ const navItems = [
   { href: '/campaigns', label: 'Campaigns', icon: FileText },
   { href: '/generated', label: 'Generated Ads', icon: Sparkles },
   { href: '/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/wallet', label: 'Wallet', icon: Wallet },
   { href: '/billing', label: 'Billing', icon: CreditCard },
   { href: '/network', label: 'Ad Network', icon: Network },
   { href: '/settings', label: 'Settings', icon: Settings },

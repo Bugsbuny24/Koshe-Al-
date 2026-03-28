@@ -1,6 +1,7 @@
 """Publisher-side domain models: profiles, sites, apps, placements, ad slots."""
 import uuid
 import enum
+from decimal import Decimal
 from sqlalchemy import String, ForeignKey, JSON, Text, Boolean, Numeric, Integer, Enum as SAEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
@@ -49,6 +50,7 @@ class PublisherSite(UUIDBase):
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     allowed_categories: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     publisher: Mapped["PublisherProfile"] = relationship("PublisherProfile", back_populates="sites")
@@ -92,11 +94,13 @@ class AdSlot(UUIDBase):
 
     placement_id: Mapped[uuid.UUID] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("placements.id"), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
+    slot_key: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False, default=lambda: str(uuid.uuid4()))
     format: Mapped[SlotFormat] = mapped_column(SAEnum(SlotFormat), nullable=False)
     width: Mapped[int | None] = mapped_column(Integer, nullable=True)
     height: Mapped[int | None] = mapped_column(Integer, nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
     allowed_formats: Mapped[list | None] = mapped_column(JSON, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    revenue_share_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2), nullable=False, default=Decimal("70.0"))
 
     placement: Mapped["Placement"] = relationship("Placement", back_populates="slots")

@@ -16,6 +16,9 @@ from app.models.finance import (
     ModerationReview, PolicyFlag, FraudSignal,
     InvoiceStatus, ModerationDecision, ModerationItemType,
 )
+from app.models.adnet import (
+    Campaign, CampaignStatus, Ad, AdvertiserWallet, AdvertiserTransaction, PublisherEarning,
+)
 
 __all__ = [
     "User", "Workspace", "WorkspaceMember", "UserRole",
@@ -30,4 +33,5 @@ __all__ = [
     "AdvertiserInvoice", "PublisherPayout", "SpendReservation",
     "ModerationReview", "PolicyFlag", "FraudSignal",
     "InvoiceStatus", "ModerationDecision", "ModerationItemType",
+    "Campaign", "CampaignStatus", "Ad", "AdvertiserWallet", "AdvertiserTransaction", "PublisherEarning",
 ]
