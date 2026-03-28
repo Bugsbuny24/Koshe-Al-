@@ -285,6 +285,35 @@ cd apps/web && npm test
 - [ ] A/B testing for ad creatives
 - [ ] Conversion attribution model
 
+## Netlify Deployment (Frontend)
+
+The frontend lives in `apps/web/`. The `netlify.toml` at the repository root handles all configuration automatically.
+
+### Netlify Site Settings
+
+| Setting | Value |
+|---------|-------|
+| Base directory | `apps/web` |
+| Build command | `npm run build` |
+| Publish directory | `.next` |
+
+The `@netlify/plugin-nextjs` plugin is declared in `netlify.toml` and will be installed automatically by Netlify — no manual plugin installation is required.
+
+### Required Environment Variables
+
+Set the following in **Netlify → Site settings → Environment variables**:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_API_URL` | Full URL of the deployed backend API (e.g. `https://api.example.com`) |
+
+### Steps
+
+1. Connect the repository to Netlify.
+2. Netlify will auto-detect `netlify.toml` and use `apps/web` as the base directory.
+3. Add `NEXT_PUBLIC_API_URL` in the Netlify environment variables settings.
+4. Trigger a deploy.
+
 ## API Documentation
 
 When running locally:
