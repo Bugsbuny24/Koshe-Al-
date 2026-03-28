@@ -1,26 +1,42 @@
 import Link from 'next/link'
-import { Zap, ArrowRight, CheckCircle2, BarChart3, Globe, Sparkles } from 'lucide-react'
+import { Zap, ArrowRight, Sparkles, LayoutList, Target } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 const features = [
   {
     icon: Sparkles,
-    title: 'AI-Powered Copy',
-    description: 'Generate compelling ad copy tailored to your brand voice and campaign objectives using advanced AI.',
+    title: 'Smart Ad Copy',
+    description: 'Generate ad copy tailored to your brand, audience, and campaign goals in seconds.',
   },
   {
-    icon: Globe,
-    title: 'Multi-Platform',
-    description: 'Create ads for Google, Meta (Facebook & Instagram), and TikTok from a single campaign brief.',
+    icon: LayoutList,
+    title: 'One Brief, Multiple Variations',
+    description: 'Turn one campaign input into multiple angles, headlines, and messaging options instantly.',
   },
   {
-    icon: BarChart3,
-    title: 'Performance-Focused',
-    description: 'Every variant is crafted with conversion in mind — headlines, descriptions, hooks, and CTAs.',
+    icon: Target,
+    title: 'Performance-Focused Creation',
+    description: 'Create headlines, descriptions, calls to action, and creative ideas designed for better results.',
   },
 ]
 
-const platforms = ['Google Ads', 'Meta Ads', 'TikTok Ads']
+const steps = [
+  {
+    number: '01',
+    title: 'Add your campaign brief',
+    description: 'Enter your product, audience, goal, and message in a simple guided flow.',
+  },
+  {
+    number: '02',
+    title: 'Generate your ad package',
+    description: 'AI prepares ad copy, creative directions, and multiple campaign-ready variations.',
+  },
+  {
+    number: '03',
+    title: 'Review and move faster',
+    description: 'Review your outputs, refine what you need, and move forward with a clearer campaign package.',
+  },
+]
 
 export default function LandingPage() {
   return (
@@ -51,34 +67,32 @@ export default function LandingPage() {
         <div className="mx-auto max-w-3xl">
           <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-sm text-indigo-700">
             <Sparkles className="h-3.5 w-3.5" />
-            AI-powered ad copy generation
+            AI-powered ad creation
           </div>
           <h1 className="mb-6 text-5xl font-bold leading-tight tracking-tight text-slate-900 sm:text-6xl">
-            Generate ad copy that{' '}
-            <span className="text-indigo-600">actually converts</span>
+            Create high-converting ads in minutes
           </h1>
           <p className="mb-8 text-xl text-slate-500 leading-relaxed">
-            Stop spending hours writing ad copy. AdGenius uses AI to generate platform-optimized
-            ads for Google, Meta, and TikTok in seconds — tailored to your brand and audience.
+            Enter your product details and let AI generate ad copy, creative angles, and campaign
+            variations tailored to your brand and audience.
           </p>
           <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Button size="lg" asChild className="px-8">
               <Link href="/signup">
-                Start generating ads free
+                Start creating ads
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button variant="outline" size="lg" asChild>
-              <Link href="/login">Sign in to your account</Link>
+              <Link href="#how-it-works">See how it works</Link>
             </Button>
           </div>
-          <div className="mt-6 flex items-center justify-center gap-4 text-sm text-slate-400">
-            {platforms.map((p) => (
-              <span key={p} className="flex items-center gap-1.5">
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
-                {p}
-              </span>
-            ))}
+          <div className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-400">
+            <span>Fast setup</span>
+            <span>·</span>
+            <span>Smarter messaging</span>
+            <span>·</span>
+            <span>More variations</span>
           </div>
         </div>
       </section>
@@ -88,10 +102,10 @@ export default function LandingPage() {
         <div className="mx-auto max-w-5xl">
           <div className="mb-12 text-center">
             <h2 className="mb-3 text-3xl font-bold text-slate-900">
-              Everything you need to launch winning campaigns
+              Everything you need to build stronger campaigns
             </h2>
             <p className="text-lg text-slate-500">
-              From campaign brief to ready-to-publish copy in under a minute.
+              From a single brief to ready-to-use ad ideas, manage your creative workflow in one place.
             </p>
           </div>
           <div className="grid gap-8 sm:grid-cols-3">
@@ -111,14 +125,46 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* How it works */}
+      <section id="how-it-works" className="bg-slate-50 px-6 py-20">
+        <div className="mx-auto max-w-4xl">
+          <div className="mb-12 text-center">
+            <h2 className="text-3xl font-bold text-slate-900">How it works</h2>
+          </div>
+          <div className="grid gap-8 sm:grid-cols-3">
+            {steps.map((step) => (
+              <div key={step.number} className="flex flex-col items-start">
+                <span className="mb-3 text-3xl font-bold text-indigo-200">{step.number}</span>
+                <h3 className="mb-2 text-base font-semibold text-slate-900">{step.title}</h3>
+                <p className="text-sm text-slate-500 leading-relaxed">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Extra section */}
+      <section className="px-6 py-20">
+        <div className="mx-auto max-w-3xl text-center">
+          <h2 className="mb-4 text-3xl font-bold text-slate-900">
+            Built for faster campaign execution
+          </h2>
+          <p className="text-lg text-slate-500 leading-relaxed">
+            Whether you are launching a new offer, testing new messaging, or preparing campaign
+            ideas at scale, AdGenius helps you move from idea to execution faster.
+          </p>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="bg-indigo-600 px-6 py-20 text-center">
         <div className="mx-auto max-w-2xl">
           <h2 className="mb-4 text-3xl font-bold text-white">
-            Ready to supercharge your ad campaigns?
+            Ready to speed up your ad creation workflow?
           </h2>
           <p className="mb-8 text-lg text-indigo-200">
-            Join hundreds of marketers using AdGenius to create better ads, faster.
+            Use AI to generate better campaign ideas, stronger messaging, and more ad variations in
+            less time.
           </p>
           <Button
             size="lg"
@@ -127,7 +173,7 @@ export default function LandingPage() {
             className="bg-white text-indigo-600 hover:bg-indigo-50 px-8"
           >
             <Link href="/signup">
-              Get started — it&apos;s free
+              Get started free
               <ArrowRight className="h-4 w-4" />
             </Link>
           </Button>
