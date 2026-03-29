@@ -44,7 +44,7 @@
         ? '<img src="' + ad.image_url + '" alt="" style="width:100%;border-radius:6px;margin-bottom:10px;display:block;" />'
         : '') +
       '<div style="font-size:15px;font-weight:600;margin-bottom:4px;">' + _esc(ad.headline) + '</div>' +
-      '<div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.5;">' + _esc(ad.body) + '</div>' +
+      '<div style="font-size:13px;color:#64748b;margin-bottom:12px;line-height:1.5;">' + _esc(ad.body_text) + '</div>' +
       '<span style="display:inline-block;background:#4f46e5;color:#fff;font-size:12px;font-weight:600;' +
       'padding:6px 14px;border-radius:6px;">' + _esc(ad.cta) + '</span>' +
       '<span style="display:block;font-size:10px;color:#cbd5e1;margin-top:8px;">Ad · AdGenius Network</span>' +
@@ -52,11 +52,19 @@
 
     container.innerHTML = html
 
-    // Fire impression beacon
-    var img = new Image()
-    img.src = impUrl
-    img.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;'
-    document.body.appendChild(img)
+    // Fire impression beacon via POST
+    var trackingData = ad.tracking_data || {}
+    fetch(impUrl, {
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        campaign_id: trackingData.campaign_id || ad.campaign_id,
+        slot_id: trackingData.slot_id,
+        session_id: getSessionId(),
+        site_url: window.location.href,
+      }),
+    }).catch(function () {})
   }
 
   function _esc(str) {

@@ -10,6 +10,7 @@ from app.dependencies import get_db, get_current_user
 from app.models.user import User, Workspace, WorkspaceMember, UserRole
 from app.schemas.auth import SignupRequest, LoginRequest, UserResponse, WorkspaceResponse
 from app.services.auth_service import hash_password, verify_password, create_access_token
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = structlog.get_logger()
@@ -85,7 +86,7 @@ async def signup(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,  # Set True in production with HTTPS
+        secure=settings.ENVIRONMENT == "production",
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )
@@ -137,7 +138,7 @@ async def login(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,
+        secure=settings.ENVIRONMENT == "production",
         samesite="lax",
         max_age=7 * 24 * 60 * 60,
     )

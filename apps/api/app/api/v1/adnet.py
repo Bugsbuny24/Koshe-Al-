@@ -280,6 +280,16 @@ async def update_campaign(
 ):
     _require_advertiser(current_user)
     campaign = await _get_campaign_for_user(campaign_id, current_user, db)
+
+    # Guard: only admins may activate a campaign
+    admin_roles = {UserRole.SUPER_ADMIN, UserRole.OPS_MANAGER}
+    if current_user.role not in admin_roles:
+        if payload.status == CampaignStatus.ACTIVE or payload.is_active is True:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Campaign activation requires admin approval",
+            )
+
     for field, value in payload.model_dump(exclude_none=True).items():
         setattr(campaign, field, value)
     await db.flush()

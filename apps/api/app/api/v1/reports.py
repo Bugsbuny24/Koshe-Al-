@@ -13,6 +13,7 @@ from app.dependencies import get_db, get_current_user, get_current_workspace
 from app.models.user import User, UserRole, Workspace
 from app.models.delivery import LiveCampaign, AdImpression, AdClick, LiveCampaignStatus
 from app.models.publisher import PublisherProfile, AdSlot, Placement, PublisherSite
+from app.models.adnet import Campaign
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 logger = structlog.get_logger()
@@ -73,10 +74,17 @@ async def advertiser_report(
     current_user: User = Depends(get_current_user),
     workspace: Workspace = Depends(get_current_workspace),
 ):
+    # Query LiveCampaign
     result = await db.execute(
         select(LiveCampaign).where(LiveCampaign.workspace_id == workspace.id)
     )
-    campaigns = result.scalars().all()
+    live_campaigns = result.scalars().all()
+
+    # Query new Campaign model
+    result = await db.execute(
+        select(Campaign).where(Campaign.user_id == current_user.id)
+    )
+    new_campaigns = result.scalars().all()
 
     metrics = []
     total_impressions = 0
@@ -84,7 +92,7 @@ async def advertiser_report(
     total_spend = 0.0
     total_budget = 0.0
 
-    for campaign in campaigns:
+    for campaign in live_campaigns:
         imp_result = await db.execute(
             select(func.count(AdImpression.id)).where(AdImpression.campaign_id == campaign.id)
         )
@@ -110,6 +118,30 @@ async def advertiser_report(
             spent_amount=spent,
             remaining_budget=max(budget - spent, 0.0),
             pricing_model=campaign.pricing_model.value,
+        ))
+        total_impressions += impressions
+        total_clicks += clicks
+        total_spend += spent
+        total_budget += budget
+
+    for campaign in new_campaigns:
+        impressions = campaign.impressions_count or 0
+        clicks = campaign.clicks_count or 0
+        ctr = (clicks / impressions * 100) if impressions > 0 else 0.0
+        spent = float(campaign.spent_amount)
+        budget = float(campaign.total_budget)
+
+        metrics.append(CampaignMetrics(
+            campaign_id=str(campaign.id),
+            campaign_name=campaign.title,
+            status=campaign.status.value,
+            impressions=impressions,
+            clicks=clicks,
+            ctr=round(ctr, 2),
+            total_budget=budget,
+            spent_amount=spent,
+            remaining_budget=max(budget - spent, 0.0),
+            pricing_model=campaign.pricing_model,
         ))
         total_impressions += impressions
         total_clicks += clicks

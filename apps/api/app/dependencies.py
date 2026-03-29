@@ -92,22 +92,48 @@ async def get_current_workspace(
 
 
 def rate_limiter(max_per_minute: int = 60):
-    """Simple in-memory rate limiter (use Redis-based in production)."""
+    """Redis-based sliding window rate limiter (safe for multiple uvicorn workers).
+    Falls back to allowing requests if Redis is unavailable."""
     import time
-    from collections import defaultdict
+    import redis.asyncio as aioredis
+    from app.config import settings
 
-    call_times: dict = defaultdict(list)
+    # Shared connection pool across all requests for this limiter instance
+    _pool: list = []
+
+    def _get_redis():
+        if not _pool:
+            _pool.append(aioredis.from_url(
+                settings.REDIS_URL,
+                decode_responses=True,
+                socket_connect_timeout=1,
+                max_connections=10,
+            ))
+        return _pool[0]
 
     async def _rate_limit(current_user: User = Depends(get_current_user)):
         user_id = str(current_user.id)
         now = time.time()
         window_start = now - 60
-        call_times[user_id] = [t for t in call_times[user_id] if t > window_start]
-        if len(call_times[user_id]) >= max_per_minute:
+        key = f"ratelimit:{user_id}"
+
+        try:
+            r = _get_redis()
+            async with r.pipeline(transaction=True) as pipe:
+                pipe.zremrangebyscore(key, "-inf", window_start)
+                pipe.zadd(key, {str(now): now})
+                pipe.zcard(key)
+                pipe.expire(key, 120)
+                results = await pipe.execute()
+            count = results[2]
+        except Exception:
+            # Redis unavailable — fail open (allow request)
+            return
+
+        if count > max_per_minute:
             raise HTTPException(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 detail=f"Rate limit exceeded. Max {max_per_minute} requests per minute.",
             )
-        call_times[user_id].append(now)
 
     return _rate_limit
