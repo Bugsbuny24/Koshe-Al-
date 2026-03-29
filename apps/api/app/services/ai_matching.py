@@ -15,14 +15,20 @@ _GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models"
 _GEMINI_MODEL = "gemini-1.5-flash"
 _CACHE_TTL = 1800  # 30 minutes
 
+# Module-level Redis connection pool, created lazily on first use
+_redis_pool: aioredis.Redis | None = None
 
-def _get_redis_client():
-    return aioredis.from_url(
-        settings.REDIS_URL,
-        decode_responses=True,
-        socket_connect_timeout=2,
-        max_connections=10,
-    )
+
+def _get_redis_client() -> aioredis.Redis:
+    global _redis_pool
+    if _redis_pool is None:
+        _redis_pool = aioredis.from_url(
+            settings.REDIS_URL,
+            decode_responses=True,
+            socket_connect_timeout=2,
+            max_connections=10,
+        )
+    return _redis_pool
 
 
 async def _call_gemini_match(slot_context: dict, campaign_context: dict) -> dict | None:
@@ -83,10 +89,9 @@ async def score_slot_campaign_match(slot: AdSlot, campaign: Campaign, db: AsyncS
     # Try cache first
     try:
         r = _get_redis_client()
-        async with r:
-            cached = await r.get(cache_key)
-            if cached is not None:
-                return float(cached)
+        cached = await r.get(cache_key)
+        if cached is not None:
+            return float(cached)
     except Exception as e:
         logger.debug("Redis cache read failed for match score", error=str(e))
 
@@ -122,8 +127,7 @@ async def score_slot_campaign_match(slot: AdSlot, campaign: Campaign, db: AsyncS
     # Cache the result
     try:
         r = _get_redis_client()
-        async with r:
-            await r.setex(cache_key, _CACHE_TTL, str(match_score))
+        await r.setex(cache_key, _CACHE_TTL, str(match_score))
     except Exception as e:
         logger.debug("Redis cache write failed for match score", error=str(e))
 

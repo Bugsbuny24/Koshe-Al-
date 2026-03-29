@@ -240,7 +240,7 @@ export default function AdminDeliveryPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {fraudSignals!.map((signal) => (
+                  {(fraudSignals ?? []).map((signal) => (
                     <tr key={signal.id} className={`transition-colors ${signal.is_reviewed ? 'opacity-50' : 'hover:bg-slate-50'}`}>
                       <td className="px-6 py-4 font-medium text-slate-900">
                         {signalTypeLabel(signal.signal_type)}

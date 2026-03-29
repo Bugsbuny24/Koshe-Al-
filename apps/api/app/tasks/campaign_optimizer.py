@@ -250,7 +250,10 @@ async def _optimize_campaigns():
                 )
 
                 # Use cpm_rate or cpc_rate as the "bid"
-                current_bid = float(lc.cpm_rate if lc.pricing_model.value == "CPM" else lc.cpc_rate)
+                if lc.pricing_model.value == "CPM":
+                    current_bid = float(lc.cpm_rate) if lc.cpm_rate is not None else 0.0
+                else:
+                    current_bid = float(lc.cpc_rate) if lc.cpc_rate is not None else 0.0
 
                 campaign_data = {
                     "campaign_id": str(lc.id),

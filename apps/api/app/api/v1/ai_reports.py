@@ -12,7 +12,7 @@ from sqlalchemy import func, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.dependencies import get_db, get_current_user
-from app.models.user import User
+from app.models.user import User, UserRole
 from app.models.adnet import Campaign, Ad
 from app.models.delivery import AdImpression, AdClick, LiveCampaign, LiveCampaignStatus
 from app.models.publisher import AdSlot, Placement, PublisherProfile, PublisherStatus
@@ -169,7 +169,7 @@ async def campaign_ai_report(
     total_clicks = clicks_result.scalar_one() or 0
     ctr = total_clicks / total_impressions if total_impressions > 0 else 0.0
 
-    # Top 3 ads by CTR (approximate by clicks count from campaign)
+    # Top 3 active ads for the campaign (no per-ad click tracking in current schema)
     top_ads_result = await db.execute(
         select(Ad).where(Ad.campaign_id == campaign_uuid, Ad.is_active == True).limit(3)
     )
@@ -376,8 +376,6 @@ Return ONLY valid JSON, no markdown, no explanation:
 
 
 # ── Endpoint 3: Admin AI Chat ──────────────────────────────────────────────────
-
-from app.models.user import UserRole
 
 
 def _require_admin(current_user: User = Depends(get_current_user)) -> User:

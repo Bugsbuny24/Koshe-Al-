@@ -157,7 +157,6 @@ async def _run_fraud_detection():
                 LEFT JOIN ad_impressions i
                     ON i.campaign_id = c.campaign_id
                     AND i.session_id IS NOT NULL
-                    AND c.clicked_at > :cutoff
                 WHERE c.clicked_at > :cutoff
                     AND i.id IS NULL
                 GROUP BY c.campaign_id
