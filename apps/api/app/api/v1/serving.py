@@ -17,7 +17,7 @@ from pydantic import BaseModel
 import structlog
 
 from app.dependencies import get_db
-from app.models.publisher import AdSlot, Placement
+from app.models.publisher import AdSlot, Placement, PublisherProfile, PublisherStatus
 from app.models.delivery import (
     LiveCampaign, LiveCampaignStatus, PricingModel,
     AdImpression, AdClick, ConversionEvent, BudgetLedger, PacingCounter,
@@ -167,6 +167,16 @@ async def serve_ad(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found or inactive")
         resolved_slot_id = slot.id
 
+        # Verify publisher is approved (single join query)
+        result = await db.execute(
+            select(PublisherProfile)
+            .join(Placement, Placement.publisher_id == PublisherProfile.id)
+            .where(Placement.id == slot.placement_id)
+        )
+        pub_profile = result.scalar_one_or_none()
+        if not pub_profile or pub_profile.status != PublisherStatus.APPROVED:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No eligible ad available")
+
         # ── New Campaign flow ──────────────────────────────────────────────
         conditions = [
             Campaign.is_active == True,
@@ -183,7 +193,7 @@ async def serve_ad(
         result = await db.execute(select(Campaign).where(and_(*conditions)))
         candidates: list[Campaign] = list(result.scalars().all())
 
-        # Country/device targeting filter
+        # Country/device targeting + daily budget filter
         eligible_campaigns = []
         for c in candidates:
             if country and c.target_countries:
@@ -191,6 +201,11 @@ async def serve_ad(
                     continue
             if device and c.target_devices:
                 if device not in c.target_devices:
+                    continue
+            # Enforce daily_budget
+            if c.daily_budget is not None:
+                today_spend = await _get_today_spend(db, c.id)
+                if today_spend >= c.daily_budget:
                     continue
             eligible_campaigns.append(c)
 
@@ -298,6 +313,11 @@ async def serve_ad(
         # Format match (if campaign specifies target formats)
         if campaign.target_formats and slot_format:
             if slot_format not in campaign.target_formats:
+                continue
+        # Enforce daily budget cap
+        if campaign.daily_budget_cap is not None:
+            today_spend = await _get_today_spend(db, campaign.id)
+            if today_spend >= campaign.daily_budget_cap:
                 continue
         eligible.append(campaign)
 
@@ -756,12 +776,20 @@ async def track_conversion(
     data: ConversionRequest,
     db: AsyncSession = Depends(get_db),
 ):
+    # Try LiveCampaign first
     result = await db.execute(
         select(LiveCampaign).where(LiveCampaign.id == data.campaign_id)
     )
     campaign = result.scalar_one_or_none()
+
     if not campaign:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
+        # Fall back to new Campaign model
+        result = await db.execute(
+            select(Campaign).where(Campaign.id == data.campaign_id)
+        )
+        new_campaign = result.scalar_one_or_none()
+        if not new_campaign:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not found")
 
     click_id = None
     if data.click_token:
@@ -782,5 +810,5 @@ async def track_conversion(
     )
     db.add(conversion)
     await db.flush()
-    logger.info("Conversion tracked", campaign_id=str(campaign.id), event_type=data.event_type)
+    logger.info("Conversion tracked", campaign_id=str(data.campaign_id), event_type=data.event_type)
     return {"conversion_id": str(conversion.id), "recorded": True}

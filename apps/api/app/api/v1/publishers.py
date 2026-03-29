@@ -1,11 +1,13 @@
 """Publisher-side APIs: profiles, sites, apps, placements, ad slots."""
 import uuid
+import secrets
 from typing import List, Optional
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
 import structlog
 
@@ -514,9 +516,16 @@ async def create_slot(
     )
     if not result.scalar_one_or_none():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Placement not found")
-    slot = AdSlot(placement_id=placement_id, **data.model_dump())
+    slot_data = data.model_dump()
+    if not slot_data.get("slot_key"):
+        slot_data["slot_key"] = secrets.token_urlsafe(12)
+    slot = AdSlot(placement_id=placement_id, **slot_data)
     db.add(slot)
-    await db.flush()
+    try:
+        await db.flush()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="slot_key already exists")
     await db.refresh(slot)
     return slot
 
