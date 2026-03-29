@@ -9,6 +9,13 @@ from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from app.models.base import UUIDBase
 
 
+class CreativeType(str, enum.Enum):
+    text = "text"
+    image = "image"
+    native = "native"
+    banner = "banner"
+
+
 class CampaignStatus(str, enum.Enum):
     DRAFT = "DRAFT"
     ACTIVE = "ACTIVE"
@@ -55,7 +62,7 @@ class Ad(UUIDBase):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     cta: Mapped[str] = mapped_column(String(100), nullable=False)
     image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    creative_type: Mapped[str] = mapped_column(String(50), nullable=False, default="text")
+    creative_type: Mapped[CreativeType] = mapped_column(SAEnum(CreativeType, name="creative_type"), nullable=False, default=CreativeType.text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
 
     campaign: Mapped["Campaign"] = relationship("Campaign", back_populates="ads")

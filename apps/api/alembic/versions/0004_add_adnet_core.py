@@ -8,6 +8,9 @@ Create Date: 2024-01-04 00:00:00.000000
 from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
+from sqlalchemy.dialects import postgresql
+
+_CREATIVE_TYPE_VALUES = ("text", "image", "native", "banner")
 
 revision: str = "0004"
 down_revision: Union[str, None] = "0003"
@@ -16,6 +19,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    # ── creative_type enum ─────────────────────────────────────────────────
+    creative_type_enum = postgresql.ENUM(*_CREATIVE_TYPE_VALUES, name="creative_type", create_type=False)
+    creative_type_enum.create(op.get_bind(), checkfirst=True)
+
     # ── campaigns ──────────────────────────────────────────────────────────
     op.create_table(
         "campaigns",
@@ -58,7 +65,7 @@ def upgrade() -> None:
         sa.Column("body", sa.Text(), nullable=False),
         sa.Column("cta", sa.String(100), nullable=False),
         sa.Column("image_url", sa.String(2048), nullable=True),
-        sa.Column("creative_type", sa.String(50), nullable=False, server_default="text"),
+        sa.Column("creative_type", sa.Enum(*_CREATIVE_TYPE_VALUES, name="creative_type", create_type=False), nullable=False, server_default="text"),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")),
     )
     op.create_index("ix_ads_campaign_id", "ads", ["campaign_id"])
@@ -157,3 +164,4 @@ def downgrade() -> None:
     op.drop_index("ix_campaigns_user_id", table_name="campaigns")
     op.drop_table("campaigns")
     op.execute("DROP TYPE IF EXISTS campaignstatus")
+    op.execute("DROP TYPE IF EXISTS creative_type")

@@ -30,7 +30,7 @@ from app.models.delivery import (
     AdImpression, AdClick, BudgetLedger, PacingCounter,
 )
 from app.models.finance import AdvertiserInvoice, InvoiceStatus
-from app.models.adnet import Campaign, CampaignStatus, Ad, AdvertiserWallet, AdvertiserTransaction
+from app.models.adnet import Campaign, CampaignStatus, Ad, CreativeType, AdvertiserWallet, AdvertiserTransaction
 from app.services.auth_service import hash_password
 from app.ai.mock_data import get_mock_output
 from datetime import datetime, timezone
@@ -386,7 +386,7 @@ async def seed():
             body="Limited time offer! Upgrade your workflow with TechCorp Pro and save 30%. Trusted by 10,000+ teams.",
             cta="Claim Offer",
             image_url=None,
-            creative_type="text",
+            creative_type=CreativeType.text,
             is_active=True,
         )
         db.add(ad)

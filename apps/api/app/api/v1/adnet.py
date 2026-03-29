@@ -13,7 +13,7 @@ import structlog
 from app.dependencies import get_db, get_current_user
 from app.models.user import User, UserRole
 from app.models.adnet import (
-    Campaign, CampaignStatus, Ad,
+    Campaign, CampaignStatus, Ad, CreativeType,
     AdvertiserWallet, AdvertiserTransaction, PublisherEarning,
 )
 from app.models.publisher import PublisherProfile
@@ -85,7 +85,7 @@ class AdCreate(BaseModel):
     body: str
     cta: str
     image_url: Optional[str] = None
-    creative_type: str = "text"
+    creative_type: CreativeType = CreativeType.text
 
 
 class AdUpdate(BaseModel):
@@ -93,7 +93,7 @@ class AdUpdate(BaseModel):
     body: Optional[str] = None
     cta: Optional[str] = None
     image_url: Optional[str] = None
-    creative_type: Optional[str] = None
+    creative_type: Optional[CreativeType] = None
     is_active: Optional[bool] = None
 
 
@@ -104,7 +104,7 @@ class AdResponse(BaseModel):
     body: str
     cta: str
     image_url: Optional[str]
-    creative_type: str
+    creative_type: CreativeType
     is_active: bool
     created_at: datetime
 

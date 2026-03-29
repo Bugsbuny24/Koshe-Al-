@@ -17,7 +17,7 @@ from app.models.finance import (
     InvoiceStatus, ModerationDecision, ModerationItemType,
 )
 from app.models.adnet import (
-    Campaign, CampaignStatus, Ad, AdvertiserWallet, AdvertiserTransaction, PublisherEarning,
+    Campaign, CampaignStatus, Ad, CreativeType, AdvertiserWallet, AdvertiserTransaction, PublisherEarning,
 )
 
 __all__ = [
@@ -33,5 +33,5 @@ __all__ = [
     "AdvertiserInvoice", "PublisherPayout", "SpendReservation",
     "ModerationReview", "PolicyFlag", "FraudSignal",
     "InvoiceStatus", "ModerationDecision", "ModerationItemType",
-    "Campaign", "CampaignStatus", "Ad", "AdvertiserWallet", "AdvertiserTransaction", "PublisherEarning",
+    "Campaign", "CampaignStatus", "Ad", "CreativeType", "AdvertiserWallet", "AdvertiserTransaction", "PublisherEarning",
 ]
