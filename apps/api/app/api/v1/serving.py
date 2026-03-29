@@ -1,6 +1,8 @@
 """Ad serving engine: selection, impression tracking, click tracking, conversion."""
 import uuid
+import base64
 import hashlib
+import json
 import secrets
 import random
 from datetime import datetime, timezone
@@ -21,9 +23,18 @@ from app.models.delivery import (
     AdImpression, AdClick, ConversionEvent, BudgetLedger, PacingCounter,
 )
 from app.models.generation import GeneratedAdSet, GeneratedAdVariant
+from app.models.adnet import (
+    Campaign, CampaignStatus, Ad,
+    AdvertiserWallet, AdvertiserTransaction, PublisherEarning,
+)
 
 router = APIRouter(tags=["serving"])
 logger = structlog.get_logger()
+
+# Scoring weights for ad candidate selection
+_SCORE_WEIGHT_BID = 10       # bid amount contribution
+_SCORE_WEIGHT_BUDGET = 20    # budget remaining ratio contribution
+_SCORE_WEIGHT_NOISE = 5      # randomness to prevent winner-lock
 
 
 # ── Response schemas ──────────────────────────────────────────────────────────
@@ -31,6 +42,7 @@ logger = structlog.get_logger()
 class ServedAdResponse(BaseModel):
     campaign_id: str
     ad_set_id: Optional[str]
+    ad_id: Optional[str]
     headline: str
     body_text: str
     cta: str
@@ -133,16 +145,117 @@ async def _get_today_spend(db: AsyncSession, campaign_id: uuid.UUID) -> Decimal:
 
 @router.get("/serve/ad", response_model=ServedAdResponse)
 async def serve_ad(
-    slot_id: uuid.UUID,
+    slot_key: Optional[str] = None,
+    slot_id: Optional[uuid.UUID] = None,  # backward compat
     site_id: Optional[uuid.UUID] = None,
     page_url: Optional[str] = None,
     session_id: Optional[str] = None,
+    country: Optional[str] = None,
+    device: Optional[str] = None,
     request: Request = None,
     db: AsyncSession = Depends(get_db),
 ):
     now = datetime.now(timezone.utc)
 
-    # 1. Validate slot
+    # 1. Validate slot (by slot_key preferred, fall back to slot_id)
+    if slot_key:
+        result = await db.execute(
+            select(AdSlot).where(AdSlot.slot_key == slot_key, AdSlot.is_active == True)
+        )
+        slot = result.scalar_one_or_none()
+        if not slot:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found or inactive")
+        resolved_slot_id = slot.id
+
+        # ── New Campaign flow ──────────────────────────────────────────────
+        conditions = [
+            Campaign.is_active == True,
+            Campaign.status == CampaignStatus.ACTIVE,
+            Campaign.spent_amount < Campaign.total_budget,
+        ]
+        conditions.append(
+            (Campaign.start_at.is_(None)) | (Campaign.start_at <= now)
+        )
+        conditions.append(
+            (Campaign.end_at.is_(None)) | (Campaign.end_at >= now)
+        )
+
+        result = await db.execute(select(Campaign).where(and_(*conditions)))
+        candidates: list[Campaign] = list(result.scalars().all())
+
+        # Country/device targeting filter
+        eligible_campaigns = []
+        for c in candidates:
+            if country and c.target_countries:
+                if country not in c.target_countries:
+                    continue
+            if device and c.target_devices:
+                if device not in c.target_devices:
+                    continue
+            eligible_campaigns.append(c)
+
+        if not eligible_campaigns:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No eligible ad available")
+
+        # Score candidates: bid * 10 + budget_remaining_ratio * 20 + random * 5
+        scored = []
+        for c in eligible_campaigns:
+            remaining = float(c.total_budget) - float(c.spent_amount)
+            budget_ratio = min(remaining / max(float(c.total_budget), 1.0), 1.0)
+            score = (
+                float(c.bid_amount) * _SCORE_WEIGHT_BID
+                + budget_ratio * _SCORE_WEIGHT_BUDGET
+                + random.random() * _SCORE_WEIGHT_NOISE
+            )
+            scored.append((c, score))
+        scored.sort(key=lambda x: x[1], reverse=True)
+        selected_campaign = scored[0][0]
+
+        # Pick an active ad from the campaign
+        result = await db.execute(
+            select(Ad).where(Ad.campaign_id == selected_campaign.id, Ad.is_active == True).limit(1)
+        )
+        selected_ad = result.scalar_one_or_none()
+        if not selected_ad:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active ad creatives for campaign")
+
+        # Build new-style click token (base64-encoded JSON)
+        token_payload = {
+            "type": "new",
+            "campaign_id": str(selected_campaign.id),
+            "ad_id": str(selected_ad.id),
+            "slot_id": str(resolved_slot_id),
+            "landing_url": selected_campaign.landing_url,
+        }
+        click_token = base64.urlsafe_b64encode(
+            json.dumps(token_payload).encode()
+        ).decode()
+
+        slot_format = slot.format.value if slot.format else "BANNER"
+        return ServedAdResponse(
+            campaign_id=str(selected_campaign.id),
+            ad_set_id=None,
+            ad_id=str(selected_ad.id),
+            headline=selected_ad.headline,
+            body_text=selected_ad.body,
+            cta=selected_ad.cta,
+            image_url=selected_ad.image_url,
+            click_url=f"/api/v1/track/click/{click_token}",
+            impression_url="/api/v1/track/impression",
+            format=slot_format,
+            tracking_data={
+                "campaign_id": str(selected_campaign.id),
+                "ad_id": str(selected_ad.id),
+                "slot_id": str(resolved_slot_id),
+                "slot_key": slot_key,
+                "click_token": click_token,
+            },
+        )
+
+    if not slot_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="slot_key or slot_id is required")
+
+    # ── Legacy LiveCampaign flow ───────────────────────────────────────────
     result = await db.execute(
         select(AdSlot).where(AdSlot.id == slot_id, AdSlot.is_active == True)
     )
@@ -158,10 +271,10 @@ async def serve_ad(
     ]
     # Date filters
     conditions.append(
-        (LiveCampaign.start_date == None) | (LiveCampaign.start_date <= now)
+        (LiveCampaign.start_date.is_(None)) | (LiveCampaign.start_date <= now)
     )
     conditions.append(
-        (LiveCampaign.end_date == None) | (LiveCampaign.end_date >= now)
+        (LiveCampaign.end_date.is_(None)) | (LiveCampaign.end_date >= now)
     )
 
     result = await db.execute(
@@ -266,6 +379,7 @@ async def serve_ad(
     return ServedAdResponse(
         campaign_id=str(selected_campaign.id),
         ad_set_id=str(selected_campaign.ad_set_id) if selected_campaign.ad_set_id else None,
+        ad_id=None,
         headline=creative_content["headline"],
         body_text=creative_content["body_text"],
         cta=creative_content["cta"],
@@ -291,6 +405,98 @@ async def track_impression(
 ):
     now = datetime.now(timezone.utc)
 
+    # IP hash
+    client_ip = request.client.host if request.client else "unknown"
+    ip_hash = hashlib.sha256(client_ip.encode()).hexdigest()[:32]
+
+    # Try new Campaign model first
+    result = await db.execute(
+        select(Campaign).where(Campaign.id == data.campaign_id)
+    )
+    new_campaign = result.scalar_one_or_none()
+
+    if new_campaign:
+        # Verify slot
+        result = await db.execute(select(AdSlot).where(AdSlot.id == data.slot_id))
+        slot = result.scalar_one_or_none()
+        if not slot:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Slot not found")
+
+        if not new_campaign.is_active or new_campaign.status != CampaignStatus.ACTIVE:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Campaign not active")
+
+        # Calculate cost based on pricing model
+        cost = Decimal("0")
+        if new_campaign.pricing_model == "CPM":
+            cost = new_campaign.bid_amount / Decimal("1000")
+
+        # Publisher earnings using slot.revenue_share_percent
+        publisher_earnings = cost * slot.revenue_share_percent / Decimal("100")
+
+        impression = AdImpression(
+            campaign_id=data.campaign_id,
+            slot_id=data.slot_id,
+            session_id=data.session_id,
+            site_url=data.site_url,
+            cost=cost,
+            publisher_earnings=publisher_earnings,
+            served_at=now,
+            ip_hash=ip_hash,
+        )
+        db.add(impression)
+        await db.flush()
+
+        # Debit advertiser wallet
+        result = await db.execute(
+            select(AdvertiserWallet).where(AdvertiserWallet.user_id == new_campaign.user_id)
+        )
+        wallet = result.scalar_one_or_none()
+        if wallet and cost > 0:
+            if wallet.balance < cost:
+                # Insufficient funds — mark campaign as ended
+                new_campaign.status = CampaignStatus.ENDED
+                new_campaign.is_active = False
+                logger.warning("Insufficient wallet balance, pausing campaign", campaign_id=str(new_campaign.id))
+            else:
+                wallet.balance = wallet.balance - cost
+                wallet.total_spent = wallet.total_spent + cost
+                db.add(AdvertiserTransaction(
+                    wallet_id=wallet.id,
+                    campaign_id=new_campaign.id,
+                    tx_type="spend_impression",
+                    amount=-cost,
+                    description=f"CPM impression on slot {data.slot_id}",
+                    reference_id=str(impression.id),
+                ))
+
+        # Update campaign stats
+        new_campaign.spent_amount = new_campaign.spent_amount + cost
+        new_campaign.impressions_count = new_campaign.impressions_count + 1
+        if new_campaign.spent_amount >= new_campaign.total_budget:
+            new_campaign.status = CampaignStatus.ENDED
+            new_campaign.is_active = False
+            logger.info("Campaign budget exhausted", campaign_id=str(new_campaign.id))
+
+        # Create publisher earning record
+        result = await db.execute(
+            select(Placement).where(Placement.id == slot.placement_id)
+        )
+        placement = result.scalar_one_or_none()
+        if placement and publisher_earnings > 0:
+            db.add(PublisherEarning(
+                publisher_id=placement.publisher_id,
+                slot_id=slot.id,
+                campaign_id=new_campaign.id,
+                event_type="impression",
+                amount=publisher_earnings,
+                reference_id=str(impression.id),
+            ))
+
+        await db.flush()
+        logger.info("Impression tracked (new campaign)", campaign_id=str(new_campaign.id), cost=str(cost))
+        return ImpressionResponse(impression_id=str(impression.id), recorded=True)
+
+    # Fall back to legacy LiveCampaign
     result = await db.execute(
         select(LiveCampaign).where(LiveCampaign.id == data.campaign_id)
     )
@@ -322,10 +528,6 @@ async def track_impression(
             pub_profile = result.scalar_one_or_none()
             if pub_profile:
                 publisher_earnings = cost * Decimal(str(pub_profile.revenue_share_pct)) / Decimal("100")
-
-    # IP hash
-    client_ip = request.client.host if request.client else "unknown"
-    ip_hash = hashlib.sha256(client_ip.encode()).hexdigest()[:32]
 
     impression = AdImpression(
         campaign_id=data.campaign_id,
@@ -390,14 +592,95 @@ async def track_click(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    now = datetime.now(timezone.utc)
+
+    # Try to decode as new-style base64 JSON token
+    try:
+        padded = click_token + "=" * (-len(click_token) % 4)
+        decoded = json.loads(base64.urlsafe_b64decode(padded.encode()).decode())
+    except Exception:
+        decoded = None
+
+    if decoded and decoded.get("type") == "new":
+        campaign_id_str = decoded.get("campaign_id")
+        ad_id_str = decoded.get("ad_id")
+        slot_id_str = decoded.get("slot_id")
+        landing_url = decoded.get("landing_url", "#")
+
+        try:
+            campaign_id = uuid.UUID(campaign_id_str)
+            slot_id = uuid.UUID(slot_id_str)
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid click token data")
+
+        result = await db.execute(select(Campaign).where(Campaign.id == campaign_id))
+        new_campaign = result.scalar_one_or_none()
+
+        if new_campaign and new_campaign.pricing_model == "CPC":
+            cost = new_campaign.bid_amount
+            result = await db.execute(select(AdSlot).where(AdSlot.id == slot_id))
+            slot = result.scalar_one_or_none()
+            publisher_earnings = Decimal("0")
+            if slot:
+                publisher_earnings = cost * slot.revenue_share_percent / Decimal("100")
+
+            # Debit advertiser wallet
+            result = await db.execute(
+                select(AdvertiserWallet).where(AdvertiserWallet.user_id == new_campaign.user_id)
+            )
+            wallet = result.scalar_one_or_none()
+            if wallet:
+                if wallet.balance >= cost:
+                    wallet.balance = wallet.balance - cost
+                    wallet.total_spent = wallet.total_spent + cost
+                    db.add(AdvertiserTransaction(
+                        wallet_id=wallet.id,
+                        campaign_id=new_campaign.id,
+                        tx_type="spend_click",
+                        amount=-cost,
+                        description=f"CPC click token {click_token[:20]}",
+                        reference_id=click_token[:255],
+                    ))
+                else:
+                    logger.warning("Insufficient wallet balance for click", campaign_id=campaign_id_str)
+
+            # Update campaign stats
+            new_campaign.spent_amount = new_campaign.spent_amount + cost
+            new_campaign.clicks_count = new_campaign.clicks_count + 1
+            if new_campaign.spent_amount >= new_campaign.total_budget:
+                new_campaign.status = CampaignStatus.ENDED
+                new_campaign.is_active = False
+
+            # Publisher earning
+            if slot and publisher_earnings > 0:
+                result = await db.execute(
+                    select(Placement).where(Placement.id == slot.placement_id)
+                )
+                placement = result.scalar_one_or_none()
+                if placement:
+                    db.add(PublisherEarning(
+                        publisher_id=placement.publisher_id,
+                        slot_id=slot.id,
+                        campaign_id=new_campaign.id,
+                        event_type="click",
+                        amount=publisher_earnings,
+                        reference_id=click_token[:255],
+                    ))
+        elif new_campaign:
+            # CPM campaign — track click count only
+            new_campaign.clicks_count = new_campaign.clicks_count + 1
+
+        await db.flush()
+        logger.info("Click tracked (new campaign)", campaign_id=campaign_id_str, landing_url=landing_url)
+        return RedirectResponse(url=landing_url, status_code=302)
+
+    # ── Legacy: look up AdClick record by token ────────────────────────────
     result = await db.execute(
         select(AdClick).where(AdClick.click_token == click_token)
     )
     click = result.scalar_one_or_none()
     if not click:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid click token")
-
-    now = datetime.now(timezone.utc)
 
     # Get campaign
     result = await db.execute(

@@ -149,19 +149,23 @@ class PlacementResponse(BaseModel):
 class SlotCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     format: SlotFormat
+    slot_key: Optional[str] = None
     width: Optional[int] = None
     height: Optional[int] = None
     category: Optional[str] = None
+    revenue_share_percent: Optional[float] = None
     allowed_formats: Optional[List[str]] = None
 
 
 class SlotUpdate(BaseModel):
     name: Optional[str] = None
     format: Optional[SlotFormat] = None
+    slot_key: Optional[str] = None
     width: Optional[int] = None
     height: Optional[int] = None
     category: Optional[str] = None
     is_active: Optional[bool] = None
+    revenue_share_percent: Optional[float] = None
     allowed_formats: Optional[List[str]] = None
 
 
@@ -170,9 +174,11 @@ class SlotResponse(BaseModel):
     placement_id: uuid.UUID
     name: str
     format: SlotFormat
+    slot_key: Optional[str]
     width: Optional[int]
     height: Optional[int]
     category: Optional[str]
+    revenue_share_percent: Optional[float]
     allowed_formats: Optional[List[str]]
     is_active: bool
     created_at: datetime

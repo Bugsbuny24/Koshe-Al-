@@ -10,6 +10,7 @@ import {
   SlidersHorizontal,
   BarChart3,
   Wallet,
+  DollarSign,
   Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,6 +23,7 @@ const navItems = [
   { href: '/publisher/placements', label: 'Placements', icon: Layout },
   { href: '/publisher/slots', label: 'Ad Slots', icon: SlidersHorizontal },
   { href: '/publisher/reports', label: 'Reports', icon: BarChart3 },
+  { href: '/publisher/earnings', label: 'Earnings', icon: DollarSign },
   { href: '/publisher/payouts', label: 'Payouts', icon: Wallet },
 ]
 
