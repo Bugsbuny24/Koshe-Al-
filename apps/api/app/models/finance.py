@@ -102,7 +102,7 @@ class FraudSignal(UUIDBase):
     campaign_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("live_campaigns.id"), nullable=True)
     slot_id: Mapped[uuid.UUID | None] = mapped_column(PG_UUID(as_uuid=True), ForeignKey("ad_slots.id"), nullable=True)
     signal_type: Mapped[str] = mapped_column(String(100), nullable=False)
+    severity: Mapped[int] = mapped_column(nullable=False, default=5)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     signal_data: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     is_reviewed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    # TODO: Add ML-based fraud scoring in future version

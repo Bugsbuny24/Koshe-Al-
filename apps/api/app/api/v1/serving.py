@@ -212,19 +212,40 @@ async def serve_ad(
         if not eligible_campaigns:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No eligible ad available")
 
-        # Score candidates: bid * 10 + budget_remaining_ratio * 20 + random * 5
-        scored = []
-        for c in eligible_campaigns:
-            remaining = float(c.total_budget) - float(c.spent_amount)
-            budget_ratio = min(remaining / max(float(c.total_budget), 1.0), 1.0)
-            score = (
-                float(c.bid_amount) * _SCORE_WEIGHT_BID
-                + budget_ratio * _SCORE_WEIGHT_BUDGET
-                + random.random() * _SCORE_WEIGHT_NOISE
-            )
-            scored.append((c, score))
-        scored.sort(key=lambda x: x[1], reverse=True)
-        selected_campaign = scored[0][0]
+        # Score candidates using AI matching (falls back to base scoring on error)
+        try:
+            from app.services.ai_matching import score_slot_campaign_match
+
+            ai_scored = []
+            for c in eligible_campaigns:
+                base_score = (
+                    float(c.bid_amount) * _SCORE_WEIGHT_BID
+                    + (float(c.total_budget) - float(c.spent_amount)) / max(float(c.total_budget), 1) * _SCORE_WEIGHT_BUDGET
+                    + random.random() * _SCORE_WEIGHT_NOISE
+                )
+                try:
+                    ai_score = await score_slot_campaign_match(slot, c, db)
+                except Exception:
+                    ai_score = 0.5
+                final_score = base_score * (1 + ai_score)
+                ai_scored.append((c, final_score))
+
+            ai_scored.sort(key=lambda x: x[1], reverse=True)
+            selected_campaign = ai_scored[0][0]
+        except Exception:
+            # Fall back to original scoring if AI matching fails entirely
+            scored = []
+            for c in eligible_campaigns:
+                remaining = float(c.total_budget) - float(c.spent_amount)
+                budget_ratio = min(remaining / max(float(c.total_budget), 1.0), 1.0)
+                score = (
+                    float(c.bid_amount) * _SCORE_WEIGHT_BID
+                    + budget_ratio * _SCORE_WEIGHT_BUDGET
+                    + random.random() * _SCORE_WEIGHT_NOISE
+                )
+                scored.append((c, score))
+            scored.sort(key=lambda x: x[1], reverse=True)
+            selected_campaign = scored[0][0]
 
         # Pick an active ad from the campaign
         result = await db.execute(

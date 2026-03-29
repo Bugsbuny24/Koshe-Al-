@@ -19,6 +19,7 @@ from app.models.finance import (
 from app.models.adnet import (
     Campaign, CampaignStatus, Ad, CreativeType, AdvertiserWallet, AdvertiserTransaction, PublisherEarning,
 )
+from app.models.ai_logs import AiOptimizationLog
 
 __all__ = [
     "User", "Workspace", "WorkspaceMember", "UserRole",
@@ -34,4 +35,5 @@ __all__ = [
     "ModerationReview", "PolicyFlag", "FraudSignal",
     "InvoiceStatus", "ModerationDecision", "ModerationItemType",
     "Campaign", "CampaignStatus", "Ad", "CreativeType", "AdvertiserWallet", "AdvertiserTransaction", "PublisherEarning",
+    "AiOptimizationLog",
 ]

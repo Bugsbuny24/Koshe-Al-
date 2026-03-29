@@ -1,6 +1,6 @@
 """Admin / ops APIs: campaign activation, publisher approval, moderation queue, finance overview."""
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from decimal import Decimal
 
@@ -15,7 +15,7 @@ from app.models.user import User, UserRole
 from app.models.delivery import LiveCampaign, LiveCampaignStatus, AdImpression, AdClick, BudgetLedger
 from app.models.publisher import PublisherProfile, PublisherStatus, AdSlot, Placement
 from app.models.generation import GeneratedAdSet
-from app.models.finance import ModerationReview, ModerationDecision, ModerationItemType, AdvertiserInvoice
+from app.models.finance import ModerationReview, ModerationDecision, ModerationItemType, AdvertiserInvoice, FraudSignal
 from app.models.campaign import CampaignBrief
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -403,3 +403,60 @@ async def create_live_campaign_from_brief(
     await db.refresh(campaign)
     logger.info("Live campaign created", campaign_id=str(campaign.id), admin=str(admin.id))
     return {"id": str(campaign.id), "name": campaign.name, "status": campaign.status.value}
+
+
+# ── Fraud signals ──────────────────────────────────────────────────────────────
+
+class FraudSignalResponse(BaseModel):
+    id: uuid.UUID
+    signal_type: str
+    severity: int
+    description: Optional[str]
+    signal_data: Optional[dict]
+    campaign_id: Optional[uuid.UUID]
+    slot_id: Optional[uuid.UUID]
+    is_reviewed: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+@router.get("/fraud/signals", response_model=List[FraudSignalResponse])
+async def list_fraud_signals(
+    hours: int = 24,
+    min_severity: int = 1,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Return fraud signals from the last N hours with severity >= min_severity."""
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=max(1, min(168, hours)))
+    min_sev = max(1, min(10, min_severity))
+
+    result = await db.execute(
+        select(FraudSignal)
+        .where(
+            and_(
+                FraudSignal.created_at >= cutoff,
+                FraudSignal.severity >= min_sev,
+            )
+        )
+        .order_by(FraudSignal.severity.desc(), FraudSignal.created_at.desc())
+    )
+    return result.scalars().all()
+
+
+@router.patch("/fraud/signals/{signal_id}/review", response_model=FraudSignalResponse)
+async def mark_fraud_signal_reviewed(
+    signal_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    """Mark a fraud signal as reviewed."""
+    result = await db.execute(select(FraudSignal).where(FraudSignal.id == signal_id))
+    signal = result.scalar_one_or_none()
+    if not signal:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Fraud signal not found")
+    signal.is_reviewed = True
+    await db.flush()
+    await db.refresh(signal)
+    return signal
